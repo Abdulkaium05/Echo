@@ -1,4 +1,3 @@
-
 // src/services/firestore.ts
 import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseAuthUser } from 'firebase/auth';
@@ -195,84 +194,75 @@ let mockMessages: { [chatId: string]: Message[] } = {
     ],
 };
 
-const ensureDevTeamChat = (userProfile: UserProfile | undefined | null) => {
-    if (!userProfile) return;
-    const hasVIPAccess = userProfile.isVIP || userProfile.isVerified || userProfile.isCreator || userProfile.isDevTeam;
-    if (userProfile.uid === DEV_UID || !hasVIPAccess) return;
+const ensureAllUserChatsExist = (activeUserId: string) => {
+    mockLocalUsers.forEach(user => {
+        // Skip creating a chat with self
+        if (user.uid === activeUserId) return;
 
-    const devChatExists = mockChats.some(c => c.participants.includes(userProfile.uid) && c.participants.includes(DEV_UID));
-    if (!devChatExists) {
-        const newChat: Chat = {
-            id: `chat-${userProfile.uid}-${DEV_UID}`,
-            participants: [userProfile.uid, DEV_UID].sort(),
-            lastMessage: 'You can now chat with the Dev Team.',
-            lastMessageSenderId: DEV_UID,
-            lastMessageTimestamp: { seconds: Date.now() / 1000, nanoseconds: 0 } as unknown as Timestamp,
-        };
-        mockChats.push(newChat);
-        if (!mockMessages[newChat.id!]) {
-            mockMessages[newChat.id!] = [{
-                id: `msg-${Date.now()}`,
-                chatId: newChat.id!,
-                senderId: DEV_UID,
-                text: 'Welcome! You can reach the Dev Team here with any questions or feedback.',
-                timestamp: { seconds: Date.now() / 1000, nanoseconds: 0 } as unknown as Timestamp,
-            }];
-        }
-    }
-};
-
-const ensureNormalUserChats = (currentUserId: string) => {
-    const normalUsers = mockLocalUsers.filter(u => 
-        !u.isBot && !u.isDevTeam && !u.isVerified && !u.isCreator && u.uid !== currentUserId
-    );
-
-    normalUsers.forEach(normalUser => {
         const chatExists = mockChats.some(c => 
-            c.participants.includes(currentUserId) && c.participants.includes(normalUser.uid)
+            c.participants.includes(activeUserId) && c.participants.includes(user.uid)
         );
 
         if (!chatExists) {
-            const newChatId = `chat-${currentUserId}-${normalUser.uid}`;
+            const newChatId = `chat-${activeUserId}-${user.uid}`;
+            const isBotOrDev = user.isBot || user.isDevTeam;
             const newChat: Chat = {
                 id: newChatId,
-                participants: [currentUserId, normalUser.uid].sort(),
-                lastMessage: `Say hi to ${normalUser.name}!`,
-                lastMessageSenderId: 'system',
+                participants: [activeUserId, user.uid].sort(),
+                lastMessage: isBotOrDev ? `Welcome! Chat with ${user.name} now.` : `Say hi to ${user.name}!`,
+                lastMessageSenderId: isBotOrDev ? user.uid : 'system',
                 lastMessageTimestamp: { seconds: (Date.now()/1000) - (Math.random() * 10000 + 1500), nanoseconds: 0} as unknown as Timestamp,
             };
             mockChats.push(newChat);
+            
+            // Ensure message list exists for new chat
             if (!mockMessages[newChatId]) {
                 mockMessages[newChatId] = [];
             }
+
+            // Pre-populate with welcome message for bot/dev chats
+             if (isBotOrDev && mockMessages[newChatId].length === 0) {
+                mockMessages[newChatId].push({
+                    id: `msg-welcome-${user.uid}`,
+                    chatId: newChatId,
+                    senderId: user.uid,
+                    text: newChat.lastMessage,
+                    timestamp: newChat.lastMessageTimestamp,
+                });
+            }
         }
     });
-};
+}
+
 
 let chatListListeners: Array<(chats: Chat[]) => void> = [];
 
-const notifyChatListListeners = () => {
-    const activeUserId = CURRENT_DEMO_USER_ID;
-    const userProfile = mockLocalUsers.find(u => u.uid === activeUserId);
+const notifyChatListListeners = (userProfile: UserProfile) => {
+    if (!userProfile) {
+        console.warn("notifyChatListListeners: No user profile provided for filtering.");
+        chatListListeners.forEach(listener => listener([])); // Notify with empty list
+        return;
+    }
     
-    ensureDevTeamChat(userProfile);
-    ensureNormalUserChats(activeUserId);
+    ensureAllUserChatsExist(userProfile.uid);
 
-    const hasVIPAccess = userProfile?.isVIP || userProfile?.isVerified || userProfile?.isCreator || userProfile?.isDevTeam;
+    const hasVIPAccess = userProfile.isVIP || userProfile.isVerified || userProfile.isCreator || userProfile.isDevTeam;
 
     const userChats = mockChats.filter(chat => {
-        if (!chat.participants.includes(activeUserId)) {
+        if (!chat.participants.includes(userProfile.uid)) {
             return false;
         }
         
-        const otherParticipantId = chat.participants.find(p => p !== activeUserId);
+        const otherParticipantId = chat.participants.find(p => p !== userProfile.uid);
         const otherParticipantProfile = mockLocalUsers.find(u => u.uid === otherParticipantId);
         
-        if (otherParticipantProfile?.isDevTeam && !hasVIPAccess) {
+        if (!otherParticipantProfile) return false;
+
+        if (otherParticipantProfile.isDevTeam && !hasVIPAccess) {
             return false;
         }
 
-        if (otherParticipantProfile?.isVerified && !otherParticipantProfile.isDevTeam && !otherParticipantProfile.isBot) {
+        if (otherParticipantProfile.isVerified && !otherParticipantProfile.isDevTeam && !otherParticipantProfile.isBot) {
             if (!hasVIPAccess) return false;
             return userProfile?.selectedVerifiedContacts?.includes(otherParticipantId!);
         }
@@ -294,7 +284,7 @@ const notifyChatListListeners = () => {
                  participantDetails[pId] = { uid: pId, name: "Unknown User"};
             }
         });
-        const updatedParticipants = chat.participants.map(p => p === 'test-user-placeholder' ? activeUserId : p).sort();
+        const updatedParticipants = chat.participants.map(p => p === 'test-user-placeholder' ? userProfile.uid : p).sort();
         return { ...chat, participants: updatedParticipants, participantDetails };
     });
     
@@ -310,6 +300,7 @@ const notifyChatListListeners = () => {
 
 export const getUserChats = (
     userId: string,
+    userProfile: UserProfile, // Now requires the full profile for filtering
     callback: (chats: Chat[]) => void,
     onError: (error: Error) => void
 ): (() => void) => {
@@ -321,7 +312,7 @@ export const getUserChats = (
 
   // Initial call
   try {
-    notifyChatListListeners();
+    notifyChatListListeners(userProfile);
   } catch (e: any) {
       onError(e);
   }
@@ -365,7 +356,12 @@ export const createChat = async (userId1: string, userId2: string): Promise<stri
     mockMessages[newChatId] = [];
   }
   console.log(`[createChat] New chat created with ID: ${newChatId}`);
-  notifyChatListListeners();
+  
+  const currentUserProfile = await getUserProfile(userId1);
+  if (currentUserProfile) {
+      notifyChatListListeners(currentUserProfile);
+  }
+
   return Promise.resolve(newChatId);
 };
 
@@ -378,7 +374,7 @@ export const sendWelcomeMessage = async (newUserId: string): Promise<void> => {
   try {
     const chatId = await createChat(newUserId, BOT_UID);
     const welcomeText = "Welcome to Echo Message! 🎉 I'm Blue Bird, your AI Assistant. How can I assist you today?";
-    await sendMessage(chatId, BOT_UID, welcomeText, undefined, undefined, undefined, undefined, true);
+    await sendMessage(chatId, BOT_UID, welcomeText, undefined, undefined, true);
     console.log(`[sendWelcomeMessage] Welcome message sent to ${newUserId} in chat ${chatId}`);
   } catch (error) {
     console.error(`[sendWelcomeMessage] Error:`, error);
@@ -510,7 +506,9 @@ export const sendMessage = async (
   console.log(`[sendMessage] Message added to chat ${chatId}:`, newMessage);
 
   notifyMessageListeners(chatId);
-  notifyChatListListeners();
+  if (senderProfile) {
+    notifyChatListListeners(senderProfile);
+  }
 
   // --- Start of new notification logic ---
   const chat = mockChats.find(c => c.id === chatId);
@@ -650,7 +648,10 @@ export const deleteMessage = async (chatId: string, messageId: string): Promise<
                      chat.lastMessage = "Chat cleared.";
                 }
             }
-            notifyChatListListeners();
+            const senderProfile = mockLocalUsers.find(u => u.uid === deletedMessage.senderId);
+            if (senderProfile) {
+                notifyChatListListeners(senderProfile);
+            }
         }
     }
 
@@ -666,7 +667,10 @@ export const removeChat = (chatId: string): void => {
         mockChats.splice(chatIndex, 1);
         delete mockMessages[chatId];
     }
-    notifyChatListListeners();
+    const currentUserProfile = mockLocalUsers.find(u => u.uid === CURRENT_DEMO_USER_ID);
+    if(currentUserProfile) {
+        notifyChatListListeners(currentUserProfile);
+    }
 }
 
 
@@ -681,10 +685,10 @@ export const updateVIPStatus = async (userId: string, isVIP: boolean, vipPack?: 
         mockLocalUsers[userIndex].selectedVerifiedContacts = [];
         mockLocalUsers[userIndex].hasMadeVipSelection = false;
     }
+    notifyChatListListeners(mockLocalUsers[userIndex]);
   } else {
       console.warn(`[updateVIPStatus] User ${userId} not found to update VIP status.`);
   }
-  notifyChatListListeners();
   return Promise.resolve();
 };
 
@@ -765,10 +769,7 @@ export const mapChatToChatItem = (
       iconIdentifier = 'dev-team-svg';
   }
 
-  let isVerifiedForSectioning = false;
-  if (isContactGenerallyVerified) {
-      isVerifiedForSectioning = true;
-  }
+  const isVerifiedForSectioning = isContactGenerallyVerified;
 
   const isLastMessageSentByCurrentUser = chat.lastMessageSenderId === currentUserId;
 

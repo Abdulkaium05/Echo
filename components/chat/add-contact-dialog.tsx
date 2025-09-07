@@ -1,4 +1,3 @@
-
 // src/components/chat/add-contact-dialog.tsx
 'use client';
 
@@ -20,6 +19,7 @@ import { UserPlus, Loader2, ShieldAlert } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { findUserByEmail, findChatBetweenUsers, createChat, BOT_UID, DEV_UID } from '@/services/firestore';
 import { useAuth } from '@/context/auth-context';
+import { useVIP } from '@/context/vip-context';
 
 interface AddContactDialogProps {
   isOpen: boolean;
@@ -30,8 +30,7 @@ interface AddContactDialogProps {
 export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddContactDialogProps) {
   const { toast } = useToast();
   const router = useRouter();
-  const { userProfile } = useAuth();
-  const isVIP = userProfile?.isVIP ?? false;
+  const { hasVipAccess } = useVIP();
   const [contactEmail, setContactEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -63,18 +62,18 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
           return;
       }
       
-      // Prevent adding verified users through this dialog. VIPs must use the selection dialog.
-      if (targetUser.isVerified && !targetUser.isDevTeam && !targetUser.isBot) {
-          toast({
-            title: "Cannot Add Verified User",
-            description: isVIP 
-              ? "Please use the 'Select Verified Person' option in the chat list to add verified users." 
-              : "You must be a VIP to chat with verified users.",
-            variant: "destructive",
-            action: <ShieldAlert className="h-5 w-5" />,
-          });
-          setIsLoading(false);
-          return;
+      // Prevent adding verified users through this dialog if user doesn't have VIP access.
+      if ((targetUser.isVerified || targetUser.isDevTeam) && !targetUser.isBot) {
+          if (!hasVipAccess) {
+              toast({
+                title: "VIP Required",
+                description: "You must be a VIP to chat with verified users or the Dev Team. Subscribe to a VIP plan to unlock this feature.",
+                variant: "destructive",
+                action: <ShieldAlert className="h-5 w-5" />,
+              });
+              setIsLoading(false);
+              return;
+          }
       }
 
       const existingChatId = await findChatBetweenUsers(currentUserId, targetUser.uid);

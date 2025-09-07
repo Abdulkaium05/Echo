@@ -12,7 +12,7 @@ import { AddContactDialog } from './add-contact-dialog';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getUserChats, mapChatToChatItem, type Chat, getVerifiedContactLimit, DEV_UID, getUserProfile, type UserProfile, BOT_UID } from '@/services/firestore';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/context/auth-context';
 import { SelectVerifiedDialog } from './select-verified-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useBlockUser } from '@/context/block-user-context';
@@ -60,41 +60,35 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     profile: UserProfile | null;
   }>({ isOpen: false, profile: null });
 
-  const hasVIPAccess = userProfile?.isVIP || userProfile?.isVerified || userProfile?.isCreator;
+  const hasVIPAccess = userProfile?.isVIP || userProfile?.isVerified || userProfile?.isCreator || userProfile?.isDevTeam;
   
   const vipLimit = (userProfile?.isVerified || userProfile?.isCreator) 
     ? Number.MAX_SAFE_INTEGER 
     : getVerifiedContactLimit(userProfile?.vipPack);
-
-  const selectedCount = userProfile?.selectedVerifiedContacts?.length ?? 0;
-
-  const fetchChatsCallback = useCallback((fetchedChats: Chat[]) => {
-      if (!currentUserId) return;
-      let chatItems = fetchedChats.map(chat => mapChatToChatItem(
-          chat, 
-          currentUserId,
-      ));
-      
-      chatItems.sort((a, b) => b.lastMessageTimestampValue - a.lastMessageTimestampValue);
-      
-      setChats(chatItems);
-      setLoading(false);
-  }, [currentUserId]);
   
   useEffect(() => {
     setLoading(true);
     setError(null);
     setChats([]);
 
-    if (!currentUserId) {
-        console.warn("ChatList: No current user ID provided.");
+    if (!currentUserId || !userProfile) {
+        console.warn("ChatList: No current user ID or profile provided.");
         setLoading(false);
         return () => {};
     }
 
+    console.log("ChatList: Subscribing to chats for user:", currentUserId);
     const unsubscribe = getUserChats(
         currentUserId,
-        fetchChatsCallback,
+        userProfile, // Pass the entire profile to ensure correct filtering
+        (fetchedChats: Chat[]) => {
+            const chatItems = fetchedChats.map(chat => mapChatToChatItem(
+                chat, 
+                currentUserId,
+            ));
+            setChats(chatItems);
+            setLoading(false);
+        },
         (err) => {
             console.error("ChatList: Error fetching chats:", err);
             setError(err.message || "Failed to load chats.");
@@ -103,7 +97,7 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     );
     return () => unsubscribe();
 
-  }, [currentUserId, fetchChatsCallback]); 
+  }, [currentUserId, userProfile]); 
 
   const handleBlockUser = (userId: string, userName: string) => {
     setDialogState({ isOpen: true, type: 'block', userId, userName });
@@ -161,39 +155,18 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     setDialogState({ isOpen: false, type: null });
   };
 
-
   const allMatchingChats = chats.filter(chat =>
     chat.name.toLowerCase().includes(searchTerm.toLowerCase()) && !isChatTrashed(chat.id)
   );
+
+  // Sort chats by timestamp, but keep Dev Team chat at the bottom
+  const sortedChats = allMatchingChats.sort((a, b) => b.lastMessageTimestampValue - a.lastMessageTimestampValue);
+  const devTeamChatIndex = sortedChats.findIndex(chat => chat.contactUserId === DEV_UID);
+  if (devTeamChatIndex > -1) {
+    const [devTeamChat] = sortedChats.splice(devTeamChatIndex, 1);
+    sortedChats.push(devTeamChat);
+  }
   
-  // Always include Blue Bird if it exists, regardless of search term
-  const aiAssistantChat = chats.find(chat => chat.contactUserId === BOT_UID && !isChatTrashed(chat.id));
-
-  const verifiedPersons = allMatchingChats.filter(chat => {
-    if (chat.isBot) return false; 
-
-    if (chat.contactUserId === DEV_UID) {
-        return hasVIPAccess;
-    }
-    
-    if (hasVIPAccess && chat.isVerified) {
-        return userProfile?.selectedVerifiedContacts?.includes(chat.contactUserId);
-    }
-    
-    return false;
-  });
-
-  const filteredRegularChats = allMatchingChats.filter(chat => {
-      if (chat.isBot) return false;
-      const isVerifiedPerson = verifiedPersons.some(vp => vp.id === chat.id);
-      return !isVerifiedPerson;
-  });
-  
-  // If AI chat exists and wasn't found by search, add it to the list to display.
-  const finalRegularChats = (searchTerm && aiAssistantChat && !filteredRegularChats.some(c => c.id === aiAssistantChat.id))
-      ? filteredRegularChats
-      : filteredRegularChats;
-
     if (loading) {
         return (
             <div className="flex flex-col h-full bg-secondary items-center justify-center p-4">
@@ -252,74 +225,48 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0"
-                onClick={() => setIsAddContactOpen(true)}
-                disabled={!currentUserId}
-                aria-label="Add Contact by Email"
-              >
-                <UserPlus className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Add Contact by Email</p>
-            </TooltipContent>
-          </Tooltip>
+           <Tooltip>
+              <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() => setIsAddContactOpen(true)}
+                    disabled={!currentUserId}
+                    aria-label="Add Contact by Email"
+                  >
+                    <UserPlus className="h-5 w-5" />
+                  </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Add Contact by Email</p></TooltipContent>
+            </Tooltip>
+           {hasVIPAccess && (
+             <Tooltip>
+               <TooltipTrigger asChild>
+                 <Button
+                   variant="ghost"
+                   size="icon"
+                   className="shrink-0"
+                   onClick={() => setIsSelectVerifiedOpen(true)}
+                 >
+                   <Edit className="h-5 w-5" />
+                 </Button>
+               </TooltipTrigger>
+               <TooltipContent><p>Select Verified Users</p></TooltipContent>
+             </Tooltip>
+           )}
         </div>
 
         <ScrollArea className="flex-1">
-           {allMatchingChats.length === 0 && !loading && (
+           {sortedChats.length > 0 ? (
+                <div className="p-2 pt-3 space-y-1">
+                    {renderChatItems(sortedChats)}
+                </div>
+            ) : (
                 <p className="p-4 text-center text-sm text-muted-foreground">
-                    No chats found. Add a contact to start messaging!
+                    {searchTerm ? `No chats found for "${searchTerm}"` : "No chats found. Add a contact to start messaging!"}
                 </p>
             )}
-
-          { (aiAssistantChat || finalRegularChats.length > 0) && (
-            <div className="p-2 pt-3">
-                <h2 className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                   <MessageCircle className="h-3.5 w-3.5" />
-                   Chats
-                </h2>
-                <div className="pt-1 space-y-1">
-                    {aiAssistantChat && renderChatItems([aiAssistantChat])}
-                    {renderChatItems(finalRegularChats)}
-                </div>
-            </div>
-          )}
-
-          {(finalRegularChats.length > 0 || aiAssistantChat) && verifiedPersons.length > 0 && <Separator className="mx-2 my-2" />}
-
-          {hasVIPAccess && (
-            <div className="p-2 pt-1">
-                <div className="flex justify-between items-center px-2">
-                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5" />
-                        Verified Persons
-                    </h2>
-                    {hasVIPAccess && (
-                        <Button variant="ghost" size="sm" className="h-auto p-1 text-xs" onClick={() => setIsSelectVerifiedOpen(true)}>
-                            <Edit className="h-3 w-3 mr-1" />
-                            {selectedCount < vipLimit ? 'Select' : 'View'}
-                        </Button>
-                    )}
-                </div>
-                 {verifiedPersons.length > 0 ? (
-                    <div className={cn("pt-1 space-y-1", verifiedPersons.length > 0 ? 'pb-2' : '')}>
-                       {renderChatItems(verifiedPersons)}
-                    </div>
-                 ) : (
-                    <p className="p-2 text-xs text-muted-foreground">
-                        {selectedCount >= vipLimit ? 'Your selected contacts will appear here.' : 
-                         'Use the "Select" button to add verified users.'
-                        }
-                    </p>
-                 )}
-            </div>
-          )}
         </ScrollArea>
 
         {currentUserId && (
