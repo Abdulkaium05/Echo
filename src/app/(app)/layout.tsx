@@ -163,7 +163,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
       </header>
 
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col">
           <div className={cn("h-full md:hidden", {
               'hidden': isViewingChat || pathname !== '/chat', 
               'block': pathname === '/chat' && !isViewingChat,  

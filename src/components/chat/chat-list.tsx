@@ -1,7 +1,7 @@
 // src/components/chat/chat-list.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatItem, type ChatItemProps } from './chat-item';
@@ -67,27 +67,29 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     : getVerifiedContactLimit(userProfile?.vipPack);
   
   useEffect(() => {
+    if (!currentUserId || !userProfile) {
+        console.warn("ChatList: No current user ID or profile provided. Waiting for auth.");
+        setLoading(false);
+        return;
+    }
+
     setLoading(true);
     setError(null);
     setChats([]);
-
-    if (!currentUserId || !userProfile) {
-        console.warn("ChatList: No current user ID or profile provided.");
-        setLoading(false);
-        return () => {};
-    }
-
+    
     console.log("ChatList: Subscribing to chats for user:", currentUserId);
+    
     const unsubscribe = getUserChats(
         currentUserId,
-        userProfile, // Pass the entire profile to ensure correct filtering
+        userProfile, // Pass the full, stable profile for the subscription
         (fetchedChats: Chat[]) => {
+            console.log(`ChatList: Received ${fetchedChats.length} chats for user ${currentUserId}`);
             const chatItems = fetchedChats.map(chat => mapChatToChatItem(
                 chat, 
                 currentUserId,
             ));
             setChats(chatItems);
-            setLoading(false);
+            if (loading) setLoading(false);
         },
         (err) => {
             console.error("ChatList: Error fetching chats:", err);
@@ -95,9 +97,13 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
             setLoading(false);
         }
     );
-    return () => unsubscribe();
 
-  }, [currentUserId, userProfile]); 
+    return () => {
+        console.log("ChatList: Unsubscribing from chats for user:", currentUserId);
+        unsubscribe();
+    };
+}, [currentUserId, userProfile]);
+
 
   const handleBlockUser = (userId: string, userName: string) => {
     setDialogState({ isOpen: true, type: 'block', userId, userName });

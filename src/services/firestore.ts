@@ -237,10 +237,12 @@ const ensureAllUserChatsExist = (activeUserId: string) => {
 
 let chatListListeners: Array<(chats: Chat[]) => void> = [];
 
-const notifyChatListListeners = (userProfile: UserProfile) => {
+const notifyChatListListeners = () => {
+    const userProfile = mockLocalUsers.find(u => u.uid === CURRENT_DEMO_USER_ID);
+
     if (!userProfile) {
-        console.warn("notifyChatListListeners: No user profile provided for filtering.");
-        chatListListeners.forEach(listener => listener([])); // Notify with empty list
+        console.warn("notifyChatListListeners: No current user profile found for filtering. Notifying with empty list.");
+        chatListListeners.forEach(listener => listener([]));
         return;
     }
     
@@ -300,19 +302,22 @@ const notifyChatListListeners = (userProfile: UserProfile) => {
 
 export const getUserChats = (
     userId: string,
-    userProfile: UserProfile, // Now requires the full profile for filtering
+    userProfile: UserProfile,
     callback: (chats: Chat[]) => void,
     onError: (error: Error) => void
 ): (() => void) => {
   console.log(`[getUserChats] Registering listener for user: ${userId}`);
+  
+  if (userId !== CURRENT_DEMO_USER_ID) {
+      console.warn(`[getUserChats] Subscribing user (${userId}) does not match current demo user (${CURRENT_DEMO_USER_ID}). This might cause issues.`);
+  }
 
   if (!chatListListeners.includes(callback)) {
       chatListListeners.push(callback);
   }
 
-  // Initial call
   try {
-    notifyChatListListeners(userProfile);
+    notifyChatListListeners();
   } catch (e: any) {
       onError(e);
   }
@@ -357,10 +362,7 @@ export const createChat = async (userId1: string, userId2: string): Promise<stri
   }
   console.log(`[createChat] New chat created with ID: ${newChatId}`);
   
-  const currentUserProfile = await getUserProfile(userId1);
-  if (currentUserProfile) {
-      notifyChatListListeners(currentUserProfile);
-  }
+  notifyChatListListeners();
 
   return Promise.resolve(newChatId);
 };
@@ -506,9 +508,7 @@ export const sendMessage = async (
   console.log(`[sendMessage] Message added to chat ${chatId}:`, newMessage);
 
   notifyMessageListeners(chatId);
-  if (senderProfile) {
-    notifyChatListListeners(senderProfile);
-  }
+  notifyChatListListeners();
 
   // --- Start of new notification logic ---
   const chat = mockChats.find(c => c.id === chatId);
@@ -648,10 +648,7 @@ export const deleteMessage = async (chatId: string, messageId: string): Promise<
                      chat.lastMessage = "Chat cleared.";
                 }
             }
-            const senderProfile = mockLocalUsers.find(u => u.uid === deletedMessage.senderId);
-            if (senderProfile) {
-                notifyChatListListeners(senderProfile);
-            }
+            notifyChatListListeners();
         }
     }
 
@@ -667,10 +664,7 @@ export const removeChat = (chatId: string): void => {
         mockChats.splice(chatIndex, 1);
         delete mockMessages[chatId];
     }
-    const currentUserProfile = mockLocalUsers.find(u => u.uid === CURRENT_DEMO_USER_ID);
-    if(currentUserProfile) {
-        notifyChatListListeners(currentUserProfile);
-    }
+    notifyChatListListeners();
 }
 
 
@@ -685,7 +679,7 @@ export const updateVIPStatus = async (userId: string, isVIP: boolean, vipPack?: 
         mockLocalUsers[userIndex].selectedVerifiedContacts = [];
         mockLocalUsers[userIndex].hasMadeVipSelection = false;
     }
-    notifyChatListListeners(mockLocalUsers[userIndex]);
+    notifyChatListListeners();
   } else {
       console.warn(`[updateVIPStatus] User ${userId} not found to update VIP status.`);
   }
@@ -749,18 +743,33 @@ export const mapChatToChatItem = (
     currentUserId: string,
 ): ChatItemProps => {
   const otherParticipantId = chat.participants.find(p => p !== currentUserId);
-  const otherDetails = otherParticipantId ? chat.participantDetails?.[otherParticipantId] : undefined;
+  
+  if (!otherParticipantId) {
+      console.warn(`Could not find other participant for chat ${chat.id} and user ${currentUserId}`);
+      return { // Return a fallback object
+        id: chat.id!,
+        name: 'Invalid Chat',
+        contactUserId: '',
+        lastMessage: 'Error: Could not load chat details.',
+        timestamp: '',
+        lastMessageTimestampValue: 0,
+        href: `/chat/${chat.id}`,
+      } as ChatItemProps;
+  }
+  
+  const otherDetails = chat.participantDetails?.[otherParticipantId];
 
   let name = otherDetails?.name || 'Chat User';
-  if (otherParticipantId === BOT_UID && name === 'Chat User') name = 'Blue Bird (AI Assistant)';
-  if (otherParticipantId === DEV_UID && name === 'Chat User') name = 'Dev Team';
-
   const avatarUrl = otherDetails?.avatarUrl;
-  const isContactDevTeam = !!otherDetails?.isDevTeam || otherParticipantId === DEV_UID;
-  const isContactBot = !!otherDetails?.isBot || otherParticipantId === BOT_UID;
+
+  const isContactDevTeam = otherParticipantId === DEV_UID;
+  const isContactBot = otherParticipantId === BOT_UID;
   const isContactGenerallyVerified = !!otherDetails?.isVerified;
   const isContactCreator = !!otherDetails?.isCreator;
   const isContactActuallyVIP = !!otherDetails?.isVIP;
+  
+  if (isContactBot) name = 'Blue Bird (AI Assistant)';
+  if (isContactDevTeam) name = 'Dev Team';
 
   let iconIdentifier: string | undefined = undefined;
   if (isContactBot && avatarUrl === 'outline-bird-avatar') { 
@@ -768,8 +777,6 @@ export const mapChatToChatItem = (
   } else if (isContactDevTeam) {
       iconIdentifier = 'dev-team-svg';
   }
-
-  const isVerifiedForSectioning = isContactGenerallyVerified;
 
   const isLastMessageSentByCurrentUser = chat.lastMessageSenderId === currentUserId;
 
@@ -784,7 +791,7 @@ export const mapChatToChatItem = (
     lastMessage: chat.lastMessage,
     timestamp: formatTimestamp(chat.lastMessageTimestamp),
     lastMessageTimestampValue: chat.lastMessageTimestamp.seconds,
-    isVerified: isVerifiedForSectioning,
+    isVerified: isContactGenerallyVerified,
     isContactVIP: isContactActuallyVIP,
     isDevTeam: isContactDevTeam,
     isBot: isContactBot,

@@ -1,6 +1,7 @@
 
 import type {NextConfig} from 'next';
 
+// Invalidate cache
 const nextConfig: NextConfig = {
   /* config options here */
   typescript: {
