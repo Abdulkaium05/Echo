@@ -158,6 +158,7 @@ export default function IndividualChatPage() {
    }
 
   return (
+    <div className="h-full">
      <ChatWindow
        chatId={chatPartnerDetails.id}
        chatPartnerId={chatPartnerDetails.partnerActualId}
@@ -168,5 +169,6 @@ export default function IndividualChatPage() {
        isVIP={chatPartnerDetails.isVIP} 
        isCreator={chatPartnerDetails.isCreator} // Pass creator status for badge display
      />
+    </div>
   );
 }

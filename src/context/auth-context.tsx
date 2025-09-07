@@ -15,6 +15,7 @@ import type { BadgeType } from '@/app/(app)/layout';
 
 export interface UserProfile {
   uid: string;
+  displayUid?: string; // The new 8-digit user ID
   name: string;
   email: string | null;
   avatarUrl?: string; 
@@ -29,6 +30,7 @@ export interface UserProfile {
   lastSeen?: Timestamp; 
   selectedVerifiedContacts?: string[]; 
   hasMadeVipSelection?: boolean;
+  blockedUsers?: string[]; // List of UIDs this user has blocked
   
   // Badge Management
   badgeOrder?: BadgeType[];
@@ -152,8 +154,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const newUserUid = `user-${Date.now()}`;
+    const newUserDisplayUid = Math.floor(10000000 + Math.random() * 90000000).toString();
+
     const newUserProfile: UserProfile = {
       uid: newUserUid,
+      displayUid: newUserDisplayUid,
       name: name,
       email: email.toLowerCase(),
       avatarUrl: avatarDataUri || `https://picsum.photos/seed/${newUserUid}/200`,
@@ -164,6 +169,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as Timestamp,
       selectedVerifiedContacts: [],
       hasMadeVipSelection: false,
+      blockedUsers: [],
       badgeOrder: [],
       chatColorPreferences: {},
     };

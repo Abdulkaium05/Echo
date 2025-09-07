@@ -1,3 +1,4 @@
+
 // src/components/chat/add-contact-dialog.tsx
 'use client';
 
@@ -15,11 +16,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Loader2, ShieldAlert } from "lucide-react";
+import { UserPlus, Loader2, ShieldAlert, QrCode } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { findUserByEmail, findChatBetweenUsers, createChat, BOT_UID, DEV_UID } from '@/services/firestore';
-import { useAuth } from '@/context/auth-context';
+import { useAuth } from '@/hooks/use-auth';
 import { useVIP } from '@/context/vip-context';
+import { ScanQrDialog } from './scan-qr-dialog'; // Import the new component
+import { Separator } from '../ui/separator';
 
 interface AddContactDialogProps {
   isOpen: boolean;
@@ -33,6 +36,7 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
   const { hasVipAccess } = useVIP();
   const [contactEmail, setContactEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isScanQrOpen, setIsScanQrOpen] = useState(false); // State for ScanQrDialog
 
   const handleAddContact = async () => {
     if (!contactEmail.trim() || !/\S+@\S+\.\S+/.test(contactEmail)) {
@@ -110,18 +114,35 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
      onOpenChange(false);
   };
 
+  const handleOpenScanner = () => {
+    onOpenChange(false); // Close this dialog
+    setIsScanQrOpen(true); // Open the scanner dialog
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!isLoading) onOpenChange(open); }}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-             <UserPlus className="h-5 w-5" /> Add Contact by Email
-          </DialogTitle>
-          <DialogDescription>
-            Enter the email address of the user you want to chat with.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!isLoading) onOpenChange(open); }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" /> Add New Contact
+            </DialogTitle>
+            <DialogDescription>
+              Add a new person to your chat list by their email address or by scanning their QR code.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Button variant="outline" className="w-full" onClick={handleOpenScanner}>
+            <QrCode className="mr-2 h-4 w-4" />
+            Scan QR Code
+          </Button>
+          
+          <div className="flex items-center my-2">
+            <Separator className="flex-1" />
+            <span className="px-2 text-xs text-muted-foreground">OR</span>
+            <Separator className="flex-1" />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="contact-email-dialog">Email Address</Label>
             <Input
@@ -134,19 +155,25 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
               disabled={isLoading}
             />
           </div>
-        </div>
-        <DialogFooter>
-           <DialogClose asChild>
-              <Button type="button" variant="secondary" onClick={handleCancel} disabled={isLoading}>
-                  Cancel
+          
+          <DialogFooter className="mt-4">
+            <DialogClose asChild>
+                <Button type="button" variant="secondary" onClick={handleCancel} disabled={isLoading}>
+                    Cancel
+                </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleAddContact} disabled={isLoading || !contactEmail.trim()}>
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isLoading ? 'Adding...' : 'Add Contact'}
               </Button>
-           </DialogClose>
-           <Button type="button" onClick={handleAddContact} disabled={isLoading || !contactEmail.trim()}>
-             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-             {isLoading ? 'Adding...' : 'Add Contact'}
-            </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <ScanQrDialog 
+        isOpen={isScanQrOpen}
+        onOpenChange={setIsScanQrOpen}
+      />
+    </>
   );
 }

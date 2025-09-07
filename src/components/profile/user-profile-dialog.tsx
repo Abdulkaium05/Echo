@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { UserProfile } from "@/context/auth-context";
-import { Crown, Mail, MessageSquare, Loader2, Wrench, Bot, Cake, Clock } from "lucide-react";
+import { Crown, Mail, MessageSquare, Loader2, Wrench, Bot, Cake, Clock, UserCircle2 } from "lucide-react";
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { useRouter } from "next/navigation";
 import { findChatBetweenUsers, createChat, formatLastSeen } from '@/services/firestore';
@@ -134,6 +134,12 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
             </DialogHeader>
 
             <div className="space-y-3">
+                 {profile.displayUid && !profile.isBot && !profile.isDevTeam && (
+                    <div className="flex items-center text-sm p-3 rounded-md border bg-secondary/50">
+                        <UserCircle2 className="h-5 w-5 text-muted-foreground mr-3" />
+                        <span className="text-muted-foreground font-mono tracking-wider">{profile.displayUid}</span>
+                    </div>
+                 )}
                  {profile.email && (
                     <div className="flex items-center text-sm p-3 rounded-md border bg-secondary/50">
                         <Mail className="h-5 w-5 text-muted-foreground mr-3" />

@@ -369,7 +369,7 @@ export default function SubscribePage() {
             <h2 className="text-xl font-semibold">Or Choose a Timed Plan</h2>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {subscriptionPlans.map((plan, index) => (
           <SubscriptionCard
             key={index}
@@ -386,7 +386,7 @@ export default function SubscribePage() {
   );
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6 lg:px-8 overflow-y-auto">
+    <div className="container mx-auto py-8 px-4 md:px-6 lg:px-8 h-full overflow-y-auto">
       <div className="w-full">
         {hasVipBadge ? renderManageSubscription() : renderSubscribe()}
 

@@ -1,7 +1,9 @@
+
 // src/context/block-user-context.tsx
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
+import { useAuth } from './auth-context';
 
 interface BlockUserContextProps {
   blockedUserIds: string[];
@@ -15,10 +17,12 @@ const BlockUserContext = createContext<BlockUserContextProps | undefined>(undefi
 const BLOCKED_USERS_STORAGE_KEY = 'echo_blocked_users';
 
 export const BlockUserProvider = ({ children }: { children: ReactNode }) => {
+  const { user, userProfile, updateMockUserProfile } = useAuth();
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    // Load from local storage initially
     try {
       const storedBlockedUsers = localStorage.getItem(BLOCKED_USERS_STORAGE_KEY);
       if (storedBlockedUsers) {
@@ -32,6 +36,17 @@ export const BlockUserProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    // Sync with userProfile when it loads
+    if (userProfile && isLoaded) {
+      // Prioritize userProfile.blockedUsers as the source of truth if it exists
+      const profileBlockedUsers = userProfile.blockedUsers || [];
+      setBlockedUserIds(profileBlockedUsers);
+      localStorage.setItem(BLOCKED_USERS_STORAGE_KEY, JSON.stringify(profileBlockedUsers));
+    }
+  }, [userProfile, isLoaded]);
+
+  useEffect(() => {
+    // Save to local storage whenever the list changes (and is loaded)
     if (isLoaded) {
         try {
             localStorage.setItem(BLOCKED_USERS_STORAGE_KEY, JSON.stringify(blockedUserIds));
@@ -42,15 +57,24 @@ export const BlockUserProvider = ({ children }: { children: ReactNode }) => {
   }, [blockedUserIds, isLoaded]);
 
   const addBlockedUser = useCallback((userId: string) => {
-    setBlockedUserIds(prev => {
-      if (prev.includes(userId)) return prev;
-      return [...prev, userId];
-    });
-  }, []);
+    if (!user || !userProfile) return;
+    
+    const newBlockedList = Array.from(new Set([...(userProfile.blockedUsers || []), userId]));
+
+    updateMockUserProfile(user.uid, { blockedUsers: newBlockedList });
+
+    setBlockedUserIds(newBlockedList);
+  }, [user, userProfile, updateMockUserProfile]);
   
   const unblockUser = useCallback((userId: string) => {
-    setBlockedUserIds(prev => prev.filter(id => id !== userId));
-  }, []);
+    if (!user || !userProfile) return;
+
+    const newBlockedList = (userProfile.blockedUsers || []).filter(id => id !== userId);
+    
+    updateMockUserProfile(user.uid, { blockedUsers: newBlockedList });
+
+    setBlockedUserIds(newBlockedList);
+  }, [user, userProfile, updateMockUserProfile]);
 
   const isUserBlocked = useCallback((userId: string) => {
     return blockedUserIds.includes(userId);

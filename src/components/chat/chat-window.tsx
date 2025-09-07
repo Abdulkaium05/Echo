@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './message-bubble';
 import { MessageInput, type MessageInputHandle } from './message-input';
 import { VerifiedBadge } from '@/components/verified-badge';
-import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X } from 'lucide-react';
+import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban } from 'lucide-react';
 import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
@@ -83,6 +83,8 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
   const [isTransparentMode, setIsTransparentMode] = useState(false);
 
   const customBubbleColor = userProfile?.chatColorPreferences?.[chatId];
+  const amBlockedByPartner = partnerProfileDetails?.blockedUsers?.includes(currentUser?.uid ?? '') ?? false;
+
 
   useEffect(() => {
     // This effect ensures the component re-renders when transparent mode is toggled globally.
@@ -401,7 +403,7 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
   return (
     <>
     <div className="flex flex-col h-full bg-background">
-      <div className="flex items-center p-2 md:p-3 border-b bg-secondary">
+      <div className="flex items-center p-2 md:p-3 border-b bg-secondary shrink-0">
          <Link href="/chat" className="md:hidden mr-1">
            <Button variant="ghost" size="icon" className="h-8 w-8">
              <ArrowLeft className="h-5 w-5" />
@@ -483,8 +485,8 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <ScrollArea className="flex-1 p-3 md:p-4" viewportRef={scrollViewportRef}>
+      <div className="flex-1 relative overflow-y-auto">
+        <ScrollArea className="absolute inset-0 p-3 md:p-4" viewportRef={scrollViewportRef}>
            {loadingMessages && (
                <div className="flex flex-col justify-center items-center h-full text-center p-4">
                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -529,24 +531,33 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
              )
            })}
         </ScrollArea>
-
-        {chatPartnerId === BOT_UID && isBotTyping && (
-          <div className="px-3 md:px-4 pb-1 pt-1 text-left flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            <p className="text-xs text-muted-foreground italic">Blue Bird is typing...</p>
-          </div>
-        )}
       </div>
 
-      <MessageInput
-         ref={messageInputRef}
-         onSendMessage={handleSendMessage}
-         disabled={loadingMessages || !!errorMessages || isSending}
-         isSending={isSending}
-         replyingTo={replyingToMessage}
-         onCancelReply={cancelReply}
-         customBubbleColor={customBubbleColor}
-       />
+      {chatPartnerId === BOT_UID && isBotTyping && (
+        <div className="px-3 md:px-4 pb-1 pt-1 text-left flex items-center gap-2 shrink-0">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <p className="text-xs text-muted-foreground italic">Blue Bird is typing...</p>
+        </div>
+      )}
+
+      <div className="shrink-0">
+        {amBlockedByPartner ? (
+          <div className="p-4 border-t bg-secondary text-center text-sm text-destructive font-medium flex items-center justify-center gap-2">
+            <Ban className="h-4 w-4" />
+            <span>You have been blocked by this user.</span>
+          </div>
+        ) : (
+          <MessageInput
+            ref={messageInputRef}
+            onSendMessage={handleSendMessage}
+            disabled={loadingMessages || !!errorMessages || isSending}
+            isSending={isSending}
+            replyingTo={replyingToMessage}
+            onCancelReply={cancelReply}
+            customBubbleColor={customBubbleColor}
+          />
+        )}
+      </div>
     </div>
      {partnerProfileDetails && (
         <UserProfileDialog

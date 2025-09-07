@@ -1,3 +1,4 @@
+
 // src/app/(app)/layout.tsx
 'use client';
 
@@ -7,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, Star } from 'lucide-react';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, Star, QrCode } from 'lucide-react';
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ import { useAuth, type UserProfile } from '@/context/auth-context';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { NotificationPopover } from '@/components/chat/notification-popover';
 import { MusicPlayerProvider } from '@/context/music-player-context';
+import { ShareProfileDialog } from '@/components/profile/share-profile-dialog'; // Import ShareProfileDialog
 
 export default function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -39,6 +41,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
   const [isAppearanceDialogOpen, setAppearanceDialogOpen] = useState(false);
   const [isAboutDialogOpen, setAboutDialogOpen] = useState(false);
+  const [isShareProfileDialogOpen, setShareProfileDialogOpen] = useState(false); // State for ShareProfileDialog
 
   const isViewingChat = /^\/chat\/[^/]+$/.test(pathname);
   const currentChatId = isViewingChat ? pathname.split('/')[2] : undefined;
@@ -138,6 +141,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
                       onOpenProfileSettings={() => setProfileDialogOpen(true)}
                       onOpenAppearanceSettings={() => setAppearanceDialogOpen(true)}
                       onOpenAboutDialog={() => setAboutDialogOpen(true)}
+                      onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)} // Pass handler
                   />
                 )}
               </div>
@@ -158,29 +162,26 @@ function AppLayout({ children }: { children: React.ReactNode }) {
                   onOpenProfileSettings={() => setProfileDialogOpen(true)}
                   onOpenAppearanceSettings={() => setAppearanceDialogOpen(true)}
                   onOpenAboutDialog={() => setAboutDialogOpen(true)}
+                  onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)} // Pass handler
               />
             )}
           </div>
       </header>
 
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col overflow-hidden">
           <div className={cn("h-full md:hidden", {
-              'hidden': isViewingChat || pathname !== '/chat', 
-              'block': pathname === '/chat' && !isViewingChat,  
+              'hidden': isViewingChat,
+              'block': !isViewingChat,
           })}>
-            {pathname === '/chat' && !isViewingChat && currentUser && <ChatList currentChatId={undefined} currentUserId={currentUser.uid} />}
+            {currentUser && <ChatList currentChatId={currentChatId} currentUserId={currentUser.uid} />}
           </div>
 
-          <div className={cn("h-full md:hidden", {
-              'hidden': !isViewingChat && pathname === '/chat', 
-              'block': isViewingChat || pathname !== '/chat', 
+          <div className={cn("h-full", {
+              'hidden md:block': !isViewingChat,
+              'block': isViewingChat,
           })}>
               {children}
           </div>
-
-         <div className="hidden md:flex h-full">
-            {children}
-         </div>
       </main>
 
       {currentUserProfile && (
@@ -188,7 +189,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           <ProfileSettingsDialog
             isOpen={isProfileDialogOpen}
             onOpenChange={setProfileDialogOpen}
-            user={currentUserProfile} 
+            user={currentUserProfile}
             onProfileUpdate={handleProfileUpdate}
           />
           <AppearanceSettingsDialog
@@ -198,6 +199,11 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           <AboutDialog
             isOpen={isAboutDialogOpen}
             onOpenChange={setAboutDialogOpen}
+          />
+          <ShareProfileDialog
+            isOpen={isShareProfileDialogOpen}
+            onOpenChange={setShareProfileDialogOpen}
+            user={currentUserProfile}
           />
         </>
       )}
@@ -211,6 +217,7 @@ interface UserMenuProps {
   onOpenProfileSettings: () => void;
   onOpenAppearanceSettings: () => void;
   onOpenAboutDialog: () => void;
+  onOpenShareProfileDialog: () => void; // New prop
 }
 
 export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot';
@@ -224,7 +231,7 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
 };
 
 
-function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog }: UserMenuProps) {
+function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog }: UserMenuProps) {
    const fallbackInitials = user.name ? user.name.substring(0, 2).toUpperCase() : '??';
 
    const earnedBadges: BadgeType[] = [];
@@ -276,6 +283,10 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
            <DropdownMenuItem onClick={onOpenProfileSettings}>
              <Edit className="mr-2 h-4 w-4" />
              <span>Edit Profile</span>
+           </DropdownMenuItem>
+           <DropdownMenuItem onClick={onOpenShareProfileDialog}>
+             <QrCode className="mr-2 h-4 w-4" />
+             <span>Share Profile</span>
            </DropdownMenuItem>
             <DropdownMenuItem onClick={onOpenAppearanceSettings}>
               <Palette className="mr-2 h-4 w-4" />
