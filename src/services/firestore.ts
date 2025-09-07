@@ -266,7 +266,10 @@ const notifyChatListListeners = () => {
 
         if (otherParticipantProfile.isVerified && !otherParticipantProfile.isDevTeam && !otherParticipantProfile.isBot) {
             if (!hasVIPAccess) return false;
-            return userProfile?.selectedVerifiedContacts?.includes(otherParticipantId!);
+            // A non-dev/bot verified contact should only appear if they are in the user's selected list.
+            if (!userProfile.selectedVerifiedContacts?.includes(otherParticipantId)) {
+                return false;
+            }
         }
         
         return true;
@@ -302,7 +305,6 @@ const notifyChatListListeners = () => {
 
 export const getUserChats = (
     userId: string,
-    userProfile: UserProfile,
     callback: (chats: Chat[]) => void,
     onError: (error: Error) => void
 ): (() => void) => {

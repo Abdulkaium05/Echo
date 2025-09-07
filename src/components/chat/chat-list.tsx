@@ -67,8 +67,8 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     : getVerifiedContactLimit(userProfile?.vipPack);
   
   useEffect(() => {
-    if (!currentUserId || !userProfile) {
-        console.warn("ChatList: No current user ID or profile provided. Waiting for auth.");
+    if (!currentUserId) {
+        console.warn("ChatList: No current user ID provided. Waiting for auth.");
         setLoading(false);
         return;
     }
@@ -79,9 +79,11 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     
     console.log("ChatList: Subscribing to chats for user:", currentUserId);
     
+    // The userProfile object is now passed directly here. 
+    // The firestore service will use this stable reference for the initial fetch,
+    // and its internal `notifyChatListListeners` will always grab the latest profile for updates.
     const unsubscribe = getUserChats(
         currentUserId,
-        userProfile, // Pass the full, stable profile for the subscription
         (fetchedChats: Chat[]) => {
             console.log(`ChatList: Received ${fetchedChats.length} chats for user ${currentUserId}`);
             const chatItems = fetchedChats.map(chat => mapChatToChatItem(
@@ -102,7 +104,7 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
         console.log("ChatList: Unsubscribing from chats for user:", currentUserId);
         unsubscribe();
     };
-}, [currentUserId, userProfile]);
+}, [currentUserId]); // <<-- Dependency array is now stable and won't cause loops
 
 
   const handleBlockUser = (userId: string, userName: string) => {
