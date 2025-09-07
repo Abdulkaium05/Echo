@@ -302,17 +302,17 @@ export function MessageBubble({
   const formattedTimestamp = formatTimestamp(timestamp);
   
   const colorMap = {
-    'sky-blue':    { solid: 'bg-sky-500',           text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-sky-500/20',    border: 'border-sky-500/50'    }},
-    'red':         { solid: 'bg-red-500',           text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-red-500/20',    border: 'border-red-500/50'    }},
-    'light-green': { solid: 'bg-green-500',         text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-green-500/20',  border: 'border-green-500/50'  }},
-    'yellow':      { solid: 'bg-yellow-400',        text: 'text-black dark:text-black',           replyBg: 'bg-black/10', replySender: 'text-black/80',            transparent: { bg: 'bg-yellow-400/20', border: 'border-yellow-500/50' }},
-    'orange':      { solid: 'bg-orange-500',        text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-orange-500/20', border: 'border-orange-500/50' }},
-    'purple':      { solid: 'bg-purple-500',        text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-purple-500/20', border: 'border-purple-500/50' }},
-    'pink':        { solid: 'bg-pink-500',          text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-pink-500/20',   border: 'border-pink-500/50'   }},
-    'indigo':      { solid: 'bg-indigo-500',        text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-indigo-500/20', border: 'border-indigo-500/50' }},
-    'teal':        { solid: 'bg-teal-500',          text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-teal-500/20',   border: 'border-teal-500/50'   }},
-    'white':       { solid: 'bg-white',             text: 'text-black dark:text-black',           replyBg: 'bg-black/10', replySender: 'text-black/80',            transparent: { bg: 'bg-white/20',      border: 'border-gray-300/50'   }},
-    'black':       { solid: 'bg-black',             text: 'text-white dark:text-white',           replyBg: 'bg-white/20', replySender: 'text-white/90',            transparent: { bg: 'bg-black/20',      border: 'border-gray-500/50'   }},
+    'sky-blue':    { solid: 'bg-sky-500',           text: 'text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-sky-500/20',    border: 'border-sky-500/50'    }},
+    'red':         { solid: 'bg-red-500',           text: 'text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-red-500/20',    border: 'border-red-500/50'    }},
+    'light-green': { solid: 'bg-green-500',         text: 'text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-green-500/20',  border: 'border-green-500/50'  }},
+    'yellow':      { solid: 'bg-yellow-400',        text: 'text-black',           replyBg: 'bg-black/10', replySender: 'text-black/80',            transparent: { bg: 'bg-yellow-400/20', border: 'border-yellow-500/50' }},
+    'orange':      { solid: 'bg-orange-500',        text: 'text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-orange-500/20', border: 'border-orange-500/50' }},
+    'purple':      { solid: 'bg-purple-500',        text: 'text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-purple-500/20', border: 'border-purple-500/50' }},
+    'pink':        { solid: 'bg-pink-500',          text: 'text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-pink-500/20',   border: 'border-pink-500/50'   }},
+    'indigo':      { solid: 'bg-indigo-500',        text: 'text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-indigo-500/20', border: 'border-indigo-500/50' }},
+    'teal':        { solid: 'bg-teal-500',          text: 'text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-teal-500/20',   border: 'border-teal-500/50'   }},
+    'white':       { solid: 'bg-white',             text: 'text-black',           replyBg: 'bg-black/10', replySender: 'text-black/80',            transparent: { bg: 'bg-white/20',      border: 'border-gray-300/50'   }},
+    'black':       { solid: 'bg-black',             text: 'text-white',           replyBg: 'bg-white/20', replySender: 'text-white/90',            transparent: { bg: 'bg-black/20',      border: 'border-gray-500/50'   }},
   };
   
   let bubbleClasses = "";
@@ -449,7 +449,7 @@ export function MessageBubble({
     <>
     <div
       className={cn(
-        "group/message-row flex w-full mb-1 items-end animate-in fade-in", 
+        "group/message-row flex w-full mb-4 items-end animate-in fade-in", 
         isSentByCurrentUser ? "justify-end" : "justify-start"
       )}
     >

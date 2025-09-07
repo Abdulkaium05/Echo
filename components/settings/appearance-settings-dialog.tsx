@@ -40,7 +40,8 @@ export function AppearanceSettingsDialog({ isOpen, onOpenChange }: AppearanceSet
     const savedTheme = localStorage.getItem('theme_color') as Theme | null;
     const savedTransparentMode = localStorage.getItem('transparent_mode') === 'true';
 
-    const initialMode = savedMode || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    // Set default to light mode if nothing is saved
+    const initialMode = savedMode || 'light';
     const initialTheme = savedTheme || 'theme-sky-blue';
     
     setMode(initialMode);
