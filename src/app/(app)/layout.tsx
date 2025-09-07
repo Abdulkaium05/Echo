@@ -1,4 +1,3 @@
-
 // src/app/(app)/layout.tsx
 'use client';
 
@@ -43,6 +42,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const [isAboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [isShareProfileDialogOpen, setShareProfileDialogOpen] = useState(false); // State for ShareProfileDialog
 
+  // This is the correct logic:
+  // isChatPage should be true for the main chat list and individual chats.
+  const isChatPage = /^\/chat(\/.*)?$/.test(pathname);
+  // isViewingChat should ONLY be true for individual chats, to hide the list on mobile.
   const isViewingChat = /^\/chat\/[^/]+$/.test(pathname);
   const currentChatId = isViewingChat ? pathname.split('/')[2] : undefined;
 
@@ -169,16 +172,20 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       <main className="flex-1 flex flex-col overflow-hidden">
+          {/* Mobile Chat List View */}
           <div className={cn("h-full md:hidden", {
-              'hidden': isViewingChat,
-              'block': !isViewingChat,
+              'block': pathname === '/chat', // Show only on the main chat list page
+              'hidden': pathname !== '/chat',
           })}>
             {currentUser && <ChatList currentChatId={currentChatId} currentUserId={currentUser.uid} />}
           </div>
 
+          {/* Mobile Content View (for individual chats AND other pages) */}
           <div className={cn("h-full", {
-              'hidden md:block': !isViewingChat,
-              'block': isViewingChat,
+              'block': pathname !== '/chat', // Show for any page that is NOT the main chat list
+              'hidden': pathname === '/chat',
+              'md:block': !isChatPage, // On desktop, show if not a chat page at all
+              'md:hidden': isChatPage && !isViewingChat, // On desktop, hide if on main chat list
           })}>
               {children}
           </div>
@@ -232,6 +239,7 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
 
 
 function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog }: UserMenuProps) {
+   const router = useRouter();
    const fallbackInitials = user.name ? user.name.substring(0, 2).toUpperCase() : '??';
 
    const earnedBadges: BadgeType[] = [];
@@ -274,11 +282,9 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
            </div>
          </DropdownMenuLabel>
          <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-             <Link href="/chat">
+          <DropdownMenuItem onClick={() => router.push('/chat')}>
                 <MessageSquare className="mr-2 h-4 w-4" />
                 <span>Chats</span>
-              </Link>
           </DropdownMenuItem>
            <DropdownMenuItem onClick={onOpenProfileSettings}>
              <Edit className="mr-2 h-4 w-4" />
@@ -292,24 +298,18 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
               <Palette className="mr-2 h-4 w-4" />
               <span>Theme</span>
             </DropdownMenuItem>
-           <DropdownMenuItem asChild>
-             <Link href="/subscribe">
+           <DropdownMenuItem onClick={() => router.push('/subscribe')}>
                <Crown className="mr-2 h-4 w-4 text-yellow-500" />
                <span>{user.isVIP ? 'Manage VIP' : 'Get VIP'}</span>
-             </Link>
-         </DropdownMenuItem>
-         <DropdownMenuItem asChild>
-             <Link href="/settings">
+           </DropdownMenuItem>
+         <DropdownMenuItem onClick={() => router.push('/settings')}>
                <Settings className="mr-2 h-4 w-4" />
                <span>More Settings</span>
-             </Link>
          </DropdownMenuItem>
          <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <Link href="/rate-report">
+          <DropdownMenuItem onClick={() => router.push('/rate-report')}>
               <Star className="mr-2 h-4 w-4" />
               <span>Rate &amp; Report</span>
-            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onOpenAboutDialog}>
              <Info className="mr-2 h-4 w-4" />
