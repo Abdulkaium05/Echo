@@ -896,7 +896,7 @@ export const getVerifiedUsers = async (): Promise<UserProfile[]> => {
 export const getVerifiedContactLimit = (vipPack?: string): number => {
     if (!vipPack) return 0;
     const pack = vipPack.toLowerCase();
-    if (pack.includes('gold') || pack.includes('platinum')) return 10;
+    if (pack.includes('gold') || pack.includes('platinum') || pack.includes('diamond') || pack.includes('elite')) return 10;
     if (pack.includes('starter') || pack.includes('bronze') || pack.includes('silver')) return 5;
     if (pack.includes('micro') || pack.includes('mini') || pack.includes('basic')) return 3;
     return 0;

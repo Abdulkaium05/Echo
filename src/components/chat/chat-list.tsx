@@ -79,9 +79,6 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     
     console.log("ChatList: Subscribing to chats for user:", currentUserId);
     
-    // The userProfile object is now passed directly here. 
-    // The firestore service will use this stable reference for the initial fetch,
-    // and its internal `notifyChatListListeners` will always grab the latest profile for updates.
     const unsubscribe = getUserChats(
         currentUserId,
         (fetchedChats: Chat[]) => {
@@ -104,7 +101,7 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
         console.log("ChatList: Unsubscribing from chats for user:", currentUserId);
         unsubscribe();
     };
-}, [currentUserId]); // <<-- Dependency array is now stable and won't cause loops
+}, [currentUserId]); // STABLE: Only re-subscribe when the user ID itself changes.
 
 
   const handleBlockUser = (userId: string, userName: string) => {

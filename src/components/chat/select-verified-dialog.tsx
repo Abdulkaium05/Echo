@@ -1,3 +1,4 @@
+
 // src/components/chat/select-verified-dialog.tsx
 'use client';
 
@@ -47,7 +48,7 @@ export function SelectVerifiedDialog({ isOpen, onOpenChange, limit }: SelectVeri
   useEffect(() => {
     if (isOpen) {
       setIsLoading(true);
-      setSearchTerm(''); // Reset search on open
+      setSearchTerm('');
       const currentSelection = userProfile?.selectedVerifiedContacts || [];
       setSelectedUsers(currentSelection);
       setInitialSelection(currentSelection);
@@ -100,11 +101,23 @@ export function SelectVerifiedDialog({ isOpen, onOpenChange, limit }: SelectVeri
     setIsSaving(true);
 
     try {
+      // Instantly update the profile in the context
       updateMockUserProfile(user.uid, { 
           selectedVerifiedContacts: selectedUsers,
+          hasMadeVipSelection: true,
       });
 
-      // Create chats for newly selected users if they don't exist
+      // Close the dialog immediately for a better user experience
+      onOpenChange(false);
+      
+      toast({
+        title: "Selection Saved",
+        description: !isUnlimited && selectedUsers.length >= limit
+          ? "Your verified contact list is now full for this subscription."
+          : `Your contact list has been updated. You can still select ${isUnlimited ? 'more' : limit - selectedUsers.length} more.`
+      });
+
+      // Asynchronously create chats in the background
       for (const uid of selectedUsers) {
           if (!initialSelection.includes(uid)) { // Only create chats for newly added users
             const chatExists = await findChatBetweenUsers(user.uid, uid);
@@ -114,17 +127,10 @@ export function SelectVerifiedDialog({ isOpen, onOpenChange, limit }: SelectVeri
           }
       }
 
-      toast({
-        title: "Selection Saved",
-        description: !isUnlimited && selectedUsers.length >= limit
-          ? "Your verified contact list is now full for this subscription."
-          : `Your contact list has been updated. You can still select ${isUnlimited ? 'more' : limit - selectedUsers.length} more.`
-      });
-      onOpenChange(false);
     } catch (error: any) {
       toast({
-        title: "Error Saving Selection",
-        description: error.message || "An unexpected error occurred.",
+        title: "Error Creating Chats",
+        description: error.message || "Could not create chats for new contacts.",
         variant: "destructive"
       });
     } finally {
@@ -140,7 +146,7 @@ export function SelectVerifiedDialog({ isOpen, onOpenChange, limit }: SelectVeri
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md flex flex-col h-[80vh]">
         <DialogHeader>
           <DialogTitle>Select Verified Persons</DialogTitle>
             <DialogDescription>
@@ -151,7 +157,7 @@ export function SelectVerifiedDialog({ isOpen, onOpenChange, limit }: SelectVeri
               Selections are final for the duration of your subscription.
             </DialogDescription>
         </DialogHeader>
-
+        
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -163,59 +169,61 @@ export function SelectVerifiedDialog({ isOpen, onOpenChange, limit }: SelectVeri
           />
         </div>
 
-        <ScrollArea className="h-64 -mx-4">
-          <div className="px-4">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="animate-spin" />
-              </div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
-                  <AlertCircle className="h-8 w-8 mb-2"/>
-                  <p>No verified users found{searchTerm ? ` for "${searchTerm}"` : ""}.</p>
-              </div>
-            ) : (
-              <div className="space-y-1 p-1">
-                {filteredUsers.map(vUser => (
-                  <div key={vUser.uid} 
-                    className={cn(
-                        "flex items-center space-x-3 p-2 rounded-md hover:bg-accent cursor-pointer",
-                        selectedUsers.includes(vUser.uid) && "bg-accent/70",
-                        initialSelection.includes(vUser.uid) && "opacity-60 cursor-not-allowed" // Style for locked-in users
-                    )}
-                    onClick={() => handleSelect(vUser.uid)}
-                  >
-                    <Checkbox
-                      id={`user-${vUser.uid}`}
-                      checked={selectedUsers.includes(vUser.uid)}
-                      disabled={
-                          initialSelection.includes(vUser.uid) || // Cannot change initial selections
-                          (!selectedUsers.includes(vUser.uid) && selectedUsers.length >= limit) // Limit reached
-                      }
-                      className="pointer-events-none"
-                    />
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={vUser.avatarUrl} alt={vUser.name} data-ai-hint="user avatar" />
-                      <AvatarFallback>{vUser.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <Label
-                      htmlFor={`user-${vUser.uid}`}
+        <div className="flex-1 min-h-0">
+            <ScrollArea className="h-full">
+            <div className="pr-4">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="animate-spin" />
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
+                    <AlertCircle className="h-8 w-8 mb-2"/>
+                    <p>No verified users found{searchTerm ? ` for "${searchTerm}"` : ""}.</p>
+                </div>
+              ) : (
+                <div className="space-y-1 p-1">
+                  {filteredUsers.map(vUser => (
+                    <div key={vUser.uid} 
                       className={cn(
-                          "flex-1 text-sm font-medium flex items-center gap-1.5",
-                          initialSelection.includes(vUser.uid) ? "cursor-not-allowed" : "cursor-pointer"
+                          "flex items-center space-x-3 p-2 rounded-md hover:bg-accent cursor-pointer",
+                          selectedUsers.includes(vUser.uid) && "bg-accent/70",
+                          initialSelection.includes(vUser.uid) && "opacity-60 cursor-not-allowed" // Style for locked-in users
                       )}
+                      onClick={() => handleSelect(vUser.uid)}
                     >
-                      <span>{vUser.name}</span>
-                      {vUser.isCreator && <CreatorLetterCBBadgeIcon className="h-4 w-4" />}
-                      {vUser.isVIP && <Crown className="h-4 w-4 text-yellow-500" />}
-                      {vUser.isVerified && !vUser.isCreator && <VerifiedBadge className="h-4 w-4" />}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+                      <Checkbox
+                        id={`user-${vUser.uid}`}
+                        checked={selectedUsers.includes(vUser.uid)}
+                        disabled={
+                            initialSelection.includes(vUser.uid) || // Cannot change initial selections
+                            (!selectedUsers.includes(vUser.uid) && selectedUsers.length >= limit) // Limit reached
+                        }
+                        className="pointer-events-none"
+                      />
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={vUser.avatarUrl} alt={vUser.name} data-ai-hint="user avatar" />
+                        <AvatarFallback>{vUser.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <Label
+                        htmlFor={`user-${vUser.uid}`}
+                        className={cn(
+                            "flex-1 text-sm font-medium flex items-center gap-1.5",
+                            initialSelection.includes(vUser.uid) ? "cursor-not-allowed" : "cursor-pointer"
+                        )}
+                      >
+                        <span>{vUser.name}</span>
+                        {vUser.isCreator && <CreatorLetterCBBadgeIcon className="h-4 w-4" />}
+                        {vUser.isVIP && <Crown className="h-4 w-4 text-yellow-500" />}
+                        {vUser.isVerified && !vUser.isCreator && <VerifiedBadge className="h-4 w-4" />}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="secondary" disabled={isSaving}>Cancel</Button>
