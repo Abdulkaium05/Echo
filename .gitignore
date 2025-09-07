@@ -1,0 +1,73 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Testing
+/coverage
+
+# Next.js build files
+/.next/
+/out/
+
+# Production
+/build
+
+# Misc
+.DS_Store
+*.pem
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE config files
+.idea
+.vscode # Keep settings.json, ignore the rest
+!.vscode/settings.json
+*.sublime-project
+*.sublime-workspace
+
+# Environment variables
+.env*.local
+!.env.example
+
+# Debug log files
+*.log
+logs
+**/*.log.[0-9]*
+
+# OS generated files #
+# Desktop.ini
+# thumbs.db
+# ehthumbs.db
+# ehthumbs_vista.db
+# Icon?
+# ._*
+# .Spotlight-V100
+# .Trashes
+
+# Temp files:
+# ~*
+
+# Lock files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Firebase emulator
+firebase-debug.log
+*.snapshot
+*.json # Emulator export data (optional, might want to commit seeds)
+# ui-debug.log # If using emulator UI
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Patch package
+/patches
+*.orig
