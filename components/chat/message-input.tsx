@@ -1,4 +1,3 @@
-
 // src/components/chat/message-input.tsx
 'use client';
 
@@ -27,10 +26,25 @@ interface MessageInputProps {
   isSending?: boolean;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
+  customBubbleColor?: string | null;
 }
 
+const buttonColorMap: { [key: string]: { bg: string, hover: string, text: string, colorVar: string, transparentBg: string, transparentHover: string, transparentBorder: string, transparentText: string } } = {
+  'sky-blue':    { bg: 'bg-sky-500',    hover: 'hover:bg-sky-600',    text: 'text-white',       colorVar: '200 100% 50%', transparentBg: 'bg-sky-500/20',    transparentHover: 'hover:bg-sky-500/30',    transparentBorder: 'border-sky-500',    transparentText: 'text-sky-500'    },
+  'red':         { bg: 'bg-red-500',    hover: 'hover:bg-red-600',    text: 'text-white',       colorVar: '0 84.2% 60.2%',  transparentBg: 'bg-red-500/20',    transparentHover: 'hover:bg-red-500/30',    transparentBorder: 'border-red-500',    transparentText: 'text-red-500'    },
+  'light-green': { bg: 'bg-green-500',  hover: 'hover:bg-green-600',  text: 'text-white',       colorVar: '142 71% 45%',    transparentBg: 'bg-green-500/20',  transparentHover: 'hover:bg-green-500/30',  transparentBorder: 'border-green-500',  transparentText: 'text-green-500'  },
+  'yellow':      { bg: 'bg-yellow-400', hover: 'hover:bg-yellow-500', text: 'text-black',       colorVar: '48 95% 58%',     transparentBg: 'bg-yellow-400/20', transparentHover: 'hover:bg-yellow-400/30', transparentBorder: 'border-yellow-400', transparentText: 'text-yellow-600' },
+  'orange':      { bg: 'bg-orange-500', hover: 'hover:bg-orange-600', text: 'text-white',       colorVar: '25 95% 53%',     transparentBg: 'bg-orange-500/20', transparentHover: 'hover:bg-orange-500/30', transparentBorder: 'border-orange-500', transparentText: 'text-orange-500' },
+  'purple':      { bg: 'bg-purple-500', hover: 'hover:bg-purple-600', text: 'text-white',       colorVar: '262 84% 58%',    transparentBg: 'bg-purple-500/20', transparentHover: 'hover:bg-purple-500/30', transparentBorder: 'border-purple-500', transparentText: 'text-purple-500' },
+  'pink':        { bg: 'bg-pink-500',   hover: 'hover:bg-pink-600',   text: 'text-white',       colorVar: '322 84% 58%',    transparentBg: 'bg-pink-500/20',   transparentHover: 'hover:bg-pink-500/30',   transparentBorder: 'border-pink-500',   transparentText: 'text-pink-500'   },
+  'indigo':      { bg: 'bg-indigo-500', hover: 'hover:bg-indigo-600', text: 'text-white',       colorVar: '243 75% 59%',    transparentBg: 'bg-indigo-500/20', transparentHover: 'hover:bg-indigo-500/30', transparentBorder: 'border-indigo-500', transparentText: 'text-indigo-500' },
+  'teal':        { bg: 'bg-teal-500',   hover: 'hover:bg-teal-600',   text: 'text-white',       colorVar: '162 72% 45%',    transparentBg: 'bg-teal-500/20',   transparentHover: 'hover:bg-teal-500/30',   transparentBorder: 'border-teal-500',   transparentText: 'text-teal-500'   },
+  'white':       { bg: 'bg-white',      hover: 'hover:bg-gray-200',   text: 'text-black',       colorVar: '0 0% 100%',      transparentBg: 'bg-white/20',      transparentHover: 'hover:bg-white/30',      transparentBorder: 'border-gray-300',   transparentText: 'text-white'      },
+  'black':       { bg: 'bg-black',      hover: 'hover:bg-gray-800',   text: 'text-white',       colorVar: '0 0% 0%',        transparentBg: 'bg-black/20',      transparentHover: 'hover:bg-black/30',      transparentBorder: 'border-gray-500',   transparentText: 'text-black'      },
+};
+
 export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
-  ({ onSendMessage, disabled = false, isSending = false, replyingTo, onCancelReply }, ref) => {
+  ({ onSendMessage, disabled = false, isSending = false, replyingTo, onCancelReply, customBubbleColor }, ref) => {
     const [message, setMessage] = useState('');
     const [attachmentPreview, setAttachmentPreview] = useState<{ dataUri: string; name: string; type: 'image' | 'video' | 'document' | 'audio' | 'other', duration?: number } | null>(null);
     const { toast } = useToast();
@@ -44,6 +58,19 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
     const [recordingTime, setRecordingTime] = useState(0);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    const [isTransparentModeActive, setIsTransparentModeActive] = useState(false);
+    
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        setIsTransparentModeActive(document.documentElement.classList.contains('transparent-mode'));
+        
+        const observer = new MutationObserver(() => {
+            setIsTransparentModeActive(document.documentElement.classList.contains('transparent-mode'));
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => observer.disconnect();
+    }, []);
 
     useImperativeHandle(ref, () => ({
         focusInput: () => {
@@ -221,8 +248,30 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const colorInfo = customBubbleColor ? buttonColorMap[customBubbleColor as keyof typeof buttonColorMap] : null;
+    
+    let sendButtonClass = '';
+    if (colorInfo) {
+        if (isTransparentModeActive) {
+             sendButtonClass = `border ${colorInfo.transparentBg} ${colorInfo.transparentHover} ${colorInfo.transparentBorder} ${colorInfo.transparentText}`;
+        } else {
+            sendButtonClass = `${colorInfo.bg} ${colorInfo.hover} ${colorInfo.text}`;
+        }
+    }
+    
+    const customColorStyles = colorInfo 
+      ? { 
+          '--placeholder-hover-color': `hsl(${colorInfo.colorVar})`,
+          '--input-focus-ring': `hsl(${colorInfo.colorVar})`,
+        } as React.CSSProperties
+      : {};
+
+
     return (
-      <div className="p-2 md:p-4 border-t bg-secondary flex flex-col">
+      <div 
+        className="p-2 md:p-4 border-t bg-secondary flex flex-col"
+        style={customColorStyles}
+      >
         {replyingTo && (
           <div className="mb-2 p-2 pr-8 rounded-md bg-accent/50 text-xs text-accent-foreground relative">
             <div className="border-l-2 border-primary pl-2">
@@ -327,7 +376,12 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
                     ref={textInputRef}
                     type="text"
                     placeholder={disabled ? "Loading chat..." : "Type a message..."}
-                    className="flex-1 mr-2 bg-background"
+                    className={cn(
+                      "flex-1 mr-2 bg-background",
+                      customBubbleColor
+                        ? "hover:placeholder:text-[--placeholder-hover-color] hover:border-[--input-focus-ring] focus-visible:ring-[--input-focus-ring]"
+                        : 'hover:placeholder:text-primary'
+                    )}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleKeyPress}
@@ -337,7 +391,12 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
                 />
             )}
             
-            <Button onClick={handleSend} size="icon" disabled={(!message.trim() && !attachmentPreview) || disabled || isSending || isRecording}>
+            <Button 
+                onClick={handleSend} 
+                size="icon" 
+                disabled={(!message.trim() && !attachmentPreview) || disabled || isSending || isRecording}
+                className={cn(sendButtonClass)}
+            >
                 {isSending ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (

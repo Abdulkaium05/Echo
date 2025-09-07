@@ -29,13 +29,21 @@ interface MessageBubbleProps {
   onReplyToMessage?: (message: Message) => void;
   onToggleReaction?: (messageId: string, emoji: string) => void;
   onImageClick?: (url?: string) => void;
+  customBubbleColor?: string | null;
+  isTransparentMode?: boolean;
 }
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 
-const AudioVisualizer = ({ isPlaying, isSentByCurrentUser }: { isPlaying: boolean; isSentByCurrentUser: boolean }) => {
-  const barColor = isSentByCurrentUser ? 'bg-primary-foreground/90' : 'bg-primary';
+const AudioVisualizer = ({ isPlaying, isSentByCurrentUser, customColor }: { isPlaying: boolean; isSentByCurrentUser: boolean; customColor?: string | null; }) => {
+    let barColor;
+    if (customColor) {
+        barColor = (customColor === 'white' || customColor === 'black') ? 'bg-black/70 dark:bg-white/70' : 'bg-white/90';
+    } else {
+        barColor = isSentByCurrentUser ? 'bg-primary-foreground/90' : 'bg-primary';
+    }
+  
   return (
     <div className="flex items-center justify-center gap-0.5 w-24 h-6">
       {Array.from({ length: 12 }).map((_, i) => (
@@ -63,7 +71,7 @@ const AudioVisualizer = ({ isPlaying, isSentByCurrentUser }: { isPlaying: boolea
 };
 
 
-const AudioPlayer = ({ src, duration, isSentByCurrentUser }: { src: string; duration: number, isSentByCurrentUser: boolean }) => {
+const AudioPlayer = ({ src, duration, isSentByCurrentUser, customColor }: { src: string; duration: number, isSentByCurrentUser: boolean, customColor?: string | null }) => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -107,25 +115,31 @@ const AudioPlayer = ({ src, duration, isSentByCurrentUser }: { src: string; dura
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     };
 
+    let textColorClass, buttonBgClass;
+    if (customColor) {
+        textColorClass = (customColor === 'white' || customColor === 'black') ? 'text-black/70 dark:text-white/70' : 'text-white/70';
+        buttonBgClass = (customColor === 'white' || customColor === 'black') ? 'bg-black/20 hover:bg-black/30 dark:bg-white/20 dark:hover:bg-white/30' : 'bg-white/20 hover:bg-white/30';
+    } else {
+        textColorClass = isSentByCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground';
+        buttonBgClass = isSentByCurrentUser ? 'bg-primary/80 hover:bg-primary/70 text-primary-foreground' : 'bg-muted-foreground/20 hover:bg-muted-foreground/30';
+    }
+
     return (
         <div className="flex items-center gap-2 w-48">
              <audio ref={audioRef} src={src} preload="metadata" />
              <Button
                 variant="ghost"
                 size="icon"
-                className={cn(
-                    "h-8 w-8 rounded-full shrink-0",
-                    isSentByCurrentUser ? "bg-primary/80 hover:bg-primary/70 text-primary-foreground" : "bg-muted-foreground/20 hover:bg-muted-foreground/30"
-                )}
+                className={cn("h-8 w-8 rounded-full shrink-0", buttonBgClass)}
                 onClick={togglePlayPause}
             >
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </Button>
             <div className="flex-1 flex flex-col justify-center gap-1.5">
-                <AudioVisualizer isPlaying={isPlaying} isSentByCurrentUser={!!isSentByCurrentUser} />
+                <AudioVisualizer isPlaying={isPlaying} isSentByCurrentUser={!!isSentByCurrentUser} customColor={customColor}/>
                  <div className="flex items-center justify-between">
-                    <span className={cn("text-xs", isSentByCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>{formatTime(currentTime)}</span>
-                    <span className={cn("text-xs", isSentByCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>{formatTime(duration)}</span>
+                    <span className={cn("text-xs", textColorClass)}>{formatTime(currentTime)}</span>
+                    <span className={cn("text-xs", textColorClass)}>{formatTime(duration)}</span>
                 </div>
             </div>
         </div>
@@ -231,8 +245,20 @@ export function MessageBubble({
   onReplyToMessage,
   onToggleReaction,
   onImageClick,
+  customBubbleColor,
+  isTransparentMode
 }: MessageBubbleProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const checkDarkMode = () => setIsDarkMode(document.documentElement.classList.contains('dark'));
+    checkDarkMode();
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   const {
     id: messageId,
@@ -274,6 +300,68 @@ export function MessageBubble({
   };
 
   const formattedTimestamp = formatTimestamp(timestamp);
+  
+  const colorMap = {
+    'sky-blue':    { solid: 'bg-sky-500',           text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-sky-500/20',    border: 'border-sky-500/50'    }},
+    'red':         { solid: 'bg-red-500',           text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-red-500/20',    border: 'border-red-500/50'    }},
+    'light-green': { solid: 'bg-green-500',         text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-green-500/20',  border: 'border-green-500/50'  }},
+    'yellow':      { solid: 'bg-yellow-400',        text: 'text-black dark:text-black',           replyBg: 'bg-black/10', replySender: 'text-black/80',            transparent: { bg: 'bg-yellow-400/20', border: 'border-yellow-500/50' }},
+    'orange':      { solid: 'bg-orange-500',        text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-orange-500/20', border: 'border-orange-500/50' }},
+    'purple':      { solid: 'bg-purple-500',        text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-purple-500/20', border: 'border-purple-500/50' }},
+    'pink':        { solid: 'bg-pink-500',          text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-pink-500/20',   border: 'border-pink-500/50'   }},
+    'indigo':      { solid: 'bg-indigo-500',        text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-indigo-500/20', border: 'border-indigo-500/50' }},
+    'teal':        { solid: 'bg-teal-500',          text: 'text-white dark:text-white',           replyBg: 'bg-white/30', replySender: 'text-white/90',            transparent: { bg: 'bg-teal-500/20',   border: 'border-teal-500/50'   }},
+    'white':       { solid: 'bg-white',             text: 'text-black dark:text-black',           replyBg: 'bg-black/10', replySender: 'text-black/80',            transparent: { bg: 'bg-white/20',      border: 'border-gray-300/50'   }},
+    'black':       { solid: 'bg-black',             text: 'text-white dark:text-white',           replyBg: 'bg-white/20', replySender: 'text-white/90',            transparent: { bg: 'bg-black/20',      border: 'border-gray-500/50'   }},
+  };
+  
+  let bubbleClasses = "";
+  let textClasses = "";
+  let replyBgClass = "";
+  let replySenderColorClass = "";
+  let timestampColorClass = "";
+
+  if (isSentByCurrentUser) {
+    const colorInfo = customBubbleColor ? colorMap[customBubbleColor as keyof typeof colorMap] : null;
+    
+    if (colorInfo) {
+      if (isTransparentMode) {
+        bubbleClasses = `${colorInfo.transparent.bg} border ${colorInfo.transparent.border}`;
+        textClasses = 'text-black dark:text-white';
+        timestampColorClass = 'text-black/70 dark:text-white/70';
+        replySenderColorClass = 'text-black/80 dark:text-white/90';
+        replyBgClass = 'bg-black/10 dark:bg-white/20';
+      } else {
+        bubbleClasses = colorInfo.solid;
+        textClasses = colorInfo.text;
+        replyBgClass = colorInfo.replyBg;
+        replySenderColorClass = colorInfo.replySender;
+        timestampColorClass = colorInfo.text.includes('text-white') ? 'text-white/70' : 'text-black/60 dark:text-white/70';
+        
+        // Add conditional borders for solid white/black bubbles
+        if (customBubbleColor === 'white' && !isDarkMode) {
+          bubbleClasses += ' border border-gray-200';
+        }
+        if (customBubbleColor === 'black' && isDarkMode) {
+          bubbleClasses += ' border border-gray-600';
+        }
+      }
+    } else {
+      bubbleClasses = isTransparentMode ? "bg-primary/20 border border-primary/50" : "bg-[--sent-bubble-bg]";
+      textClasses = isTransparentMode ? "text-foreground" : "text-[--sent-bubble-fg] dark:text-primary-foreground";
+      replyBgClass = "bg-white/30 dark:bg-black/20";
+      replySenderColorClass = "text-white/90 dark:text-white/90";
+      timestampColorClass = isTransparentMode ? 'text-foreground/70' : 'text-primary-foreground/70 dark:text-primary-foreground/70';
+    }
+  } else {
+    // Received bubble colors (no custom colors for these)
+    bubbleClasses = isTransparentMode ? "bg-card/40 border border-border/60" : "bg-[--received-bubble-bg]";
+    textClasses = "text-[--received-bubble-fg]";
+    replyBgClass = "bg-muted";
+    replySenderColorClass = "text-primary";
+    timestampColorClass = 'text-muted-foreground';
+  }
+
 
   const renderAttachment = () => {
     if (!attachmentUrl || isDeleted) return null;
@@ -281,7 +369,7 @@ export function MessageBubble({
     if (attachmentType === 'audio') {
         return (
             <div className="mt-1.5" data-ai-hint="audio message">
-                <AudioPlayer src={attachmentUrl} duration={audioDuration || 0} isSentByCurrentUser={!!isSentByCurrentUser}/>
+                <AudioPlayer src={attachmentUrl} duration={audioDuration || 0} isSentByCurrentUser={!!isSentByCurrentUser} customColor={customBubbleColor}/>
             </div>
         );
     }
@@ -381,21 +469,23 @@ export function MessageBubble({
           className={cn(
             "max-w-[70vw] sm:max-w-md md:max-w-lg px-3 py-2 shadow-sm flex flex-col",
             "backdrop-blur-sm",
-            "rounded-[var(--bubble-radius)]",
+            isTransparentMode ? "rounded-3xl" : "rounded-xl",
             isSentByCurrentUser
-              ? "bg-[--sent-bubble-bg] text-[--sent-bubble-fg] border border-[--sent-bubble-border] rounded-br-none" 
-              : "bg-[--received-bubble-bg] text-[--received-bubble-fg] border border-[--received-bubble-border] rounded-bl-none"
+              ? "rounded-br-none" 
+              : "rounded-bl-none",
+            bubbleClasses,
+            textClasses,
           )}
         >
           {replyingTo && !isDeleted && (
             <div className={cn(
               "mb-1.5 p-1.5 rounded-md text-xs border-l-2",
-              isSentByCurrentUser ? "bg-primary/60 border-primary-foreground/50" : "bg-muted border-primary/50"
+              replyBgClass,
+              isSentByCurrentUser ? 'border-white/50 dark:border-white/50' : 'border-primary/50'
             )}>
-              <p className={cn(
-                "font-semibold text-xs",
-                 isSentByCurrentUser ? "text-primary-foreground/90" : "text-primary"
-              )}>{replyingTo.senderName || "User"}</p>
+              <p className={cn("font-semibold text-xs", replySenderColorClass)}>
+                {replyingTo.senderName || "User"}
+              </p>
               <p className="truncate text-xs">
                 {replyTextSnippet()}
               </p>
@@ -414,7 +504,7 @@ export function MessageBubble({
           <div className="flex items-end justify-end mt-1">
             <span className={cn(
               "text-xs self-end",
-              isSentByCurrentUser ? "text-[--sent-bubble-fg]/70" : "text-muted-foreground"
+              timestampColorClass
             )}>
               {formattedTimestamp}
             </span>

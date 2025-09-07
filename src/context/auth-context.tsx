@@ -32,6 +32,9 @@ export interface UserProfile {
   
   // Badge Management
   badgeOrder?: BadgeType[];
+
+  // Chat Customization
+  chatColorPreferences?: { [chatId: string]: string | null };
 }
 
 interface AuthContextProps {
@@ -162,6 +165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       selectedVerifiedContacts: [],
       hasMadeVipSelection: false,
       badgeOrder: [],
+      chatColorPreferences: {},
     };
     
     authContextMockUsers.push(newUserProfile);

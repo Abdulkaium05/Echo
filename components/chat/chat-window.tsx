@@ -10,8 +10,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './message-bubble';
 import { MessageInput, type MessageInputHandle } from './message-input';
 import { VerifiedBadge } from '@/components/verified-badge';
-import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, Paperclip, Smile as SmileIcon, X } from 'lucide-react';
+import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X } from 'lucide-react';
 import Link from 'next/link';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
     getChatMessages,
     sendMessage as sendMessageToChat, 
@@ -26,7 +27,7 @@ import {
     formatLastSeen,
     markMessagesAsSeen,
 } from '@/services/firestore';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { UserProfileDialog } from '@/components/profile/user-profile-dialog';
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ import { OutlineBirdIcon, SquareBotBadgeIcon, CreatorLetterCBBadgeIcon } from '.
 import { useMusicPlayer } from '@/context/music-player-context';
 import { AudioCallDialog } from './audio-call-dialog'; // Import the new component
 import { useSound } from '@/context/sound-context';
+import { useVIP } from '@/context/vip-context';
 
 interface ChatWindowProps {
   chatId: string;
@@ -56,7 +58,8 @@ const DevTeamAvatarIcon = () => (
 
 
 export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, chatIconIdentifier, isVerified, isVIP, isCreator }: ChatWindowProps) {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, userProfile, updateMockUserProfile } = useAuth();
+  const { hasVipAccess } = useVIP();
   const { toast } = useToast();
   const { url: songUrl } = useMusicPlayer();
   const { playSound } = useSound();
@@ -77,7 +80,49 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   const [isAudioCallDialogOpen, setIsAudioCallDialogOpen] = useState(false);
+  const [isTransparentMode, setIsTransparentMode] = useState(false);
 
+  const customBubbleColor = userProfile?.chatColorPreferences?.[chatId];
+
+  useEffect(() => {
+    // This effect ensures the component re-renders when transparent mode is toggled globally.
+    if (typeof window === 'undefined') return;
+
+    // Initial check
+    const checkTransparentMode = () => {
+        const isTransparent = document.documentElement.classList.contains('transparent-mode');
+        setIsTransparentMode(isTransparent);
+    };
+    checkTransparentMode();
+
+    // Set up an observer to watch for class changes on the <html> element
+    const observer = new MutationObserver((mutationsList) => {
+        for (const mutation of mutationsList) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                checkTransparentMode();
+            }
+        }
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+
+    // Cleanup observer on component unmount
+    return () => observer.disconnect();
+  }, []);
+
+  const handleBubbleColorChange = (color: string | null) => {
+    if (!currentUser || !userProfile) {
+        toast({ title: "Error", description: "You must be logged in to change settings.", variant: "destructive" });
+        return;
+    }
+
+    const newPreferences = { ...userProfile.chatColorPreferences, [chatId]: color };
+    updateMockUserProfile(currentUser.uid, { chatColorPreferences: newPreferences });
+    toast({
+        title: "Bubble Color Updated",
+        description: `Chat bubbles for this conversation are now ${color ? color.replace('-', ' ') : 'default'}.`
+    });
+  };
 
   useEffect(() => {
     const fetchPartnerStatus = async () => {
@@ -345,6 +390,13 @@ const handleVideoCall = () => {
     toast({ title: "Video Call", description: "This feature is for demonstration purposes." });
 };
 
+const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: string, colorClass: string, name: string, onSelect: (color: string) => void }) => (
+    <DropdownMenuItem onClick={() => onSelect(colorValue)}>
+      <div className={cn("w-4 h-4 rounded-full mr-2 border", colorClass)} />
+      <span>{name}</span>
+    </DropdownMenuItem>
+);
+
 
   return (
     <>
@@ -380,15 +432,54 @@ const handleVideoCall = () => {
             </p>
            )}
         </div>
-        <div className="flex items-center space-x-1 md:space-x-2 shrink-0">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleAudioCall}>
-            <Phone className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
-            <span className="sr-only">Call</span>
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleVideoCall}>
-            <Video className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
-            <span className="sr-only">Video Call</span>
-          </Button>
+        <div className="flex items-center space-x-1">
+          {chatPartnerId !== BOT_UID && (
+            <>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleAudioCall}>
+                <Phone className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+                <span className="sr-only">Call</span>
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleVideoCall}>
+                <Video className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+                <span className="sr-only">Video Call</span>
+              </Button>
+            </>
+          )}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuSub>
+                    <DropdownMenuSubTrigger disabled={!hasVipAccess} onClick={ hasVipAccess ? undefined : () => toast({ title: 'VIP Feature', description: 'Purchase a VIP plan to unlock custom bubble colors.'}) }>
+                        <Palette className="mr-2 h-4 w-4" />
+                        <span>Change Bubble Color</span>
+                        {!hasVipAccess && <Crown className="ml-auto h-4 w-4 text-yellow-500" />}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                        <ColorOption colorValue="sky-blue" colorClass="bg-sky-500" name="Sky Blue" onSelect={handleBubbleColorChange} />
+                        <ColorOption colorValue="light-green" colorClass="bg-green-500" name="Light Green" onSelect={handleBubbleColorChange} />
+                        <ColorOption colorValue="red" colorClass="bg-red-500" name="Red" onSelect={handleBubbleColorChange} />
+                        <ColorOption colorValue="orange" colorClass="bg-orange-500" name="Orange" onSelect={handleBubbleColorChange} />
+                        <ColorOption colorValue="yellow" colorClass="bg-yellow-400" name="Yellow" onSelect={handleBubbleColorChange} />
+                        <ColorOption colorValue="purple" colorClass="bg-purple-500" name="Purple" onSelect={handleBubbleColorChange} />
+                        <ColorOption colorValue="pink" colorClass="bg-pink-500" name="Pink" onSelect={handleBubbleColorChange} />
+                        <ColorOption colorValue="indigo" colorClass="bg-indigo-500" name="Indigo" onSelect={handleBubbleColorChange} />
+                        <ColorOption colorValue="teal" colorClass="bg-teal-500" name="Teal" onSelect={handleBubbleColorChange} />
+                        <ColorOption colorValue="white" colorClass="bg-white" name="White" onSelect={handleBubbleColorChange} />
+                        <ColorOption colorValue="black" colorClass="bg-black" name="Black" onSelect={handleBubbleColorChange} />
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleBubbleColorChange(null)}>
+                            Reset to Default
+                        </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                </DropdownMenuSub>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
         </div>
       </div>
 
@@ -432,6 +523,8 @@ const handleVideoCall = () => {
                   onReplyToMessage={handleReplyToMessage}
                   onToggleReaction={handleToggleReaction}
                   onImageClick={handleImageClick}
+                  customBubbleColor={customBubbleColor}
+                  isTransparentMode={isTransparentMode}
                 />
              )
            })}
@@ -452,6 +545,7 @@ const handleVideoCall = () => {
          isSending={isSending}
          replyingTo={replyingToMessage}
          onCancelReply={cancelReply}
+         customBubbleColor={customBubbleColor}
        />
     </div>
      {partnerProfileDetails && (
