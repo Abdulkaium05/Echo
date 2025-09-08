@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { Message, formatTimestamp } from '@/services/firestore';
-import { Trash2, Smile, CornerUpLeft, FileText, CheckCheck, Play, Pause } from 'lucide-react';
+import { Trash2, Smile, CornerUpLeft, FileText, CheckCheck, Play, Pause, Reply } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -251,6 +251,13 @@ export function MessageBubble({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   
+  // Swipe to reply state
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const SWIPE_THRESHOLD = 50; // pixels to swipe to trigger reply
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const checkDarkMode = () => setIsDarkMode(document.documentElement.classList.contains('dark'));
@@ -273,6 +280,49 @@ export function MessageBubble({
     reactions,
     isDeleted
   } = message;
+
+  const handleDoubleClick = () => {
+    if (messageId && onToggleReaction && !isDeleted) {
+      onToggleReaction(messageId, '❤️');
+    }
+  };
+
+  // Drag handlers
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (isDeleted) return;
+    setIsDragging(true);
+    const startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    setDragStartX(startX);
+  };
+
+  const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging || isDeleted) return;
+    const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    let diffX = currentX - dragStartX;
+
+    // Constrain swipe direction
+    if (isSentByCurrentUser && diffX > 0) diffX = 0; // Sent messages can only move left
+    if (!isSentByCurrentUser && diffX < 0) diffX = 0; // Received messages can only move right
+
+    // Apply some resistance
+    diffX = Math.sign(diffX) * Math.pow(Math.abs(diffX), 0.7);
+
+    setDragX(diffX);
+  };
+
+  const handleDragEnd = () => {
+    if (!isDragging || isDeleted) return;
+
+    if (Math.abs(dragX) > SWIPE_THRESHOLD) {
+      if (onReplyToMessage) {
+        onReplyToMessage(message);
+      }
+    }
+    
+    setIsDragging(false);
+    setDragX(0);
+    setDragStartX(0);
+  };
 
   const handleDeleteClick = () => {
     if (messageId && onDeleteMessage && !isDeleted) {
@@ -445,129 +495,139 @@ export function MessageBubble({
         .map(([emoji, _]) => emoji)
     : [];
 
+  const dragStyle = {
+    transform: `translateX(${dragX}px)`,
+    transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+  };
+
+  const replyIconOpacity = Math.min(Math.abs(dragX) / SWIPE_THRESHOLD, 1);
+
   return (
     <>
-    <div
-      className={cn(
-        "group/message-row flex w-full mb-4 items-end animate-in fade-in", 
-        isSentByCurrentUser ? "justify-end" : "justify-start"
-      )}
-    >
-      {isSentByCurrentUser && !isDeleted && (
-         <ActionButtons
-            message={message}
-            isSentByCurrentUser={true}
-            onDeleteClick={handleDeleteClick}
-            onReplyClick={handleReplyClick}
-            onToggleReaction={onToggleReaction}
-            disabled={!!isDeleted}
-        />
-      )}
-      
-      <div className="relative">
-        <div
-          className={cn(
-            "max-w-[70vw] sm:max-w-md md:max-w-lg px-3 py-2 shadow-sm flex flex-col",
-            "backdrop-blur-sm",
-            isTransparentMode ? "rounded-3xl" : "rounded-xl",
-            isSentByCurrentUser
-              ? "rounded-br-none" 
-              : "rounded-bl-none",
-            bubbleClasses,
-            textClasses,
-          )}
-        >
-          {replyingTo && !isDeleted && (
-            <div className={cn(
-              "mb-1.5 p-1.5 rounded-md text-xs border-l-2",
-              replyBgClass,
-              isSentByCurrentUser ? 'border-white/50 dark:border-white/50' : 'border-primary/50'
-            )}>
-              <p className={cn("font-semibold text-xs", replySenderColorClass)}>
-                {replyingTo.senderName || "User"}
-              </p>
-              <p className="truncate text-xs">
-                {replyTextSnippet()}
-              </p>
+      <div
+        className={cn(
+          "group/message-row flex w-full mb-4 items-center animate-in fade-in",
+          isSentByCurrentUser ? "justify-end" : "justify-start"
+        )}
+        onMouseDown={handleDragStart}
+        onTouchStart={handleDragStart}
+        onMouseMove={handleDragMove}
+        onTouchMove={handleDragMove}
+        onMouseUp={handleDragEnd}
+        onMouseLeave={handleDragEnd}
+        onTouchEnd={handleDragEnd}
+      >
+        {!isSentByCurrentUser && (
+            <div
+                className="flex items-center justify-center transition-opacity"
+                style={{ opacity: replyIconOpacity, width: `${Math.abs(dragX)}px` }}
+            >
+                <Reply className="h-5 w-5 text-muted-foreground" />
             </div>
-          )}
+        )}
 
-          {isDeleted ? (
-            <p className="text-sm italic">This message was deleted.</p>
-          ) : (
-            <>
-              {text && <p className="text-sm break-words whitespace-pre-wrap">{text}</p>}
-              {renderAttachment()}
-            </>
-          )}
+        <div className="relative" ref={bubbleRef} style={dragStyle} onDoubleClick={handleDoubleClick}>
+            <div
+            className={cn(
+                "max-w-[70vw] sm:max-w-md md:max-w-lg px-3 py-2 shadow-sm flex flex-col",
+                "backdrop-blur-sm",
+                isTransparentMode ? "rounded-3xl" : "rounded-xl",
+                isSentByCurrentUser
+                ? "rounded-br-none" 
+                : "rounded-bl-none",
+                bubbleClasses,
+                textClasses,
+            )}
+            >
+            {replyingTo && !isDeleted && (
+                <div className={cn(
+                "mb-1.5 p-1.5 rounded-md text-xs border-l-2",
+                replyBgClass,
+                isSentByCurrentUser ? 'border-white/50 dark:border-white/50' : 'border-primary/50'
+                )}>
+                <p className={cn("font-semibold text-xs", replySenderColorClass)}>
+                    {replyingTo.senderName || "User"}
+                </p>
+                <p className="truncate text-xs">
+                    {replyTextSnippet()}
+                </p>
+                </div>
+            )}
 
-          <div className="flex items-end justify-end mt-1">
-            <span className={cn(
-              "text-xs self-end",
-              timestampColorClass
-            )}>
-              {formattedTimestamp}
-            </span>
-          </div>
+            {isDeleted ? (
+                <p className="text-sm italic">This message was deleted.</p>
+            ) : (
+                <>
+                {text && <p className="text-sm break-words whitespace-pre-wrap">{text}</p>}
+                {renderAttachment()}
+                </>
+            )}
+
+            <div className="flex items-end justify-end mt-1">
+                <span className={cn(
+                "text-xs self-end",
+                timestampColorClass
+                )}>
+                {formattedTimestamp}
+                </span>
+            </div>
+            </div>
+
+            {renderedReactions.length > 0 && (
+            <div 
+                className={cn(
+                    "absolute -bottom-2.5 flex items-center justify-center p-0.5 rounded-full bg-background shadow-md border",
+                    isSentByCurrentUser ? "left-2" : "right-2"
+                )}
+                onClick={() => handleEmojiClickForDisplay(renderedReactions[0])} // Allow toggling first reaction
+            >
+                <span className="text-xs">{renderedReactions.join('')}</span>
+                {reactions && reactions[renderedReactions[0]]?.count > 1 && (
+                    <span className="text-xs font-medium ml-1">{reactions[renderedReactions[0]].count}</span>
+                )}
+            </div>
+            )}
         </div>
 
-        {renderedReactions.length > 0 && (
-          <div 
-              className={cn(
-                  "absolute -bottom-2.5 flex items-center justify-center p-0.5 rounded-full bg-background shadow-md border",
-                  isSentByCurrentUser ? "right-2" : "right-2"
-              )}
-              onClick={() => handleEmojiClickForDisplay(renderedReactions[0])} // Allow toggling first reaction
-          >
-              <span className="text-xs">{renderedReactions.join('')}</span>
-              {reactions && reactions[renderedReactions[0]]?.count > 1 && (
-                <span className="text-xs font-medium ml-1">{reactions[renderedReactions[0]].count}</span>
-              )}
-          </div>
+        {isSentByCurrentUser && (
+            <div
+                className="flex items-center justify-center transition-opacity"
+                style={{ opacity: replyIconOpacity, width: `${Math.abs(dragX)}px` }}
+            >
+                <Reply className="h-5 w-5 text-muted-foreground" />
+            </div>
+        )}
+
+        {showDeleteConfirm && (
+            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Delete Message?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Are you sure you want to delete this message? This action cannot be undone.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setShowDeleteConfirm(false)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                    onClick={confirmDelete}
+                    className={buttonVariants({ variant: "destructive" })}
+                >
+                    Delete
+                </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+            </AlertDialog>
         )}
       </div>
-
-      {!isSentByCurrentUser && !isDeleted && (
-         <ActionButtons
-            message={message}
-            isSentByCurrentUser={false}
-            onDeleteClick={handleDeleteClick} 
-            onReplyClick={handleReplyClick}
-            onToggleReaction={onToggleReaction}
-            disabled={!!isDeleted}
-        />
+      {isSeen && (
+          <div className="flex justify-end pr-2 pl-12 mb-2">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <CheckCheck className="h-3.5 w-3.5" />
+                  Seen
+              </p>
+          </div>
       )}
-
-      {showDeleteConfirm && (
-        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Message?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete this message? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setShowDeleteConfirm(false)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmDelete}
-                className={buttonVariants({ variant: "destructive" })}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
-    </div>
-    {isSeen && (
-        <div className="flex justify-end pr-2 pl-12 mb-2">
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <CheckCheck className="h-3.5 w-3.5" />
-                Seen
-            </p>
-        </div>
-    )}
    </>
   );
 }

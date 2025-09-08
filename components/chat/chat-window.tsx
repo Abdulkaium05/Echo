@@ -1,4 +1,3 @@
-
 // src/components/chat/chat-window.tsx
 'use client';
 
@@ -70,7 +69,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
   const messageInputRef = useRef<MessageInputHandle>(null);
   const [isSending, setIsSending] = useState(false);
   const [isBotTyping, setIsBotTyping] = useState(false);
-  const previousMessagesCountRef = useRef(0);
 
   const [isPartnerProfileDialogOpen, setPartnerProfileDialogOpen] = useState(false);
   const [partnerProfileDetails, setPartnerProfileDetails] = useState<UserProfile | null>(null);
@@ -81,6 +79,8 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
 
   const [isAudioCallDialogOpen, setIsAudioCallDialogOpen] = useState(false);
   const [isTransparentMode, setIsTransparentMode] = useState(false);
+  
+  const previousMessagesCountRef = useRef(0);
 
   const customBubbleColor = userProfile?.chatColorPreferences?.[chatId];
   const amBlockedByPartner = partnerProfileDetails?.blockedUsers?.includes(currentUser?.uid ?? '') ?? false;
@@ -163,7 +163,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
      setLoadingMessages(true);
      setErrorMessages(null);
      console.log(`ChatWindow: Fetching messages for chat ${chatId}`);
-
+     
      const unsubscribe = getChatMessages(
        chatId,
        (fetchedMessages) => {
@@ -173,17 +173,23 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
            isSentByCurrentUser: msg.senderId === currentUser.uid,
          }));
 
+         const newMessagesCount = fetchedMessages.length;
+         const previousMessagesCount = previousMessagesCountRef.current;
+
          // Play sound for new messages from other users
-         if (fetchedMessages.length > previousMessagesCountRef.current) {
+         if (newMessagesCount > previousMessagesCount) {
             const lastNewMessage = fetchedMessages[fetchedMessages.length - 1];
             if (lastNewMessage.senderId !== currentUser.uid) {
                 playSound('/sounds/message-received.mp3');
             }
          }
-         previousMessagesCountRef.current = fetchedMessages.length;
-
-
+         
          setMessages(processedMessages);
+         
+         if(loadingMessages) { // Only on initial load
+            scrollToBottom('auto');
+         }
+
          setLoadingMessages(false);
 
          // Mark messages as seen
@@ -203,7 +209,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
        }
      );
      return unsubscribe;
-   }, [chatId, currentUser?.uid, playSound]);
+   }, [chatId, currentUser?.uid, playSound, scrollToBottom]);
 
    useEffect(() => {
      const unsubscribe = fetchAndSetMessages();
@@ -211,9 +217,15 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
    }, [fetchAndSetMessages]);
 
    useEffect(() => {
-     if (messages.length > 0) {
+    const hasNewMessages = messages.length > previousMessagesCountRef.current;
+
+    if (hasNewMessages) {
         scrollToBottom('smooth');
-     }
+    }
+    
+    // Update the ref *after* the check
+    previousMessagesCountRef.current = messages.length;
+
    }, [messages, scrollToBottom]);
 
 

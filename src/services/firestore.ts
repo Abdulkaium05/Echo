@@ -525,36 +525,6 @@ export const sendMessage = async (
   notifyMessageListeners(chatId);
   notifyChatListListeners();
 
-  // --- Start of new notification logic ---
-  const chat = mockChats.find(c => c.id === chatId);
-  if (chat) {
-      const recipientId = chat.participants.find(p => p !== senderId);
-      if (recipientId) {
-          const [sender, recipient] = await Promise.all([
-              getUserProfile(senderId),
-              getUserProfile(recipientId)
-          ]);
-
-          if (sender && recipient) {
-              const senderIsVerified = sender.isVerified && !sender.isBot && !sender.isDevTeam;
-              const recipientHasVipAccess = recipient.isVIP || recipient.isVerified || recipient.isCreator || recipient.isDevTeam;
-              
-              if (senderIsVerified && !recipientHasVipAccess) {
-                  addNotification({
-                      type: 'system',
-                      title: `✨ New Message from ${sender.name}`,
-                      message: `You've received a message from a verified user. Subscribe to VIP to reply and connect!`,
-                      relatedData: {
-                          chatId: chatId,
-                          senderId: senderId,
-                      }
-                  });
-              }
-          }
-      }
-  }
-  // --- End of new notification logic ---
-
   if (!isBotMessage && chatIndex !== -1) {
       const chat = mockChats[chatIndex];
       const isBotChat = chat.participants.includes(BOT_UID);
