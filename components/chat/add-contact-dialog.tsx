@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { UserPlus, Loader2, ShieldAlert, QrCode } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { findUserByEmail, findChatBetweenUsers, createChat, BOT_UID, DEV_UID } from '@/services/firestore';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/context/auth-context';
 import { useVIP } from '@/context/vip-context';
 import { ScanQrDialog } from './scan-qr-dialog'; // Import the new component
 import { Separator } from '../ui/separator';
@@ -67,30 +67,15 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
           return;
       }
       
-      const isCurrentUserVerified = currentUserProfile.isVerified || currentUserProfile.isCreator || currentUserProfile.isDevTeam;
-      const isTargetUserVerified = targetUser.isVerified || targetUser.isCreator || targetUser.isDevTeam;
+      const isTargetUserVerifiedOrDev = (targetUser.isVerified || targetUser.isDevTeam) && !targetUser.isBot;
 
-      // Rule 1: Regular user trying to add a verified user.
-      if (!isCurrentUserVerified && isTargetUserVerified) {
-        // Check if the verified user has allowed the current user.
-        if (!targetUser.allowedNormalContacts?.includes(currentUserId)) {
-            toast({
-              title: "Permission Denied",
-              description: "This user has not allowed you to send them a message.",
-              variant: "destructive",
-              action: <ShieldAlert className="h-5 w-5" />,
-            });
-            setIsLoading(false);
-            return;
-        }
-      }
+      if (isTargetUserVerifiedOrDev) {
+          const isCurrentUserAllowedByTarget = targetUser.allowedNormalContacts?.includes(currentUserId);
 
-      // Rule 2: VIP user trying to add a verified user (original rule).
-      if ((targetUser.isVerified || targetUser.isDevTeam) && !targetUser.isBot) {
-          if (!hasVipAccess) {
-              toast({
+          if (!hasVipAccess && !isCurrentUserAllowedByTarget) {
+               toast({
                 title: "VIP Required",
-                description: "You must be a VIP to chat with verified users or the Dev Team. Subscribe to a VIP plan to unlock this feature.",
+                description: "This is a verified user. You must either be a VIP member or be specifically allowed by them to start a conversation.",
                 variant: "destructive",
                 action: <ShieldAlert className="h-5 w-5" />,
               });

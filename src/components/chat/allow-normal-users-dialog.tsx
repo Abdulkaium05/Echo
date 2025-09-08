@@ -18,7 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, AlertCircle, Search } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
-import { getNormalUsers, type UserProfile, createChat, findChatBetweenUsers } from '@/services/firestore';
+import { getNormalUsers, type UserProfile, createChat, findChatBetweenUsers, sendMessage } from '@/services/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { cn } from '@/lib/utils';
 import { Input } from '../ui/input';
@@ -34,16 +34,18 @@ export function AllowNormalUsersDialog({ isOpen, onOpenChange }: AllowNormalUser
   
   const [normalUsers, setNormalUsers] = useState<UserProfile[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [initialSelection, setInitialSelection] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && userProfile) {
       setIsLoading(true);
       setSearchTerm('');
-      const currentSelection = userProfile?.allowedNormalContacts || [];
+      const currentSelection = userProfile.allowedNormalContacts || [];
       setSelectedUsers(currentSelection);
+      setInitialSelection(currentSelection);
 
       getNormalUsers()
         .then(users => {
@@ -54,7 +56,7 @@ export function AllowNormalUsersDialog({ isOpen, onOpenChange }: AllowNormalUser
         })
         .finally(() => setIsLoading(false));
     }
-  }, [isOpen, user?.uid, userProfile?.allowedNormalContacts, toast]);
+  }, [isOpen, user?.uid, userProfile, toast]);
 
   const handleSelect = (userId: string) => {
     setSelectedUsers(prev => {
@@ -72,17 +74,49 @@ export function AllowNormalUsersDialog({ isOpen, onOpenChange }: AllowNormalUser
       return;
     }
     setIsSaving(true);
+    
+    const newlySelectedUsers = selectedUsers.filter(uid => !initialSelection.includes(uid));
 
     try {
+      // First, update the user's profile with the new list of allowed contacts.
       await updateMockUserProfile(user.uid, { 
           allowedNormalContacts: selectedUsers,
       });
-
+      
+      // Close the dialog immediately for a better user experience.
+      onOpenChange(false);
+      
       toast({
         title: "Allow List Updated",
         description: "Your list of allowed users has been saved."
       });
-      onOpenChange(false);
+
+      // In the background, create chats and send a welcome message to newly allowed users.
+      // This makes the chat appear in their list.
+      if (newlySelectedUsers.length > 0) {
+          console.log(`[AllowUsersDialog] Creating chats for ${newlySelectedUsers.length} new users.`);
+          Promise.all(newlySelectedUsers.map(async (uid) => {
+              let chatId = await findChatBetweenUsers(user.uid, uid);
+              if (!chatId) {
+                  chatId = await createChat(user.uid, uid);
+                  console.log(`[AllowUsersDialog] Created new chat ${chatId} for user ${uid}.`);
+                  // Send a message from the verified user to the normal user to initialize the chat.
+                  await sendMessage(chatId, user.uid, "You can now message me.");
+                   console.log(`[AllowUsersDialog] Sent initial message to user ${uid}.`);
+              } else {
+                  console.log(`[AllowUsersDialog] Chat with user ${uid} already exists.`);
+              }
+          })).catch(err => {
+              console.error("[AllowUsersDialog] Error creating chats/sending messages in background:", err);
+              // This toast informs the verified user if the background task fails.
+              toast({
+                  title: 'Background Chat Creation Failed',
+                  description: 'Could not create all new chats automatically. The allowed user may need to add you manually.',
+                  variant: 'destructive',
+              });
+          });
+      }
+
     } catch (error: any) {
       toast({
         title: "Error Saving Selection",

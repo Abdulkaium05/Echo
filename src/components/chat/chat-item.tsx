@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VerifiedBadge } from '@/components/verified-badge';
@@ -142,11 +143,15 @@ export function ChatItem(props: ChatItemProps) {
         isBlocked ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer"
       )}
     >
-      {renderAvatarOrIcon()}
+      <div className="relative mr-3 shrink-0">
+        {renderAvatarOrIcon()}
+      </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center gap-2 mb-0.5 min-w-0">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <p className="text-sm font-medium text-foreground truncate">{name}</p>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <p className="truncate text-sm font-medium text-foreground min-w-0">
+              {name}
+            </p>
             <div className="flex items-center shrink-0">
               {isBot && <SquareBotBadgeIcon />}
               {!isBot && isDevTeam && <DevTeamBadge />}
@@ -160,16 +165,18 @@ export function ChatItem(props: ChatItemProps) {
             </div>
           </div>
           <div className="ml-auto shrink-0">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">{timestamp}</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{timestamp}</span>
           </div>
         </div>
-        <p className={cn(
-          "truncate block text-sm",
-          isLastMessageSentByCurrentUser ? "text-muted-foreground" : "font-semibold text-foreground",
-          isBot && !isLastMessageSentByCurrentUser && "text-sky-500"
-        )}>
-          {displayLastMessage}
-        </p>
+        <div className="flex min-w-0">
+          <p className={cn(
+            "w-0 flex-1 truncate text-sm",
+            isLastMessageSentByCurrentUser ? "text-muted-foreground" : "font-semibold text-foreground",
+            isBot && !isLastMessageSentByCurrentUser && "text-sky-500"
+          )}>
+            {displayLastMessage}
+          </p>
+        </div>
       </div>
     </div>
   );

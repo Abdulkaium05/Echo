@@ -1,3 +1,4 @@
+
 // src/app/(app)/layout.tsx
 'use client';
 
@@ -80,7 +81,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   }, [authLoading, currentUser, isUserProfileLoading, router]);
 
 
-   if (authLoading || (currentUser && isUserProfileLoading)) {
+   if (authLoading || (currentUser && isUserProfileLoading && !currentUserProfile)) {
        return (
            <div className="flex h-screen w-full items-center justify-center bg-background">
                <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -340,3 +341,5 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
      </DropdownMenu>
    );
 }
+
+    
