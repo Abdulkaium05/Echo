@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, AlertCircle, Crown, CheckCircle, Search } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/context/auth-context';
 import { getVerifiedUsers, type UserProfile, createChat, findChatBetweenUsers } from '@/services/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { cn } from '@/lib/utils';
@@ -94,22 +94,23 @@ export function SelectVerifiedDialog({ isOpen, onOpenChange, limit }: SelectVeri
   };
 
   const handleConfirm = async () => {
-    if (!user) {
+    if (!user || !userProfile) {
       toast({ title: "Authentication Error", variant: "destructive"});
       return;
     }
     setIsSaving(true);
 
     try {
-      // Instantly update the profile in the context
-      updateMockUserProfile(user.uid, { 
+      // First, update the user profile. This is fast and will trigger UI updates.
+      await updateMockUserProfile(user.uid, { 
           selectedVerifiedContacts: selectedUsers,
           hasMadeVipSelection: true,
       });
 
-      // Close the dialog immediately for a better user experience
+      // Close the dialog immediately for a better user experience.
       onOpenChange(false);
-      
+      setIsSaving(false);
+
       toast({
         title: "Selection Saved",
         description: !isUnlimited && selectedUsers.length >= limit
@@ -117,23 +118,31 @@ export function SelectVerifiedDialog({ isOpen, onOpenChange, limit }: SelectVeri
           : `Your contact list has been updated. You can still select ${isUnlimited ? 'more' : limit - selectedUsers.length} more.`
       });
 
-      // Asynchronously create chats in the background
-      for (const uid of selectedUsers) {
-          if (!initialSelection.includes(uid)) { // Only create chats for newly added users
-            const chatExists = await findChatBetweenUsers(user.uid, uid);
-            if (!chatExists) {
-                await createChat(user.uid, uid);
-            }
+      // Then, handle the slower chat creation in the background.
+      const newSelections = selectedUsers.filter(uid => !initialSelection.includes(uid));
+      if (newSelections.length > 0) {
+        // No need to await this promise chain, let it run in the background
+        Promise.all(newSelections.map(async (uid) => {
+          const chatExists = await findChatBetweenUsers(user.uid, uid);
+          if (!chatExists) {
+            await createChat(user.uid, uid);
           }
+        })).catch(error => {
+            console.error("Error creating chats in the background:", error);
+             toast({
+                title: "Background Error",
+                description: "Could not create all new chat sessions. Please try again later or contact support.",
+                variant: "destructive"
+            });
+        });
       }
 
     } catch (error: any) {
       toast({
-        title: "Error Creating Chats",
-        description: error.message || "Could not create chats for new contacts.",
+        title: "Error Saving Selection",
+        description: error.message || "Could not update your selection.",
         variant: "destructive"
       });
-    } finally {
       setIsSaving(false);
     }
   };

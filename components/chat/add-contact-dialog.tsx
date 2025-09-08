@@ -33,6 +33,7 @@ interface AddContactDialogProps {
 export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddContactDialogProps) {
   const { toast } = useToast();
   const router = useRouter();
+  const { userProfile: currentUserProfile } = useAuth();
   const { hasVipAccess } = useVIP();
   const [contactEmail, setContactEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +44,7 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
       toast({ title: "Invalid Email", description: "Please enter a valid email address.", variant: "destructive" });
       return;
     }
-    if (!currentUserId) {
+    if (!currentUserId || !currentUserProfile) {
        toast({ title: "Error", description: "Cannot add contact. User not identified.", variant: "destructive" });
        return;
     }
@@ -66,7 +67,25 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
           return;
       }
       
-      // Prevent adding verified users through this dialog if user doesn't have VIP access.
+      const isCurrentUserVerified = currentUserProfile.isVerified || currentUserProfile.isCreator || currentUserProfile.isDevTeam;
+      const isTargetUserVerified = targetUser.isVerified || targetUser.isCreator || targetUser.isDevTeam;
+
+      // Rule 1: Regular user trying to add a verified user.
+      if (!isCurrentUserVerified && isTargetUserVerified) {
+        // Check if the verified user has allowed the current user.
+        if (!targetUser.allowedNormalContacts?.includes(currentUserId)) {
+            toast({
+              title: "Permission Denied",
+              description: "This user has not allowed you to send them a message.",
+              variant: "destructive",
+              action: <ShieldAlert className="h-5 w-5" />,
+            });
+            setIsLoading(false);
+            return;
+        }
+      }
+
+      // Rule 2: VIP user trying to add a verified user (original rule).
       if ((targetUser.isVerified || targetUser.isDevTeam) && !targetUser.isBot) {
           if (!hasVipAccess) {
               toast({
@@ -79,6 +98,7 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
               return;
           }
       }
+
 
       const existingChatId = await findChatBetweenUsers(currentUserId, targetUser.uid);
 

@@ -3,36 +3,36 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseAuthUser } from 'firebase/auth';
 import type { ChatItemProps } from '@/components/chat/chat-item';
-import type { UserProfile as AuthUserProfileType } from '@/context/auth-context'; // Renamed to avoid conflict
 import { blueBirdAssistant, type BlueBirdAssistantInput } from '@/ai/flows/blueBirdAiFlow';
 import { addNotification } from './notificationService';
+import type { UserProfile } from '@/types/user';
 
 export const BOT_UID = 'blue-bird-bot';
 export const DEV_UID = 'vip-dev';
 
-export type UserProfile = AuthUserProfileType;
+export type { UserProfile };
 
 let mockLocalUsers: UserProfile[] = [
   { uid: BOT_UID, displayUid: '00000001', name: 'Blue Bird (AI Assistant)', email: null, isBot: true, isVerified: true, isCreator: false, avatarUrl: 'outline-bird-avatar', lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp},
   { uid: DEV_UID, displayUid: '00000002', name: 'Dev Team', email: 'devteam@example.com', isDevTeam: true, isVerified: true, isCreator: false, isVIP: true, vipPack: "Lifetime", avatarUrl: 'dev-team-svg-placeholder', createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp },
   { uid: 'test-user', displayUid: '10000001', name: 'Test User', email: 'test@example.com', isVIP: false, isVerified: false, isCreator: false, avatarUrl: `https://picsum.photos/seed/test-user/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp, selectedVerifiedContacts: [], hasMadeVipSelection: false },
-  { uid: 'verified-contact-1', displayUid: '20000001', name: 'Twaha mizan', email: 'twahamizan04@gmail.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/twaha-the-great/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 1 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true },
-  { uid: 'verified-contact-2', displayUid: '20000002', name: 'Rakib', email: 'rakib@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/rakib-verified/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 10 * 60, nanoseconds: 0} as unknown as Timestamp },
+  { uid: 'verified-contact-1', displayUid: '20000001', name: 'Twaha mizan', email: 'twahamizan04@gmail.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/twaha-the-great/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 1 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [] },
+  { uid: 'verified-contact-2', displayUid: '20000002', name: 'Rakib', email: 'rakib@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/rakib-verified/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 10 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [] },
   { uid: 'regular-user-1', displayUid: '10000002', name: 'Ashadul', email: 'ashadul@example.com', isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/ashadul-regular/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 30 * 60, nanoseconds: 0} as unknown as Timestamp },
   { uid: 'monk-user-1', displayUid: '10000003', name: 'Karim Ahmed', email: 'monk1@example.com', isCreator: false, isVIP: true, vipPack: 'Gold VIP', avatarUrl: `https://picsum.photos/seed/monk-peaceful/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*2, nanoseconds: 0} as unknown as Timestamp },
   { uid: 'monk-user-2', displayUid: '10000004', name: 'Sajid Islam', email: 'monk2@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/monk-zen/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*3, nanoseconds: 0} as unknown as Timestamp },
   { uid: 'monk-user-3', displayUid: '10000005', name: 'Ayesha Siddika', email: 'monk3@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/monk-silent/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*4, nanoseconds: 0} as unknown as Timestamp },
   { uid: 'monk-user-4', displayUid: '10000006', name: 'Fatima Akter', email: 'monk4@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/monk-meditative/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*5, nanoseconds: 0} as unknown as Timestamp },
-  { uid: 'monk-user-tanvir', displayUid: '20000003', name: 'Tanvir Ahhamed', email: 'tanvir@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/tanvir-the-great/200`, createdAt: { seconds: Date.now()/1000 - 500, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 5 * 60, nanoseconds: 0} as unknown as Timestamp },
-  { uid: 'verified-contact-3', displayUid: '20000004', name: 'Asad', email: 'asad@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/asad-verified/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 4 * 60, nanoseconds: 0} as unknown as Timestamp },
-  { uid: 'verified-contact-4', displayUid: '20000005', name: 'Saidul', email: 'saidul@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/saidul-verified/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 15 * 60, nanoseconds: 0} as unknown as Timestamp },
-  { uid: 'vip-user-2', displayUid: '20000006', name: 'Maria Oishee', email: 'maria@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/maria-oishee-new/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 1 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true },
-  { uid: 'vip-user-3', displayUid: '20000007', name: 'Rafi', email: 'rafi@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/rafi-developer/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 25 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true },
+  { uid: 'monk-user-tanvir', displayUid: '20000003', name: 'Tanvir Ahhamed', email: 'tanvir@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/tanvir-the-great/200`, createdAt: { seconds: Date.now()/1000 - 500, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 5 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [] },
+  { uid: 'verified-contact-3', displayUid: '20000004', name: 'Asad', email: 'asad@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/asad-verified/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 4 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [] },
+  { uid: 'verified-contact-4', displayUid: '20000005', name: 'Saidul', email: 'saidul@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/saidul-verified/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 15 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [] },
+  { uid: 'vip-user-2', displayUid: '20000006', name: 'Maria Oishee', email: 'maria@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/maria-oishee-new/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 1 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [] },
+  { uid: 'vip-user-3', displayUid: '20000007', name: 'Rafi', email: 'rafi@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/rafi-developer/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 25 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [] },
   { uid: 'vip-only-user', displayUid: '10000007', name: 'Rahim Uddin', email: 'valerie@example.com', isVIP: true, vipPack: 'Bronze VIP', isCreator: false, isVerified: false, avatarUrl: `https://picsum.photos/seed/valerie-vip/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, vipExpiryTimestamp: Date.now() + 5 * 24 * 60 * 60 * 1000, lastSeen: { seconds: Math.floor(Date.now()/1000) - 5 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false },
-  { uid: 'nayem-vip', displayUid: '20000008', name: 'Nayem', email: 'nayem@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/nayem-is-great/200`, createdAt: { seconds: Date.now()/1000 - 100, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 2 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true },
-  { uid: 'abdul-kaium-verified', displayUid: '20000009', name: 'Abdul-Kaium', email: 'abdulkaiumiqbel2005@gmail.com', isVerified: true, isVIP: false, vipPack: undefined, isDevTeam: false, isCreator: false, avatarUrl: `https://picsum.photos/seed/kaium-verified/200`, createdAt: { seconds: Date.now()/1000 - 200, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 8 * 60, nanoseconds: 0} as unknown as Timestamp },
-  { uid: 'julker-nain-creator', displayUid: '30000001', name: 'Julker Nain', email: 'julker@example.com', isCreator: true, isVerified: true, isVIP: false, vipPack: undefined, avatarUrl: `https://picsum.photos/seed/julker-artist/200`, createdAt: { seconds: Date.now()/1000 - 250, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 3 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false },
-  { uid: 'al-amin-creator', displayUid: '30000002', name: 'Al-Amin', email: 'alamin@example.com', isCreator: true, isVerified: true, isVIP: false, vipPack: undefined, avatarUrl: `https://picsum.photos/seed/al-amin-creator/200`, createdAt: { seconds: Date.now()/1000 - 300, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 6 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false },
+  { uid: 'nayem-vip', displayUid: '20000008', name: 'Nayem', email: 'nayem@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/nayem-is-great/200`, createdAt: { seconds: Date.now()/1000 - 100, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 2 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [] },
+  { uid: 'abdul-kaium-verified', displayUid: '20000009', name: 'Abdul-Kaium', email: 'abdulkaiumiqbel2005@gmail.com', isVerified: true, isVIP: false, vipPack: undefined, isDevTeam: false, isCreator: false, avatarUrl: `https://picsum.photos/seed/kaium-verified/200`, createdAt: { seconds: Date.now()/1000 - 200, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 8 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [] },
+  { uid: 'julker-nain-creator', displayUid: '30000001', name: 'Julker Nain', email: 'julker@example.com', isCreator: true, isVerified: true, isVIP: false, vipPack: undefined, avatarUrl: `https://picsum.photos/seed/julker-artist/200`, createdAt: { seconds: Date.now()/1000 - 250, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 3 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false, allowedNormalContacts: [] },
+  { uid: 'al-amin-creator', displayUid: '30000002', name: 'Al-Amin', email: 'alamin@example.com', isCreator: true, isVerified: true, isVIP: false, vipPack: undefined, avatarUrl: `https://picsum.photos/seed/al-amin-creator/200`, createdAt: { seconds: Date.now()/1000 - 300, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 6 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false, allowedNormalContacts: [] },
   { uid: 'sakib-new-user', displayUid: '10000008', name: 'Sakib', email: 'sakib@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/sakib-user/200`, createdAt: { seconds: Date.now()/1000 - 400, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*6, nanoseconds: 0} as unknown as Timestamp },
   { uid: 'walid-new-user', displayUid: '10000009', name: 'Walid', email: 'walid@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/walid-user/200`, createdAt: { seconds: Date.now()/1000 - 410, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*7, nanoseconds: 0} as unknown as Timestamp, isVIP: true, vipPack: "Starter VIP" },
   { uid: 'samia-new-user', displayUid: '10000010', name: 'Samia', email: 'samia@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/samia-user/200`, createdAt: { seconds: Date.now()/1000 - 420, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*8, nanoseconds: 0} as unknown as Timestamp },
@@ -46,6 +46,12 @@ export const updateUserProfile = async (user: FirebaseAuthUser, additionalData?:
   const userIndex = mockLocalUsers.findIndex(u => u.uid === user.uid);
   if (userIndex !== -1) {
     mockLocalUsers[userIndex] = { ...mockLocalUsers[userIndex], ...additionalData, name: additionalData?.name || mockLocalUsers[userIndex].name, email: additionalData?.email || mockLocalUsers[userIndex].email };
+    // If the currently logged-in user is the one being updated, refresh their profile
+    if (user.uid === CURRENT_DEMO_USER_ID) {
+      CURRENT_USER_PROFILE = mockLocalUsers[userIndex];
+      // This is a critical step to ensure other parts of the app that rely on this see the update.
+      notifyChatListListeners();
+    }
   } else {
     const newUserProfile: UserProfile = {
         uid: user.uid,
@@ -63,6 +69,7 @@ export const updateUserProfile = async (user: FirebaseAuthUser, additionalData?:
         createdAt: (additionalData?.createdAt || { seconds: Date.now()/1000, nanoseconds: 0}) as unknown as Timestamp,
         lastSeen: (additionalData?.lastSeen || { seconds: Date.now()/1000, nanoseconds: 0}) as unknown as Timestamp,
         selectedVerifiedContacts: additionalData?.selectedVerifiedContacts || [],
+        allowedNormalContacts: additionalData?.allowedNormalContacts || [],
         hasMadeVipSelection: additionalData?.hasMadeVipSelection || false,
         ...additionalData,
     };
@@ -135,9 +142,12 @@ export interface Message {
 }
 
 let CURRENT_DEMO_USER_ID = 'test-user';
+let CURRENT_USER_PROFILE: UserProfile | null = mockLocalUsers.find(u => u.uid === CURRENT_DEMO_USER_ID) || null;
 
 export const setDemoUserId = (userId: string) => {
     CURRENT_DEMO_USER_ID = userId;
+    CURRENT_USER_PROFILE = mockLocalUsers.find(u => u.uid === userId) || null;
+
     // Update lastSeen for the logged-in user to 'now'
     const userIndex = mockLocalUsers.findIndex(u => u.uid === userId);
     if(userIndex !== -1) {
@@ -163,6 +173,7 @@ export const setDemoUserId = (userId: string) => {
         }));
     }
     console.log(`[firestore] Demo User ID set to: ${userId}. Mock data participants and sender IDs updated.`);
+    notifyChatListListeners();
 };
 
 
@@ -240,40 +251,38 @@ const ensureAllUserChatsExist = (activeUserId: string) => {
 let chatListListeners: Array<(chats: Chat[]) => void> = [];
 
 const notifyChatListListeners = () => {
-    const userProfile = mockLocalUsers.find(u => u.uid === CURRENT_DEMO_USER_ID);
+    const profileToUse = CURRENT_USER_PROFILE;
 
-    if (!userProfile) {
+    if (!profileToUse) {
         console.warn("notifyChatListListeners: No current user profile found for filtering. Notifying with empty list.");
         chatListListeners.forEach(listener => listener([]));
         return;
     }
     
-    ensureAllUserChatsExist(userProfile.uid);
-
-    const hasVIPAccess = userProfile.isVIP || userProfile.isVerified || userProfile.isCreator || userProfile.isDevTeam;
+    ensureAllUserChatsExist(profileToUse.uid);
 
     const userChats = mockChats.filter(chat => {
-        if (!chat.participants.includes(userProfile.uid)) {
+        if (!chat.participants.includes(profileToUse.uid)) {
             return false;
         }
         
-        const otherParticipantId = chat.participants.find(p => p !== userProfile.uid);
+        const otherParticipantId = chat.participants.find(p => p !== profileToUse.uid);
+        if (!otherParticipantId) return false;
+
         const otherParticipantProfile = mockLocalUsers.find(u => u.uid === otherParticipantId);
-        
         if (!otherParticipantProfile) return false;
 
-        if (otherParticipantProfile.isDevTeam && !hasVIPAccess) {
-            return false;
+        // Allow all chats with DevTeam and Bot, regardless of VIP status.
+        if (otherParticipantProfile.isDevTeam || otherParticipantProfile.isBot) {
+            return true;
         }
 
-        if (otherParticipantProfile.isVerified && !otherParticipantProfile.isDevTeam && !otherParticipantProfile.isBot) {
-            if (!hasVIPAccess) return false;
-            // A non-dev/bot verified contact should only appear if they are in the user's selected list.
-            if (!userProfile.selectedVerifiedContacts?.includes(otherParticipantId)) {
-                return false;
-            }
+        // For other verified users (not dev/bot), check if they have been selected.
+        if (otherParticipantProfile.isVerified) {
+            return profileToUse.selectedVerifiedContacts?.includes(otherParticipantProfile.uid);
         }
         
+        // For all other regular users, the chat is always visible.
         return true;
     });
 
@@ -291,7 +300,7 @@ const notifyChatListListeners = () => {
                  participantDetails[pId] = { uid: pId, name: "Unknown User"};
             }
         });
-        const updatedParticipants = chat.participants.map(p => p === 'test-user-placeholder' ? userProfile.uid : p).sort();
+        const updatedParticipants = chat.participants.map(p => p === 'test-user-placeholder' ? profileToUse.uid : p).sort();
         return { ...chat, participants: updatedParticipants, participantDetails };
     });
     
@@ -307,6 +316,7 @@ const notifyChatListListeners = () => {
 
 export const getUserChats = (
     userId: string,
+    userProfile: UserProfile,
     callback: (chats: Chat[]) => void,
     onError: (error: Error) => void
 ): (() => void) => {
@@ -321,9 +331,10 @@ export const getUserChats = (
   }
 
   try {
-    notifyChatListListeners();
+    // Notify using the provided, most up-to-date profile
+    notifyChatListListeners(); 
   } catch (e: any) {
-      onError(e);
+    onError(e);
   }
 
   return () => {
@@ -683,6 +694,9 @@ export const updateVIPStatus = async (userId: string, isVIP: boolean, vipPack?: 
         mockLocalUsers[userIndex].selectedVerifiedContacts = [];
         mockLocalUsers[userIndex].hasMadeVipSelection = false;
     }
+    if (userId === CURRENT_DEMO_USER_ID) {
+      CURRENT_USER_PROFILE = mockLocalUsers[userIndex];
+    }
     notifyChatListListeners();
   } else {
       console.warn(`[updateVIPStatus] User ${userId} not found to update VIP status.`);
@@ -893,7 +907,11 @@ export const markMessagesAsSeen = async (chatId: string, userId: string): Promis
 
 export const getVerifiedUsers = async (): Promise<UserProfile[]> => {
     return Promise.resolve(mockLocalUsers.filter(u => u.isVerified && !u.isBot && !u.isDevTeam));
-}
+};
+
+export const getNormalUsers = async (): Promise<UserProfile[]> => {
+    return Promise.resolve(mockLocalUsers.filter(u => !u.isVerified && !u.isBot && !u.isDevTeam));
+};
 
 export const getVerifiedContactLimit = (vipPack?: string): number => {
     if (!vipPack) return 0;
@@ -902,7 +920,7 @@ export const getVerifiedContactLimit = (vipPack?: string): number => {
     if (pack.includes('starter') || pack.includes('bronze') || pack.includes('silver')) return 5;
     if (pack.includes('micro') || pack.includes('mini') || pack.includes('basic')) return 3;
     return 0;
-}
+};
 
 // New Types and Mock Data for Ratings
 export interface AppRating {

@@ -1,3 +1,4 @@
+
 // src/components/chat/chat-list.tsx
 'use client';
 
@@ -72,6 +73,13 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
         setLoading(false);
         return;
     }
+    
+    // The user profile might not be loaded yet when the currentUserId is first available.
+    // So we wait until it's loaded to prevent subscribing with an incomplete profile.
+    if (!userProfile) {
+        setLoading(true); // Keep showing loading until profile is ready
+        return;
+    }
 
     setLoading(true);
     setError(null);
@@ -79,8 +87,10 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     
     console.log("ChatList: Subscribing to chats for user:", currentUserId);
     
+    // Pass the userProfile directly to the subscription function
     const unsubscribe = getUserChats(
         currentUserId,
+        userProfile, 
         (fetchedChats: Chat[]) => {
             console.log(`ChatList: Received ${fetchedChats.length} chats for user ${currentUserId}`);
             const chatItems = fetchedChats.map(chat => mapChatToChatItem(
@@ -101,7 +111,7 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
         console.log("ChatList: Unsubscribing from chats for user:", currentUserId);
         unsubscribe();
     };
-}, [currentUserId]); // STABLE: Only re-subscribe when the user ID itself changes.
+  }, [currentUserId]); // Removed userProfile from dependency array to prevent infinite loop
 
 
   const handleBlockUser = (userId: string, userName: string) => {
@@ -281,7 +291,7 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
                 currentUserId={currentUserId}
             />
         )}
-        {hasVIPAccess && currentUserId && (
+        {hasVIPAccess && currentUserId && userProfile && (
              <SelectVerifiedDialog
                 isOpen={isSelectVerifiedOpen}
                 onOpenChange={setIsSelectVerifiedOpen}

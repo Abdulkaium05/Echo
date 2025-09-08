@@ -8,36 +8,11 @@ import type { Timestamp } from 'firebase/firestore'; // Firestore Timestamp type
 import { 
     getUserProfile as fetchUserProfileFromMock, 
     updateUserProfile as syncUserProfileToMock,
-    mockLocalUsers as initialMockUsers, 
+    mockLocalUsers, 
     setDemoUserId 
 } from '@/services/firestore'; 
+import type { UserProfile } from '@/types/user';
 import type { BadgeType } from '@/app/(app)/layout';
-
-export interface UserProfile {
-  uid: string;
-  displayUid?: string; // The new 8-digit user ID
-  name: string;
-  email: string | null;
-  avatarUrl?: string; 
-  isVIP?: boolean;
-  vipPack?: string;
-  vipExpiryTimestamp?: number; // Unix timestamp in milliseconds for VIP expiry
-  createdAt?: Timestamp;
-  isBot?: boolean;
-  isVerified?: boolean;
-  isDevTeam?: boolean;
-  isCreator?: boolean; 
-  lastSeen?: Timestamp; 
-  selectedVerifiedContacts?: string[]; 
-  hasMadeVipSelection?: boolean;
-  blockedUsers?: string[]; // List of UIDs this user has blocked
-  
-  // Badge Management
-  badgeOrder?: BadgeType[];
-
-  // Chat Customization
-  chatColorPreferences?: { [chatId: string]: string | null };
-}
 
 interface AuthContextProps {
   user: User | null; 
@@ -47,12 +22,12 @@ interface AuthContextProps {
   login: (email: string, pass: string) => Promise<{ success: boolean; message: string; user?: User; userProfile?: UserProfile }>;
   signup: (name: string, email: string, pass: string, avatarDataUri?: string) => Promise<{ success: boolean; message: string; user?: User; userProfile?: UserProfile }>;
   logout: () => Promise<void>;
-  updateMockUserProfile: (uid: string, data: Partial<UserProfile>) => void;
+  updateMockUserProfile: (uid: string, data: Partial<UserProfile>) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-let authContextMockUsers: UserProfile[] = [...initialMockUsers]; 
+let authContextMockUsers: UserProfile[] = [...mockLocalUsers]; 
 
 const SESSION_COOKIE_NAME = 'echoMessageSessionToken';
 const LOGGED_IN_EMAIL_KEY = 'echoMessageLoggedInEmail';
@@ -212,7 +187,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     clearSessionData();
   }, [user, userProfile]);
 
-  const updateMockUserProfile = useCallback((uid: string, data: Partial<UserProfile>) => {
+  const updateMockUserProfile = useCallback(async (uid: string, data: Partial<UserProfile>) => {
     let userWasUpdatedInAuthContext = false;
     authContextMockUsers = authContextMockUsers.map(u => {
       if (u.uid === uid) {

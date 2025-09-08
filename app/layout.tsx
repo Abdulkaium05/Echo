@@ -4,11 +4,7 @@ import {GeistSans} from 'geist/font/sans';
 import {GeistMono} from 'geist/font/mono';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from '@/context/auth-context';
-import { NotificationProvider } from '@/context/notification-context';
-import { BlockUserProvider } from '@/context/block-user-context';
-import { TrashProvider } from '@/context/trash-context'; // Import the new provider
-import { SoundProvider } from '@/context/sound-context';
+import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
   title: 'echo', // Updated app title
@@ -38,18 +34,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="antialiased">
-        <AuthProvider>
-          <SoundProvider>
-            <NotificationProvider>
-              <BlockUserProvider>
-                <TrashProvider>
-                    {children}
-                </TrashProvider>
-              </BlockUserProvider>
-              <Toaster />
-            </NotificationProvider>
-          </SoundProvider>
-        </AuthProvider>
+        <Providers>
+          {children}
+          <Toaster />
+        </Providers>
       </body>
     </html>
   );

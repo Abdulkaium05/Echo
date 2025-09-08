@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, Star, QrCode } from 'lucide-react';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, Star, QrCode, ShieldCheck } from 'lucide-react';
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,7 @@ import { VerifiedBadge } from '@/components/verified-badge';
 import { NotificationPopover } from '@/components/chat/notification-popover';
 import { MusicPlayerProvider } from '@/context/music-player-context';
 import { ShareProfileDialog } from '@/components/profile/share-profile-dialog'; // Import ShareProfileDialog
+import { AllowNormalUsersDialog } from '@/components/chat/allow-normal-users-dialog';
 
 export default function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -40,7 +41,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
   const [isAppearanceDialogOpen, setAppearanceDialogOpen] = useState(false);
   const [isAboutDialogOpen, setAboutDialogOpen] = useState(false);
-  const [isShareProfileDialogOpen, setShareProfileDialogOpen] = useState(false); // State for ShareProfileDialog
+  const [isShareProfileDialogOpen, setShareProfileDialogOpen] = useState(false);
+  const [isAllowUsersDialogOpen, setAllowUsersDialogOpen] = useState(false);
 
   // This is the correct logic:
   // isChatPage should be true for the main chat list and individual chats.
@@ -144,7 +146,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
                       onOpenProfileSettings={() => setProfileDialogOpen(true)}
                       onOpenAppearanceSettings={() => setAppearanceDialogOpen(true)}
                       onOpenAboutDialog={() => setAboutDialogOpen(true)}
-                      onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)} // Pass handler
+                      onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
+                      onOpenAllowUsersDialog={() => setAllowUsersDialogOpen(true)}
                   />
                 )}
               </div>
@@ -165,7 +168,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
                   onOpenProfileSettings={() => setProfileDialogOpen(true)}
                   onOpenAppearanceSettings={() => setAppearanceDialogOpen(true)}
                   onOpenAboutDialog={() => setAboutDialogOpen(true)}
-                  onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)} // Pass handler
+                  onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
+                  onOpenAllowUsersDialog={() => setAllowUsersDialogOpen(true)}
               />
             )}
           </div>
@@ -212,6 +216,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
             onOpenChange={setShareProfileDialogOpen}
             user={currentUserProfile}
           />
+          <AllowNormalUsersDialog
+            isOpen={isAllowUsersDialogOpen}
+            onOpenChange={setAllowUsersDialogOpen}
+          />
         </>
       )}
     </div>
@@ -224,7 +232,8 @@ interface UserMenuProps {
   onOpenProfileSettings: () => void;
   onOpenAppearanceSettings: () => void;
   onOpenAboutDialog: () => void;
-  onOpenShareProfileDialog: () => void; // New prop
+  onOpenShareProfileDialog: () => void;
+  onOpenAllowUsersDialog: () => void;
 }
 
 export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot';
@@ -238,7 +247,7 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
 };
 
 
-function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog }: UserMenuProps) {
+function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenAllowUsersDialog }: UserMenuProps) {
    const router = useRouter();
    const fallbackInitials = user.name ? user.name.substring(0, 2).toUpperCase() : '??';
 
@@ -255,6 +264,8 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    // Fallback to a default order if the user has no preference set.
    const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot'];
    const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge));
+
+   const isAtLeastVerified = user.isVerified || user.isCreator || user.isDevTeam;
 
    return (
      <DropdownMenu>
@@ -302,6 +313,12 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
                <Crown className="mr-2 h-4 w-4 text-yellow-500" />
                <span>{user.isVIP ? 'Manage VIP' : 'Get VIP'}</span>
            </DropdownMenuItem>
+            {isAtLeastVerified && (
+                 <DropdownMenuItem onClick={onOpenAllowUsersDialog}>
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    <span>Allow Users</span>
+                </DropdownMenuItem>
+            )}
          <DropdownMenuItem onClick={() => router.push('/settings')}>
                <Settings className="mr-2 h-4 w-4" />
                <span>More Settings</span>
