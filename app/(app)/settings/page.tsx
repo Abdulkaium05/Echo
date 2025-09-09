@@ -161,8 +161,16 @@ export default function SettingsPage() {
   
   const sendTestNotification = () => {
       if (notificationsEnabled) {
-          addSystemNotification({ type: 'system', title: 'Test Notification', message: 'This is how you will be notified!' });
-          toast({ title: 'Test Sent', description: 'If the app is in the background, you should see a notification.'});
+          try {
+            new Notification("Echo Message Test", {
+                body: "This is how you will be notified!",
+                icon: '/logo.png',
+            });
+            toast({ title: 'Test Sent', description: 'If the app is in the background, you should see a notification.'});
+          } catch (e) {
+             console.error("Error sending test notification:", e);
+             toast({ title: 'Could Not Send', description: 'There was an error sending the test notification.', variant: 'destructive'});
+          }
       } else {
           toast({ title: 'Notifications Disabled', description: 'Please enable notifications to receive a test.', variant: 'destructive'});
       }

@@ -399,6 +399,7 @@ export const sendWelcomeMessage = async (newUserId: string): Promise<void> => {
 };
 
 let chatMessageListeners: { [chatId: string]: Array<(messages: Message[]) => void> } = {};
+let latestMessageTimestamps: { [chatId: string]: number } = {};
 
 const notifyMessageListeners = (chatId: string) => {
   if (chatMessageListeners[chatId]) {
@@ -409,6 +410,20 @@ const notifyMessageListeners = (chatId: string) => {
             senderName: senderProfile?.name || 'User',
         };
     });
+
+    const latestMessage = updatedMessagesForChat[updatedMessagesForChat.length - 1];
+    if (latestMessage && latestMessage.senderId !== CURRENT_DEMO_USER_ID) {
+      if (!latestMessageTimestamps[chatId] || latestMessage.timestamp.seconds > latestMessageTimestamps[chatId]) {
+        latestMessageTimestamps[chatId] = latestMessage.timestamp.seconds;
+        addNotification({
+          type: 'new_message',
+          title: latestMessage.senderName || 'New Message',
+          message: latestMessage.text || 'You received a new attachment.',
+          relatedData: { chatId: chatId, senderId: latestMessage.senderId },
+        });
+      }
+    }
+
     chatMessageListeners[chatId].forEach(listener => {
         try {
             listener(updatedMessagesForChat);
@@ -430,7 +445,9 @@ export const getChatMessages = (
   if (!chatMessageListeners[chatId]) {
     chatMessageListeners[chatId] = [];
   }
-  chatMessageListeners[chatId].push(callback);
+  if (!chatMessageListeners[chatId].includes(callback)) {
+    chatMessageListeners[chatId].push(callback);
+  }
 
   try {
     const messagesForChat = (mockMessages[chatId] || []).map(msg => {
@@ -440,6 +457,9 @@ export const getChatMessages = (
             senderName: senderProfile?.name || 'User',
         };
     });
+    if (messagesForChat.length > 0) {
+      latestMessageTimestamps[chatId] = messagesForChat[messagesForChat.length - 1].timestamp.seconds;
+    }
     Promise.resolve().then(() => callback(messagesForChat));
   } catch (e: any) {
     onError(e);

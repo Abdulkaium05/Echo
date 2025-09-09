@@ -1,3 +1,4 @@
+
 // src/components/chat/message-bubble.tsx
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -509,14 +510,18 @@ export function MessageBubble({
           "group/message-row flex w-full mb-4 items-center animate-in fade-in",
           isSentByCurrentUser ? "justify-end" : "justify-start"
         )}
-        onMouseDown={handleDragStart}
-        onTouchStart={handleDragStart}
-        onMouseMove={handleDragMove}
-        onTouchMove={handleDragMove}
-        onMouseUp={handleDragEnd}
-        onMouseLeave={handleDragEnd}
-        onTouchEnd={handleDragEnd}
       >
+        {isSentByCurrentUser && (
+            <ActionButtons
+                message={message}
+                isSentByCurrentUser={!!isSentByCurrentUser}
+                onDeleteClick={handleDeleteClick}
+                onReplyClick={handleReplyClick}
+                onToggleReaction={onToggleReaction}
+                disabled={isDragging}
+            />
+        )}
+        
         {!isSentByCurrentUser && (
             <div
                 className="flex items-center justify-center transition-opacity"
@@ -526,7 +531,18 @@ export function MessageBubble({
             </div>
         )}
 
-        <div className="relative" ref={bubbleRef} style={dragStyle} onDoubleClick={handleDoubleClick}>
+        <div 
+          ref={bubbleRef} 
+          style={dragStyle}
+          onDoubleClick={handleDoubleClick}
+          onMouseDown={handleDragStart}
+          onTouchStart={handleDragStart}
+          onMouseMove={handleDragMove}
+          onTouchMove={handleDragMove}
+          onMouseUp={handleDragEnd}
+          onMouseLeave={handleDragEnd}
+          onTouchEnd={handleDragEnd}
+        >
             <div
             className={cn(
                 "max-w-[70vw] sm:max-w-md md:max-w-lg px-3 py-2 shadow-sm flex flex-col",
@@ -598,28 +614,18 @@ export function MessageBubble({
             </div>
         )}
 
-        {showDeleteConfirm && (
-            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                <AlertDialogTitle>Delete Message?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Are you sure you want to delete this message? This action cannot be undone.
-                </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setShowDeleteConfirm(false)}>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                    onClick={confirmDelete}
-                    className={buttonVariants({ variant: "destructive" })}
-                >
-                    Delete
-                </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-            </AlertDialog>
+        {!isSentByCurrentUser && (
+            <ActionButtons
+                message={message}
+                isSentByCurrentUser={!!isSentByCurrentUser}
+                onDeleteClick={handleDeleteClick}
+                onReplyClick={handleReplyClick}
+                onToggleReaction={onToggleReaction}
+                disabled={isDragging}
+            />
         )}
       </div>
+
       {isSeen && (
           <div className="flex justify-end pr-2 pl-12 mb-2">
               <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -627,6 +633,28 @@ export function MessageBubble({
                   Seen
               </p>
           </div>
+      )}
+
+      {showDeleteConfirm && (
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Delete Message?</AlertDialogTitle>
+            <AlertDialogDescription>
+                Are you sure you want to delete this message? This action cannot be undone.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteConfirm(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+                onClick={confirmDelete}
+                className={buttonVariants({ variant: "destructive" })}
+            >
+                Delete
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+        </AlertDialog>
       )}
    </>
   );

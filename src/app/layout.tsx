@@ -24,6 +24,11 @@ export const metadata: Metadata = {
     { media: '(prefers-color-scheme: light)', color: 'hsl(0 0% 100%)' }, // White
     { media: '(prefers-color-scheme: dark)', color: 'hsl(0 0% 8%)' }, // Almost black
   ],
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({
