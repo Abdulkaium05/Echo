@@ -188,7 +188,7 @@ export function ChatItem(props: ChatItemProps) {
           {isBlocked ? (
             <div aria-disabled="true">{chatItemContent}</div>
           ) : (
-            <Link href={href} passHref>
+            <Link href={href} passHref onContextMenu={(e) => e.preventDefault()}>
               {chatItemContent}
             </Link>
           )}

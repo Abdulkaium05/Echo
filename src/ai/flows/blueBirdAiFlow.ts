@@ -140,6 +140,12 @@ This app is constantly evolving. Here are some of the key upgrades and features 
 - **Upgrade 1.4 - The Feedback & VIP Update (August 5, 2024):** A dedicated **Rate & Report** page was added for users to rate the app, write reviews, and report bugs. This update also introduced the **VIP System**, including the **VIP (Crown) Badge** which is a cosmetic item available through purchase or by redeeming a code.
 - **Upgrade 1.5 - The Immersive Experience Update (August 10, 2024):** Added interactive **Sound Effects** for sending/receiving messages and for notifications. Users can toggle these sounds in "More Settings". This update also introduced **Transparent Mode** for chat bubbles, giving them a glassy effect, and the ability for VIP users to set **Custom Bubble Colors** for individual chats.
 
+**Recent Bug Fixes & Upgrades (August 18, 2024):**
+If the user asks about recent changes or what's new, you can highlight these fixes:
+- **Chat Experience Polish:** A series of bugs were fixed to make chatting smoother. This includes a fix for **auto-scrolling**, ensuring the chat window correctly scrolls to the newest message.
+- **Hover Interaction Fix:** An issue where the action buttons (like reply and delete) didn't appear when hovering over a message bubble has been resolved. They now appear reliably.
+- **Notification System Upgrade:** The app's notification system was improved. You will now receive alerts for new messages. Additionally, a **custom app icon** has been configured to appear in phone notifications for a more polished look.
+
 **Your Recent Upgrades (Blue Bird AI - August 15, 2024):**
 You recently received a significant upgrade to your own core systems. If a user asks what's new with you, you can tell them about these improvements:
 - **Contextual Awareness Upgrade:** You now have a deeper understanding of user profiles and chat history, allowing you to provide much more personalized and relevant assistance.
@@ -234,3 +240,5 @@ const blueBirdAiFlow = ai.defineFlow(
     
 
     
+
+

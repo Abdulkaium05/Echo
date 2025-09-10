@@ -11,6 +11,7 @@ import type { Message } from '@/services/firestore';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useSound } from '@/context/sound-context';
+import ReactPlayer from 'react-player/lazy';
 
 export interface MessageInputHandle {
   focusInput: () => void;
@@ -143,8 +144,8 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
              return;
         }
 
-        if (file.size > 10 * 1024 * 1024) { // 10MB limit for demo
-          toast({ variant: 'destructive', title: 'File Too Large', description: 'File must be smaller than 10MB.' });
+        if (file.size > 1024 * 1024 * 1024) { // 1GB limit
+          toast({ variant: 'destructive', title: 'File Too Large', description: 'File must be smaller than 1GB.' });
           return;
         }
         const reader = new FileReader();
@@ -306,7 +307,12 @@ export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
                 data-ai-hint="selected attachment preview"
                 />
             )}
-            {(attachmentPreview.type === 'video' || attachmentPreview.type === 'document' || attachmentPreview.type === 'other') && (
+            {attachmentPreview.type === 'video' && (
+                <div className="w-24 h-14" data-ai-hint="selected video preview">
+                    <ReactPlayer url={attachmentPreview.dataUri} width="100%" height="100%" controls={false} playing={false} />
+                </div>
+            )}
+            {(attachmentPreview.type === 'document' || attachmentPreview.type === 'other') && (
                 <FileText className="h-8 w-8 text-muted-foreground shrink-0" />
             )}
             {attachmentPreview.type === 'audio' && (

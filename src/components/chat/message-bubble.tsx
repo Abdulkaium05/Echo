@@ -1,4 +1,3 @@
-
 // src/components/chat/message-bubble.tsx
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -21,6 +20,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button, buttonVariants } from '@/components/ui/button';
+import ReactPlayer from 'react-player/lazy';
 
 interface MessageBubbleProps {
   message: Message;
@@ -444,18 +444,15 @@ export function MessageBubble({
       );
     }
     if (attachmentType === 'video') {
-      // Basic video display, could be enhanced with a player
       return (
-        <div className="mt-1.5 text-sm">
-            <a 
-                href={attachmentUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 underline hover:text-primary/80"
-            >
-                <FileText className="h-4 w-4 shrink-0" />
-                <span>{attachmentName || "Video"} (Tap to view)</span>
-            </a>
+        <div className="mt-1.5 max-w-xs rounded-md overflow-hidden" data-ai-hint="chat video">
+            <ReactPlayer
+              url={attachmentUrl}
+              controls
+              width="100%"
+              height="auto"
+              style={{ maxWidth: '300px' }}
+            />
         </div>
       );
     }

@@ -263,12 +263,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
       setIsBotTyping(true);
     }
     
-    // Check if the message is about music to pass song context to the AI
-    const musicKeywords = ['music', 'song', 'playing', 'track', 'sound'];
-    const isMusicQuery = musicKeywords.some(keyword => newMessageText.toLowerCase().includes(keyword));
-    const songContext = (isMusicQuery && songUrl) ? songUrl : undefined;
-
-
     try {
       await sendMessageToChat(
           chatId, 
@@ -280,7 +274,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
           undefined, // isWittyReactionResponse
           undefined, // repliedToReactionOnMessageId
           undefined, // repliedToReactionEmoji
-          songContext // Pass the song context
+          songUrl // Pass the song context
       );
       setReplyingToMessage(null); 
       messageInputRef.current?.clearAttachmentPreview(); 

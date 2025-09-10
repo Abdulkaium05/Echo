@@ -415,12 +415,7 @@ const notifyMessageListeners = (chatId: string) => {
     if (latestMessage && latestMessage.senderId !== CURRENT_DEMO_USER_ID) {
       if (!latestMessageTimestamps[chatId] || latestMessage.timestamp.seconds > latestMessageTimestamps[chatId]) {
         latestMessageTimestamps[chatId] = latestMessage.timestamp.seconds;
-        addNotification({
-          type: 'new_message',
-          title: latestMessage.senderName || 'New Message',
-          message: latestMessage.text || 'You received a new attachment.',
-          relatedData: { chatId: chatId, senderId: latestMessage.senderId },
-        });
+        // The call to addNotification was here and has been removed.
       }
     }
 

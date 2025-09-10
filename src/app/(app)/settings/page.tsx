@@ -2,20 +2,21 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Check, Bell, Lock, Crown, CheckCircle, FileUp, Music, Play, Pause, SkipBack, SkipForward, Loader2, FolderOpen, Trash2, Volume2 } from "lucide-react";
+import { Check, Bell, Lock, Crown, CheckCircle, FileUp, Music, Play, Pause, SkipBack, SkipForward, Loader2, FolderOpen, Trash2, Volume2, ListMusic, PlusCircle, X, ExternalLink } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { useVIP } from '@/context/vip-context';
 import { Input } from '@/components/ui/input';
-import { useMusicPlayer } from '@/context/music-player-context';
+import { useMusicPlayer, type SavedSong } from '@/context/music-player-context';
 import { useNotifications } from '@/context/notification-context';
 import { TrashDialog } from '@/components/settings/trash-dialog'; // Import the new dialog
 import { cn } from '@/lib/utils';
 import { useSound } from '@/context/sound-context';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const AudioVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
     return (
@@ -40,6 +41,51 @@ const AudioVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
     );
 };
 
+const AddSongDialog = ({ isOpen, onOpenChange, onSave, initialUrl }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onSave: (name: string, url: string) => void, initialUrl: string }) => {
+    const [name, setName] = useState('');
+    const [url, setUrl] = useState('');
+
+    useEffect(() => {
+        if (isOpen) {
+            setName('');
+            setUrl(initialUrl);
+        }
+    }, [isOpen, initialUrl]);
+    
+    const handleSave = () => {
+        if (name.trim() && url.trim()) {
+            onSave(name, url);
+            onOpenChange(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add Song to Playlist</DialogTitle>
+                    <DialogDescription>Save the current URL with a name for easy access.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="song-name">Song Name</Label>
+                        <Input id="song-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., My Favorite Tune" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="song-url">Song URL</Label>
+                        <Input id="song-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/song.mp3" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button onClick={handleSave} disabled={!name.trim() || !url.trim()}>Save Song</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+};
+
+
 export default function SettingsPage() {
   const { isVIP, vipPack } = useVIP();
   const { toast } = useToast();
@@ -57,9 +103,11 @@ export default function SettingsPage() {
   const [isApplying, setIsApplying] = useState(false);
 
   // State for music player
-  const { url, isPlaying, setUrl, togglePlay } = useMusicPlayer();
+  const { url, isPlaying, setUrl, togglePlay, savedSongs, addSong, removeSong } = useMusicPlayer();
   const [urlInput, setUrlInput] = useState('');
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const [isAddSongDialogOpen, setIsAddSongDialogOpen] = useState(false);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -69,13 +117,17 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    // Sync the local URL input with the context URL if it's not a blob URL
-    if (url && !url.startsWith('blob:')) {
+    const song = savedSongs.find(s => s.url === url);
+    if (url && song) {
+        setUrlInput(song.name);
+    } else if (url && !url.startsWith('blob:')) {
         setUrlInput(url);
+    } else if (url.startsWith('blob:')) {
+        // Keep the file name for blob URLs, which is already handled in handleAudioFileChange
     } else {
         setUrlInput('');
     }
-  }, [url]);
+  }, [url, savedSongs]);
 
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
@@ -142,7 +194,8 @@ export default function SettingsPage() {
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUrlInput(e.target.value);
-    setUrl(e.target.value);
+    const matchedSong = savedSongs.find(s => s.name.toLowerCase() === e.target.value.toLowerCase());
+    setUrl(matchedSong ? matchedSong.url : e.target.value);
   };
   
   const handleAudioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -161,20 +214,21 @@ export default function SettingsPage() {
   
   const sendTestNotification = () => {
       if (notificationsEnabled) {
-          try {
-            new Notification("Echo Message Test", {
-                body: "This is how you will be notified!",
-                icon: '/logo.png',
-            });
-            toast({ title: 'Test Sent', description: 'If the app is in the background, you should see a notification.'});
-          } catch (e) {
-             console.error("Error sending test notification:", e);
-             toast({ title: 'Could Not Send', description: 'There was an error sending the test notification.', variant: 'destructive'});
-          }
+          addSystemNotification({
+              type: 'system',
+              title: 'Test Notification',
+              message: 'This is a test notification from Echo Message!',
+          });
+          toast({ title: 'Test Sent', description: 'Check your notifications panel or system alerts.'});
       } else {
           toast({ title: 'Notifications Disabled', description: 'Please enable notifications to receive a test.', variant: 'destructive'});
       }
   }
+
+  const handlePlaySavedSong = (song: SavedSong) => {
+    setUrl(song.url);
+    toast({ title: "Music Changed", description: `Now playing: ${song.name}`});
+  };
 
 
   return (
@@ -275,7 +329,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Music className="h-5 w-5" /> Background Music Player</CardTitle>
             <CardDescription>
-              Play music in the background from a URL or your local device. Music continues playing as you navigate the app.
+              Play music from a URL, local file, or your saved playlist. Music continues playing as you navigate the app.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -284,13 +338,22 @@ export default function SettingsPage() {
               <div className="flex gap-2">
                  <Input
                     id="music-url"
-                    placeholder="https://example.com/music.mp3 or file name"
+                    placeholder="Enter URL, saved song name, or select a file"
                     value={urlInput}
                     onChange={handleUrlChange}
                     readOnly={url.startsWith('blob:')}
+                    list="saved-songs-list"
                  />
+                 <datalist id="saved-songs-list">
+                    {savedSongs.map(song => (
+                        <option key={song.id} value={song.name} />
+                    ))}
+                 </datalist>
                  <Button variant="outline" size="icon" onClick={() => audioInputRef.current?.click()} aria-label="Open file">
                     <FolderOpen className="h-4 w-4" />
+                 </Button>
+                 <Button variant="outline" size="icon" onClick={() => setIsAddSongDialogOpen(true)} aria-label="Add to playlist" disabled={!urlInput || url.startsWith('blob:')}>
+                    <PlusCircle className="h-4 w-4"/>
                  </Button>
                  <input type="file" ref={audioInputRef} onChange={handleAudioFileChange} accept="audio/*" className="hidden" />
               </div>
@@ -305,6 +368,33 @@ export default function SettingsPage() {
                 </div>
                 <Button variant="ghost" size="icon"><SkipForward className="h-5 w-5" /></Button>
             </div>
+
+            {savedSongs.length > 0 && (
+                <div className="space-y-2 pt-4">
+                    <h4 className="font-semibold text-sm flex items-center gap-2"><ListMusic className="h-4 w-4"/> Playlist</h4>
+                    <ScrollArea className="h-40 w-full rounded-md border p-2">
+                        <div className="space-y-1">
+                            {savedSongs.map(song => (
+                                <div key={song.id} className="flex items-center gap-2 p-1.5 rounded-md hover:bg-secondary">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePlaySavedSong(song)}>
+                                        {isPlaying && url === song.url ? <Pause className="h-4 w-4"/> : <Play className="h-4 w-4"/>}
+                                    </Button>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate" title={song.name}>{song.name}</p>
+                                        <p className="text-xs text-muted-foreground truncate" title={song.url}>{song.url}</p>
+                                    </div>
+                                    <a href={song.url} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({variant: "ghost", size: "icon"}), "h-7 w-7")}>
+                                        <ExternalLink className="h-4 w-4" />
+                                    </a>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive" onClick={() => removeSong(song.id)}>
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                </div>
+            )}
           </CardContent>
         </Card>
         
@@ -360,6 +450,12 @@ export default function SettingsPage() {
     </div>
     
     <TrashDialog isOpen={isTrashDialogOpen} onOpenChange={setIsTrashDialogOpen} />
+    <AddSongDialog 
+        isOpen={isAddSongDialogOpen}
+        onOpenChange={setIsAddSongDialogOpen}
+        onSave={addSong}
+        initialUrl={url}
+    />
     </>
   );
 }
