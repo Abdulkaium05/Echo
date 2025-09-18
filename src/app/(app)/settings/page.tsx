@@ -1,3 +1,4 @@
+
 // src/app/(app)/settings/page.tsx
 'use client';
 
@@ -107,9 +108,10 @@ export default function SettingsPage() {
   const [urlInput, setUrlInput] = useState('');
   const audioInputRef = useRef<HTMLInputElement>(null);
   const [isAddSongDialogOpen, setIsAddSongDialogOpen] = useState(false);
-
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setNotificationPermission(Notification.permission);
       setNotificationsEnabled(Notification.permission === 'granted');
@@ -117,17 +119,19 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    const song = savedSongs.find(s => s.url === url);
-    if (url && song) {
-        setUrlInput(song.name);
-    } else if (url && !url.startsWith('blob:')) {
-        setUrlInput(url);
-    } else if (url.startsWith('blob:')) {
-        // Keep the file name for blob URLs, which is already handled in handleAudioFileChange
-    } else {
-        setUrlInput('');
+    if (isClient) {
+      const song = savedSongs.find(s => s.url === url);
+      if (url && song) {
+          setUrlInput(song.name);
+      } else if (url && !url.startsWith('blob:')) {
+          setUrlInput(url);
+      } else if (url.startsWith('blob:')) {
+          // Keep the file name for blob URLs, which is already handled in handleAudioFileChange
+      } else {
+          setUrlInput('');
+      }
     }
-  }, [url, savedSongs]);
+  }, [url, savedSongs, isClient]);
 
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
@@ -381,7 +385,6 @@ export default function SettingsPage() {
                                     </Button>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium truncate" title={song.name}>{song.name}</p>
-                                        <p className="text-xs text-muted-foreground truncate" title={song.url}>{song.url}</p>
                                     </div>
                                     <a href={song.url} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({variant: "ghost", size: "icon"}), "h-7 w-7")}>
                                         <ExternalLink className="h-4 w-4" />

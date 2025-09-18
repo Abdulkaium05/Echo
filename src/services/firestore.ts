@@ -3,9 +3,10 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseAuthUser } from 'firebase/auth';
 import type { ChatItemProps } from '@/components/chat/chat-item';
-import { blueBirdAssistant, type BlueBirdAssistantInput } from '@/ai/flows/blueBirdAiFlow';
+import { blueBirdAssistant, type BlueBirdAssistantInput, type BlueBirdAssistantOutput } from '@/ai/flows/blueBirdAiFlow';
 import { addNotification } from './notificationService';
 import type { UserProfile } from '@/types/user';
+import type { SavedSong } from '@/context/music-player-context';
 
 export const BOT_UID = 'blue-bird-bot';
 export const DEV_UID = 'vip-dev';
@@ -399,7 +400,6 @@ export const sendWelcomeMessage = async (newUserId: string): Promise<void> => {
 };
 
 let chatMessageListeners: { [chatId: string]: Array<(messages: Message[]) => void> } = {};
-let latestMessageTimestamps: { [chatId: string]: number } = {};
 
 const notifyMessageListeners = (chatId: string) => {
   if (chatMessageListeners[chatId]) {
@@ -410,14 +410,6 @@ const notifyMessageListeners = (chatId: string) => {
             senderName: senderProfile?.name || 'User',
         };
     });
-
-    const latestMessage = updatedMessagesForChat[updatedMessagesForChat.length - 1];
-    if (latestMessage && latestMessage.senderId !== CURRENT_DEMO_USER_ID) {
-      if (!latestMessageTimestamps[chatId] || latestMessage.timestamp.seconds > latestMessageTimestamps[chatId]) {
-        latestMessageTimestamps[chatId] = latestMessage.timestamp.seconds;
-        // The call to addNotification was here and has been removed.
-      }
-    }
 
     chatMessageListeners[chatId].forEach(listener => {
         try {
@@ -452,9 +444,7 @@ export const getChatMessages = (
             senderName: senderProfile?.name || 'User',
         };
     });
-    if (messagesForChat.length > 0) {
-      latestMessageTimestamps[chatId] = messagesForChat[messagesForChat.length - 1].timestamp.seconds;
-    }
+    
     Promise.resolve().then(() => callback(messagesForChat));
   } catch (e: any) {
     onError(e);
@@ -482,7 +472,8 @@ export const sendMessage = async (
     isWittyReactionResponse?: boolean,
     repliedToReactionOnMessageId?: string,
     repliedToReactionEmoji?: string,
-    currentlyPlayingSong?: string
+    currentlyPlayingSong?: string,
+    savedSongs?: SavedSong[],
 ): Promise<void> => {
   const attachmentUrl = attachmentData?.dataUri;
   const attachmentName = attachmentData?.name;
@@ -573,18 +564,28 @@ export const sendMessage = async (
           setTimeout(async () => {
               try {
                   console.log(`[sendMessage] Calling Genkit flow. User message: "${currentMessageTextForBot}". History:`, historyForFlow, "Photo URI:", photoDataUriForBot ? "Present" : "Absent");
-                  const aiResponse = await blueBirdAssistant({
+                  const aiResponse: BlueBirdAssistantOutput = await blueBirdAssistant({
                       userName: senderProfile?.name || 'User',
                       userMessage: currentMessageTextForBot,
                       chatHistory: historyForFlow,
                       photoDataUri: photoDataUriForBot,
                       audioDataUri: audioDataUriForBot,
                       currentlyPlayingSong: currentlyPlayingSong,
+                      savedSongs: savedSongs,
                   });
-                  const botResponseText = aiResponse.botResponse;
+                  const { botResponse, songToPlay } = aiResponse;
 
-                  await sendMessage(chatId, BOT_UID, botResponseText, undefined, undefined, true);
-                  console.log(`[sendMessage] Bot responded with Genkit in chat ${chatId}: "${botResponseText}"`);
+                  // Send the text response first
+                  await sendMessage(chatId, BOT_UID, botResponse, undefined, undefined, true);
+                  console.log(`[sendMessage] Bot responded with Genkit in chat ${chatId}: "${botResponse}"`);
+
+                  // If the AI decided to play a song, the parent component (ChatWindow) will handle it.
+                  // We need a way to pass this back up. Since this function doesn't return,
+                  // we'll rely on the ChatWindow to have access to the AI response.
+                  // For the mock, we can't directly do that. So the ChatWindow will call the AI
+                  // and then call this function.
+                  // Let's modify the ChatWindow to handle the AI response directly.
+                  
               } catch (error) {
                   console.error("[sendMessage] Error getting AI response from Genkit or sending bot's message:", error);
                   try {
@@ -690,7 +691,8 @@ export const updateVIPStatus = async (userId: string, isVIP: boolean, vipPack?: 
 };
 
 export const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
-  if (!timestamp || typeof timestamp.seconds !== 'number') {
+  // Prevent server-side execution that could cause hydration mismatch
+  if (typeof window === 'undefined' || !timestamp || typeof timestamp.seconds !== 'number') {
     return '';
   }
   try {
@@ -722,8 +724,9 @@ export const formatTimestamp = (timestamp: Timestamp | null | undefined): string
 };
 
 export const formatLastSeen = (timestamp: Timestamp | null | undefined): string => {
-    if (!timestamp || typeof timestamp.seconds !== 'number') {
-        return 'Active recently';
+    // Prevent server-side execution that could cause hydration mismatch
+    if (typeof window === 'undefined' || !timestamp || typeof timestamp.seconds !== 'number') {
+        return '...';
     }
     const now = new Date();
     const lastSeenDate = new Date(timestamp.seconds * 1000);

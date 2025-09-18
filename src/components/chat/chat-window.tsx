@@ -1,3 +1,4 @@
+
 // src/components/chat/chat-window.tsx
 'use client';
 
@@ -60,7 +61,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
   const { user: currentUser, userProfile, updateMockUserProfile } = useAuth();
   const { hasVipAccess } = useVIP();
   const { toast } = useToast();
-  const { url: songUrl } = useMusicPlayer();
+  const { url: songUrl, savedSongs, setUrl: setMusicUrl } = useMusicPlayer();
   const { playSound } = useSound();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
@@ -274,7 +275,8 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
           undefined, // isWittyReactionResponse
           undefined, // repliedToReactionOnMessageId
           undefined, // repliedToReactionEmoji
-          songUrl // Pass the song context
+          songUrl, // Pass the song context
+          savedSongs
       );
       setReplyingToMessage(null); 
       messageInputRef.current?.clearAttachmentPreview(); 

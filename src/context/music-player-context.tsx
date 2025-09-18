@@ -1,3 +1,4 @@
+
 // src/context/music-player-context.tsx
 'use client';
 
@@ -14,7 +15,6 @@ export interface SavedSong {
 interface MusicPlayerContextProps {
   url: string;
   isPlaying: boolean;
-  isReady: boolean;
   savedSongs: SavedSong[];
   setUrl: (url: string) => void;
   togglePlay: () => void;
@@ -25,12 +25,12 @@ interface MusicPlayerContextProps {
 const MusicPlayerContext = createContext<MusicPlayerContextProps | undefined>(undefined);
 
 const SAVED_SONGS_STORAGE_KEY = 'echo_saved_songs';
+const LAST_PLAYED_URL_KEY = 'echo_last_played_url';
 
 export const MusicPlayerProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const [url, setUrl] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isReady, setIsReady] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [savedSongs, setSavedSongs] = useState<SavedSong[]>([]);
 
@@ -41,8 +41,12 @@ export const MusicPlayerProvider = ({ children }: { children: ReactNode }) => {
         if (storedSongs) {
             setSavedSongs(JSON.parse(storedSongs));
         }
+        const lastUrl = localStorage.getItem(LAST_PLAYED_URL_KEY);
+        if (lastUrl) {
+            setUrl(lastUrl);
+        }
     } catch (error) {
-        console.error("Failed to load saved songs from localStorage", error);
+        console.error("Failed to load music player state from localStorage", error);
     }
   }, []);
 
@@ -50,11 +54,14 @@ export const MusicPlayerProvider = ({ children }: { children: ReactNode }) => {
     if (isClient) {
         try {
             localStorage.setItem(SAVED_SONGS_STORAGE_KEY, JSON.stringify(savedSongs));
+            if (url) {
+                localStorage.setItem(LAST_PLAYED_URL_KEY, url);
+            }
         } catch (error) {
-            console.error("Failed to save songs to localStorage", error);
+            console.error("Failed to save music player state to localStorage", error);
         }
     }
-  }, [savedSongs, isClient]);
+  }, [savedSongs, url, isClient]);
 
   const togglePlay = useCallback(() => {
     if (!url) {
@@ -65,18 +72,10 @@ export const MusicPlayerProvider = ({ children }: { children: ReactNode }) => {
       });
       return;
     }
-    if (!isReady) {
-        toast({
-            title: "Player Not Ready",
-            description: "The music player is still loading. Please wait a moment.",
-        });
-        return;
-    }
     setIsPlaying(prev => !prev);
-  }, [url, isReady, toast]);
+  }, [url, toast]);
 
   const handleSetUrl = (newUrl: string) => {
-    setIsReady(false); // Reset ready state on new URL
     setUrl(newUrl);
     setIsPlaying(true); // Auto-play new URL
   };
@@ -92,29 +91,38 @@ export const MusicPlayerProvider = ({ children }: { children: ReactNode }) => {
   }, [toast]);
 
   const removeSong = useCallback((id: string) => {
-    setSavedSongs(prev => prev.filter(song => song.id !== id));
+    setSavedSongs(prev => {
+        const songToRemove = prev.find(song => song.id === id);
+        // If the song being removed is the currently playing one, stop playback.
+        if (songToRemove && songToRemove.url === url) {
+            setUrl('');
+            setIsPlaying(false);
+        }
+        return prev.filter(song => song.id !== id);
+    });
     toast({ title: 'Song Removed', description: 'The song has been removed from your playlist.', variant: 'destructive'});
-  }, [toast]);
+  }, [url, toast]);
 
   return (
-    <MusicPlayerContext.Provider value={{ url, isPlaying, isReady, setUrl: handleSetUrl, togglePlay, savedSongs, addSong, removeSong }}>
+    <MusicPlayerContext.Provider value={{ url, isPlaying, setUrl: handleSetUrl, togglePlay, savedSongs, addSong, removeSong }}>
       {children}
       {isClient && (
         <div className="hidden">
           <ReactPlayer
             url={url}
             playing={isPlaying}
-            onReady={() => setIsReady(true)}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
-            onError={(e) => {
-              console.error('ReactPlayer Error:', e);
-              setIsPlaying(false);
-              toast({
-                title: "Playback Error",
-                description: "The provided URL or file could not be played.",
-                variant: 'destructive'
-              });
+            onError={(e, data) => {
+              if (url && data?.type !== 'metadata') { // Ignore metadata errors
+                console.error('ReactPlayer Error:', e, data);
+                setIsPlaying(false);
+                toast({
+                  title: "Playback Error",
+                  description: "The provided URL or file could not be played.",
+                  variant: 'destructive'
+                });
+              }
             }}
             width="0"
             height="0"

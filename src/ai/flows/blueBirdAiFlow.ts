@@ -10,6 +10,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import type { SavedSong } from '@/context/music-player-context';
+
 
 const getRealTimeNews = ai.defineTool(
   {
@@ -53,6 +55,48 @@ const getCurrentTime = ai.defineTool(
   }
 );
 
+const SavedSongSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  url: z.string(),
+});
+
+const PlaySongOutputSchema = z.object({
+    name: z.string().describe("The name of the found song."),
+    url: z.string().describe("The URL of the found song to be played."),
+});
+
+const playSongFromPlaylist = ai.defineTool(
+    {
+        name: 'playSongFromPlaylist',
+        description: 'Finds a song by name from the user\'s saved playlist and prepares it for playback.',
+        inputSchema: z.object({
+            songName: z.string().describe("The name of the song the user wants to play."),
+            savedSongs: z.array(SavedSongSchema).describe("The user's list of saved songs."),
+        }),
+        outputSchema: PlaySongOutputSchema.optional(),
+    },
+    async ({ songName, savedSongs }) => {
+        console.log(`[playSongFromPlaylist Tool] Searching for song: "${songName}" in playlist:`, savedSongs);
+        if (!savedSongs || savedSongs.length === 0) {
+            console.log("[playSongFromPlaylist Tool] User has no saved songs.");
+            return undefined;
+        }
+
+        const foundSong = savedSongs.find(
+            (song) => song.name.toLowerCase() === songName.toLowerCase()
+        );
+
+        if (foundSong) {
+            console.log(`[playSongFromPlaylist Tool] Found song:`, foundSong);
+            return { name: foundSong.name, url: foundSong.url };
+        } else {
+            console.log(`[playSongFromPlaylist Tool] Song "${songName}" not found in playlist.`);
+            return undefined;
+        }
+    }
+);
+
 
 const ChatHistoryItemSchema = z.object({
   role: z.enum(['user', 'model']).describe('The role of the message sender (user or model/bot).'),
@@ -66,11 +110,13 @@ const BlueBirdAssistantInputSchema = z.object({
   photoDataUri: z.string().optional().describe("An optional photo provided by the user as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
   audioDataUri: z.string().optional().describe("An optional audio message provided by the user as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
   currentlyPlayingSong: z.string().optional().describe('The name or URL of the song currently playing in the background music player.'),
+  savedSongs: z.array(SavedSongSchema).optional().describe("The user's saved playlist of songs."),
 });
 export type BlueBirdAssistantInput = z.infer<typeof BlueBirdAssistantInputSchema>;
 
 const BlueBirdAssistantOutputSchema = z.object({
   botResponse: z.string().describe("Blue Bird's AI-generated response to the user."),
+  songToPlay: PlaySongOutputSchema.optional().describe("If the AI decides to play a song, this field will contain the song's details."),
 });
 export type BlueBirdAssistantOutput = z.infer<typeof BlueBirdAssistantOutputSchema>;
 
@@ -87,7 +133,7 @@ const blueBirdPrompt = ai.definePrompt({
   name: 'blueBirdPrompt',
   input: {schema: BlueBirdAssistantInputSchema},
   output: {schema: BlueBirdAssistantOutputSchema},
-  tools: [getRealTimeNews, getCurrentTime],
+  tools: [getRealTimeNews, getCurrentTime, playSongFromPlaylist],
   prompt: `You are Blue Bird, a friendly, exceptionally intelligent, knowledgeable, and witty AI assistant. Your primary goal is to be an exceptionally helpful, insightful, and engaging AI companion.
 
 **Core Directives:**
@@ -95,6 +141,12 @@ const blueBirdPrompt = ai.definePrompt({
 - **Deep Knowledge:** You have a comprehensive understanding of the "Echo Message" application (details below) and a vast general knowledge base. Use this to provide thorough, well-explained, and insightful answers.
 - **Proactive & Helpful:** Anticipate user needs. If a question is answered, consider what the user might ask next and provide additional, relevant information.
 - **Tool Usage:** You have access to real-time information. You MUST use the \`getRealTimeNews\` tool for current events and the \`getCurrentTime\` tool for date/time queries. This is mandatory.
+
+**Music Control:**
+- If the user asks you to play a song, you MUST use the \`playSongFromPlaylist\` tool to find it in their saved songs ({{{json savedSongs}}}).
+- If the tool finds the song, you MUST populate the \`songToPlay\` output field with the name and URL.
+- Your text response should confirm which song you are playing, for example: "Sure, playing 'Your Song Name'."
+- If the song is not found, inform the user gracefully, e.g., "I couldn't find a song named 'Song Name' in your playlist." DO NOT populate the \`songToPlay\` field if the song is not found.
 
 **Creative Capabilities:**
 You are also a powerful creative partner. You can generate various creative text formats on request, including:
@@ -242,3 +294,8 @@ const blueBirdAiFlow = ai.defineFlow(
     
 
 
+
+
+
+
+    

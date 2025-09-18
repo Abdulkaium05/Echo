@@ -86,7 +86,8 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
   }
 
   const avatarHint = profile.isBot ? "blue bird" : (profile.isCreator ? "creator avatar" : "user avatar");
-  const onlineStatus = formatLastSeen(profile.lastSeen);
+  const onlineStatus = isClient ? formatLastSeen(profile.lastSeen) : '...';
+  const joinDate = isClient && profile.createdAt ? new Date(profile.createdAt.seconds * 1000).toLocaleDateString() : '...';
 
 
   return (
@@ -146,11 +147,11 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
                         <span className="text-muted-foreground">{profile.email}</span>
                     </div>
                  )}
-                 {isClient && profile.createdAt && (
+                 {profile.createdAt && (
                     <div className="flex items-center text-sm p-3 rounded-md border bg-secondary/50">
                         <Cake className="h-5 w-5 text-muted-foreground mr-3" />
                         <span className="text-muted-foreground">
-                           Joined on {new Date(profile.createdAt.seconds * 1000).toLocaleDateString()}
+                           Joined on {joinDate}
                         </span>
                     </div>
                  )}
