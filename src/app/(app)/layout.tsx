@@ -166,7 +166,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
       </header>
 
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col">
           {/* Mobile Chat List View */}
           <div className={cn("h-full md:hidden", {
               'block': pathname === '/chat', // Show only on the main chat list page

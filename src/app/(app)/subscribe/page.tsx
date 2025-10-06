@@ -34,6 +34,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useNotifications } from '@/context/notification-context';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const subscriptionPlans = [
     { planName: 'Micro VIP', price: 1, durationDays: 1, features: ['VIP Badge', 'Select 3 Verified Users', 'Exclusive Chat Access'] },
@@ -386,92 +387,94 @@ export default function SubscribePage() {
   );
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6 lg:px-8 h-full overflow-y-auto">
-      <div className="w-full">
-        {hasVipBadge ? renderManageSubscription() : renderSubscribe()}
+    <ScrollArea className="h-full">
+      <div className="container mx-auto py-8 px-4 md:px-6 lg:px-8">
+        <div className="w-full">
+          {hasVipBadge ? renderManageSubscription() : renderSubscribe()}
 
-        {!hasVipBadge && (
-          <Card className="w-full max-w-md mx-auto mt-12">
-              <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                      <Ticket className="h-6 w-6 text-primary" />
-                      Redeem a Code
-                  </CardTitle>
-                  <CardDescription>Enter your code to activate a VIP plan.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                  <div>
-                      <Label htmlFor="redeem-code-input" className="sr-only">Redeem Code</Label>
-                      <Input
-                          id="redeem-code-input"
-                          type="text"
-                          placeholder="Enter your redeem code"
-                          value={redeemCodeInput}
-                          onChange={(e) => setRedeemCodeInput(e.target.value)}
-                          className="text-base"
-                          disabled={isProcessing}
-                      />
-                  </div>
-                  <Button onClick={handleRedeemCode} className="w-full" disabled={isProcessing || !redeemCodeInput.trim()}>
-                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Redeem Code
-                  </Button>
-              </CardContent>
-          </Card>
-        )}
+          {!hasVipBadge && (
+            <Card className="w-full max-w-md mx-auto mt-12">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                        <Ticket className="h-6 w-6 text-primary" />
+                        Redeem a Code
+                    </CardTitle>
+                    <CardDescription>Enter your code to activate a VIP plan.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    <div>
+                        <Label htmlFor="redeem-code-input" className="sr-only">Redeem Code</Label>
+                        <Input
+                            id="redeem-code-input"
+                            type="text"
+                            placeholder="Enter your redeem code"
+                            value={redeemCodeInput}
+                            onChange={(e) => setRedeemCodeInput(e.target.value)}
+                            className="text-base"
+                            disabled={isProcessing}
+                        />
+                    </div>
+                    <Button onClick={handleRedeemCode} className="w-full" disabled={isProcessing || !redeemCodeInput.trim()}>
+                      {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Redeem Code
+                    </Button>
+                </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <AlertDialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+                <div className="flex justify-center mb-2">
+                    <PartyPopper className={cn("h-12 w-12 text-primary", showConfirmationDialog && "animate-pulse")} />
+                </div>
+              <AlertDialogTitle className="text-center text-xl font-semibold">Congratulations!</AlertDialogTitle>
+              <AlertDialogDescription className="text-center">
+                You are now a VIP Member with the <strong>{subscribedPlan?.name}</strong> plan!
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="my-4">
+                <h4 className="font-semibold text-center mb-3">You've unlocked:</h4>
+                <ul className="space-y-2 text-sm text-muted-foreground list-inside text-center">
+                    {subscribedPlan?.features.map((feature, index) => (
+                        <li key={index} className="flex items-center justify-center gap-2">
+                            <Check className="h-4 w-4 text-green-500 shrink-0" />
+                            <span>{feature}</span>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogAction asChild>
+                  <Button onClick={closeConfirmationAndRedirect} className="w-full">Awesome!</Button>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel VIP Subscription?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to cancel your VIP subscription? You will lose access to your VIP badge and timed benefits.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowCancelDialog(false)} disabled={isProcessing}>Keep Subscription</AlertDialogCancel>
+              <AlertDialogAction
+                  onClick={confirmCancelSubscription}
+                  className={buttonVariants({ variant: "destructive" })}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Confirm Cancellation
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-
-      <AlertDialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-              <div className="flex justify-center mb-2">
-                  <PartyPopper className={cn("h-12 w-12 text-primary", showConfirmationDialog && "animate-pulse")} />
-              </div>
-            <AlertDialogTitle className="text-center text-xl font-semibold">Congratulations!</AlertDialogTitle>
-            <AlertDialogDescription className="text-center">
-              You are now a VIP Member with the <strong>{subscribedPlan?.name}</strong> plan!
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="my-4">
-              <h4 className="font-semibold text-center mb-3">You've unlocked:</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground list-inside text-center">
-                  {subscribedPlan?.features.map((feature, index) => (
-                      <li key={index} className="flex items-center justify-center gap-2">
-                          <Check className="h-4 w-4 text-green-500 shrink-0" />
-                          <span>{feature}</span>
-                      </li>
-                  ))}
-              </ul>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogAction asChild>
-                <Button onClick={closeConfirmationAndRedirect} className="w-full">Awesome!</Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel VIP Subscription?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to cancel your VIP subscription? You will lose access to your VIP badge and timed benefits.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowCancelDialog(false)} disabled={isProcessing}>Keep Subscription</AlertDialogCancel>
-            <AlertDialogAction
-                onClick={confirmCancelSubscription}
-                className={buttonVariants({ variant: "destructive" })}
-                disabled={isProcessing}
-              >
-                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Confirm Cancellation
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    </ScrollArea>
   );
 }

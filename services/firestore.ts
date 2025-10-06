@@ -472,8 +472,6 @@ export const sendMessage = async (
     isWittyReactionResponse?: boolean,
     repliedToReactionOnMessageId?: string,
     repliedToReactionEmoji?: string,
-    currentlyPlayingSong?: string,
-    savedSongs?: SavedSong[],
 ): Promise<void> => {
   const attachmentUrl = attachmentData?.dataUri;
   const attachmentName = attachmentData?.name;
