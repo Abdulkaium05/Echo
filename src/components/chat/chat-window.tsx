@@ -290,7 +290,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
           photoDataUri,
           audioDataUri,
           currentlyPlayingSong: songUrl,
-          savedSongs: savedSongs,
+          savedSongs: savedSongs as SavedSong[],
         };
 
         console.log("[ChatWindow] Calling Genkit flow with input:", aiInput);

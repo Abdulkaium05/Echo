@@ -166,7 +166,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
       </header>
 
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col overflow-y-auto">
           {/* Mobile Chat List View */}
           <div className={cn("h-full md:hidden", {
               'block': pathname === '/chat', // Show only on the main chat list page
@@ -180,6 +180,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               'block': pathname !== '/chat', // Show for any page that is NOT the main chat list
               'hidden': pathname === '/chat',
               'md:block': !isChatPage, // On desktop, show if not a chat page at all
+              'md:flex-1 md:flex md:flex-col': isChatPage && isViewingChat, // Correctly handle flex for chat window
               'md:hidden': isChatPage && !isViewingChat, // On desktop, hide if on main chat list
           })}>
               {children}

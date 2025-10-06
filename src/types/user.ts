@@ -1,3 +1,4 @@
+
 // src/types/user.ts
 import type { Timestamp } from 'firebase/firestore';
 import type { BadgeType } from '@/app/(app)/layout';

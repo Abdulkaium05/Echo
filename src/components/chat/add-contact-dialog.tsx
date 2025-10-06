@@ -77,6 +77,7 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
                 title: "VIP Required",
                 description: "This is a verified user. You must either be a VIP member or be specifically allowed by them to start a conversation.",
                 variant: "destructive",
+                duration: 7000,
                 action: <ShieldAlert className="h-5 w-5" />,
               });
               setIsLoading(false);

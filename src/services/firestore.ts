@@ -15,11 +15,11 @@ export type { UserProfile };
 
 let mockLocalUsers: UserProfile[] = [
   { uid: BOT_UID, displayUid: '00000001', name: 'Blue Bird (AI Assistant)', email: null, isBot: true, isVerified: true, isCreator: false, avatarUrl: 'outline-bird-avatar', lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp},
-  { uid: DEV_UID, displayUid: '00000002', name: 'Dev Team', email: 'devteam@example.com', isDevTeam: true, isVerified: true, isCreator: false, isVIP: true, vipPack: "Lifetime", avatarUrl: 'dev-team-svg-placeholder', createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp },
-  { uid: 'test-user', displayUid: '10000001', name: 'Test User', email: 'test@example.com', isVIP: false, isVerified: false, isCreator: false, avatarUrl: `https://picsum.photos/seed/test-user/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp, selectedVerifiedContacts: [], hasMadeVipSelection: false },
+  { uid: DEV_UID, displayUid: '00000002', name: 'Dev Team', email: 'devteam@example.com', isDevTeam: true, isVerified: true, isCreator: false, isVIP: true, vipPack: "Lifetime", avatarUrl: 'dev-team-svg-placeholder', createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [] },
+  { uid: 'test-user', displayUid: '10000001', name: 'Test User', email: 'test@example.com', isVIP: false, isVerified: false, isCreator: false, avatarUrl: `https://picsum.photos/seed/test-user/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp, selectedVerifiedContacts: [], hasMadeVipSelection: false, allowedNormalContacts: [] },
   { uid: 'verified-contact-1', displayUid: '20000001', name: 'Twaha mizan', email: 'twahamizan04@gmail.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/twaha-the-great/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 1 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [] },
   { uid: 'verified-contact-2', displayUid: '20000002', name: 'Rakib', email: 'rakib@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/rakib-verified/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 10 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [] },
-  { uid: 'regular-user-1', displayUid: '10000002', name: 'Ashadul', email: 'ashadul@example.com', isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/ashadul-regular/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 30 * 60, nanoseconds: 0} as unknown as Timestamp },
+  { uid: 'regular-user-1', displayUid: '10000002', name: 'Ashadul', email: 'ashadul@example.com', isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/ashadul-regular/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 30 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [] },
   { uid: 'monk-user-1', displayUid: '10000003', name: 'Karim Ahmed', email: 'monk1@example.com', isCreator: false, isVIP: true, vipPack: 'Gold VIP', avatarUrl: `https://picsum.photos/seed/monk-peaceful/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*2, nanoseconds: 0} as unknown as Timestamp },
   { uid: 'monk-user-2', displayUid: '10000004', name: 'Sajid Islam', email: 'monk2@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/monk-zen/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*3, nanoseconds: 0} as unknown as Timestamp },
   { uid: 'monk-user-3', displayUid: '10000005', name: 'Ayesha Siddika', email: 'monk3@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/monk-silent/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*4, nanoseconds: 0} as unknown as Timestamp },
@@ -623,7 +623,6 @@ export const updateVIPStatus = async (userId: string, isVIP: boolean, vipPack?: 
 };
 
 export const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
-  // Prevent server-side execution that could cause hydration mismatch
   if (typeof window === 'undefined' || !timestamp || typeof timestamp.seconds !== 'number') {
     return '';
   }
@@ -656,7 +655,6 @@ export const formatTimestamp = (timestamp: Timestamp | null | undefined): string
 };
 
 export const formatLastSeen = (timestamp: Timestamp | null | undefined): string => {
-    // Prevent server-side execution that could cause hydration mismatch
     if (typeof window === 'undefined' || !timestamp || typeof timestamp.seconds !== 'number') {
         return '...';
     }

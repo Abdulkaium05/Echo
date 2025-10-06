@@ -1,3 +1,4 @@
+
 // src/components/chat/allow-normal-users-dialog.tsx
 'use client';
 
@@ -79,7 +80,7 @@ export function AllowNormalUsersDialog({ isOpen, onOpenChange }: AllowNormalUser
 
     try {
       // First, update the user's profile with the new list of allowed contacts.
-      await updateMockUserProfile(user.uid, { 
+      updateMockUserProfile(user.uid, { 
           allowedNormalContacts: selectedUsers,
       });
       
