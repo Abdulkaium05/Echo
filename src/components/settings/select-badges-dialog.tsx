@@ -1,4 +1,3 @@
-
 // src/components/settings/select-badges-dialog.tsx
 'use client';
 
@@ -12,7 +11,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Check, Loader2, Crown, Bot, Wrench } from "lucide-react";
+import { Check, Loader2, Crown, Bot, Wrench, SmilePlus, FlaskConical } from "lucide-react";
 import { useAuth, type UserProfile } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
 import { CreatorLetterCBBadgeIcon } from '../chat/bot-icons';
@@ -26,7 +25,7 @@ interface SelectBadgesDialogProps {
   onSave: (newOrder: BadgeType[]) => void;
 }
 
-const allPossibleBadges: BadgeType[] = ['creator', 'vip', 'verified', 'dev', 'bot'];
+const allPossibleBadges: BadgeType[] = ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
 
 const badgeComponentMap: Record<BadgeType, React.FC<{className?: string}>> = {
   creator: CreatorLetterCBBadgeIcon,
@@ -34,6 +33,8 @@ const badgeComponentMap: Record<BadgeType, React.FC<{className?: string}>> = {
   verified: VerifiedBadge,
   dev: (props) => <Wrench {...props} />,
   bot: (props) => <Bot {...props} />,
+  meme_creator: (props) => <SmilePlus {...props} />,
+  beta_tester: (props) => <FlaskConical {...props} />,
 };
 
 const badgeLabelMap: Record<BadgeType, string> = {
@@ -41,7 +42,9 @@ const badgeLabelMap: Record<BadgeType, string> = {
   vip: "VIP Badge",
   verified: "Verified Badge",
   dev: "Developer Badge",
-  bot: "Bot Badge"
+  bot: "Bot Badge",
+  meme_creator: "Meme Creator Badge",
+  beta_tester: "Beta Tester Badge",
 };
 
 
@@ -54,6 +57,8 @@ export function SelectBadgesDialog({ isOpen, onOpenChange, userProfile, onSave }
   if (userProfile.isVerified) earnedBadges.add('verified');
   if (userProfile.isDevTeam) earnedBadges.add('dev');
   if (userProfile.isBot) earnedBadges.add('bot');
+  if (userProfile.isMemeCreator) earnedBadges.add('meme_creator');
+  if (userProfile.isBetaTester) earnedBadges.add('beta_tester');
   
   useEffect(() => {
     if (isOpen) {
@@ -61,7 +66,7 @@ export function SelectBadgesDialog({ isOpen, onOpenChange, userProfile, onSave }
       const currentOrder = userProfile.badgeOrder || [];
       setSelectedBadges(currentOrder.filter(b => earnedBadges.has(b)));
     }
-  }, [isOpen, userProfile.badgeOrder, userProfile.isCreator, userProfile.isVIP, userProfile.isVerified, userProfile.isDevTeam, userProfile.isBot]);
+  }, [isOpen, userProfile]);
 
 
   const handleBadgeClick = (badge: BadgeType) => {
@@ -107,7 +112,7 @@ export function SelectBadgesDialog({ isOpen, onOpenChange, userProfile, onSave }
                   )}
                   onClick={() => handleBadgeClick(badgeKey)}
                 >
-                    <BadgeIcon className={cn("h-5 w-5", badgeKey === 'vip' && 'text-yellow-500', badgeKey === 'dev' && 'text-blue-600', badgeKey === 'bot' && 'text-sky-500')} />
+                    <BadgeIcon className={cn("h-5 w-5", badgeKey === 'vip' && 'text-yellow-500', badgeKey === 'dev' && 'text-blue-600', badgeKey === 'bot' && 'text-sky-500', badgeKey === 'meme_creator' && 'text-green-500', badgeKey === 'beta_tester' && 'text-orange-500')} />
                     <span className="flex-1 font-medium text-sm">{badgeLabelMap[badgeKey]}</span>
                     <div
                       className={cn(

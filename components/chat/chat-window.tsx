@@ -1,4 +1,3 @@
-
 // src/components/chat/chat-window.tsx
 'use client';
 
@@ -10,9 +9,19 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './message-bubble';
 import { MessageInput, type MessageInputHandle } from './message-input';
 import { VerifiedBadge } from '@/components/verified-badge';
-import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban } from 'lucide-react';
+import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban, Trash2, UserX, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
     getChatMessages,
     sendMessage as sendMessageToChat, 
@@ -37,6 +46,9 @@ import { useMusicPlayer, type SavedSong } from '@/context/music-player-context';
 import { AudioCallDialog } from './audio-call-dialog'; // Import the new component
 import { useSound } from '@/context/sound-context';
 import { useVIP } from '@/context/vip-context';
+import { useBlockUser } from '@/context/block-user-context';
+import { useTrash } from '@/context/trash-context';
+import { useRouter } from 'next/navigation';
 
 interface ChatWindowProps {
   chatId: string;
@@ -62,8 +74,12 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
   const { user: currentUser, userProfile, updateMockUserProfile } = useAuth();
   const { hasVipAccess } = useVIP();
   const { toast } = useToast();
+  const router = useRouter();
   const { url: songUrl, savedSongs, setUrl: setMusicUrl } = useMusicPlayer();
   const { playSound } = useSound();
+  const { addBlockedUser, unblockUser, isUserBlocked } = useBlockUser();
+  const { trashChat } = useTrash();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
   const [errorMessages, setErrorMessages] = useState<string | null>(null);
@@ -82,11 +98,13 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
   const [isAudioCallDialogOpen, setIsAudioCallDialogOpen] = useState(false);
   const [isTransparentMode, setIsTransparentMode] = useState(false);
   
+  const [dialogState, setDialogState] = useState<{ isOpen: boolean; type: 'block' | 'delete' | null }>({ isOpen: false, type: null });
+
   const previousMessagesCountRef = useRef(0);
 
   const customBubbleColor = userProfile?.chatColorPreferences?.[chatId];
   const amBlockedByPartner = partnerProfileDetails?.blockedUsers?.includes(currentUser?.uid ?? '') ?? false;
-
+  const iHaveBlockedPartner = isUserBlocked(chatPartnerId);
 
   useEffect(() => {
     // This effect ensures the component re-renders when transparent mode is toggled globally.
@@ -364,6 +382,47 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
     }
   };
 
+  const handleBlockUser = () => {
+    if (chatPartnerId === BOT_UID || chatPartnerId === DEV_UID) {
+      toast({ title: "Action Not Allowed", description: "This contact cannot be blocked." });
+      return;
+    }
+    setDialogState({ isOpen: true, type: 'block' });
+  };
+  
+  const handleUnblockUser = () => {
+      unblockUser(chatPartnerId);
+      toast({
+          title: `Unblocked ${chatName}`,
+          description: "You can now send and receive messages again.",
+      });
+  };
+
+  const handleDeleteChat = () => {
+    setDialogState({ isOpen: true, type: 'delete' });
+  };
+
+  const confirmBlockUser = () => {
+    addBlockedUser(chatPartnerId);
+    toast({
+      title: `User Blocked`,
+      description: `You have blocked ${chatName}. You can unblock them from the chat list context menu.`,
+      variant: "destructive"
+    });
+    setDialogState({ isOpen: false, type: null });
+  };
+
+  const confirmDeleteChat = () => {
+    trashChat({ id: chatId, name: chatName, avatarUrl, contactUserId: chatPartnerId } as any);
+    toast({
+      title: `Chat with ${chatName} moved to Trash`,
+      description: "You can restore it from Settings.",
+      variant: "destructive"
+    });
+    setDialogState({ isOpen: false, type: null });
+    router.push('/chat');
+  };
+
  const renderChatHeaderAvatar = () => {
     const isBotWithNewAvatar = chatAvatarUrl === 'outline-bird-avatar';
     const isDev = chatIconIdentifier === 'dev-team-svg';
@@ -510,6 +569,15 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
                         </DropdownMenuItem>
                     </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleBlockUser} className="text-destructive focus:text-destructive">
+                    <UserX className="mr-2 h-4 w-4" />
+                    <span>Block User</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDeleteChat} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    <span>Delete Conversation</span>
+                </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -572,10 +640,19 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
       )}
 
       <div className="shrink-0">
-        {amBlockedByPartner ? (
+        {iHaveBlockedPartner ? (
+          <div className="p-4 border-t bg-secondary text-center text-sm font-medium flex items-center justify-center gap-2">
+            <Ban className="h-4 w-4 text-destructive" />
+            <span className="text-destructive">You have blocked this user.</span>
+            <Button variant="outline" size="sm" onClick={handleUnblockUser}>
+              <UserCheck className="mr-2 h-4 w-4"/>
+              Unblock
+            </Button>
+          </div>
+        ) : amBlockedByPartner ? (
           <div className="p-4 border-t bg-secondary text-center text-sm text-destructive font-medium flex items-center justify-center gap-2">
             <Ban className="h-4 w-4" />
-            <span>You have been blocked by this user.</span>
+            <span>You cannot reply to this conversation.</span>
           </div>
         ) : (
           <MessageInput
@@ -625,6 +702,37 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
             calleeProfile={partnerProfileDetails}
         />
      )}
+
+     <AlertDialog open={dialogState.isOpen} onOpenChange={() => setDialogState({ isOpen: false, type: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {dialogState.type === 'block' ? `Block ${chatName}?` :
+               `Delete chat with ${chatName}?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {dialogState.type === 'block'
+                ? "You will not be able to send or receive messages from this user until you unblock them."
+                : "This will move the chat to the Trash. You can restore it later from Settings."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (dialogState.type === 'block') {
+                  confirmBlockUser();
+                } else if (dialogState.type === 'delete') {
+                  confirmDeleteChat();
+                }
+              }}
+            >
+              {dialogState.type === 'block' ? 'Block' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

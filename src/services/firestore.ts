@@ -31,11 +31,11 @@ let mockLocalUsers: UserProfile[] = [
   { uid: 'vip-user-3', displayUid: '20000007', name: 'Rafi', email: 'rafi@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/rafi-developer/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 25 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [] },
   { uid: 'vip-only-user', displayUid: '10000007', name: 'Rahim Uddin', email: 'valerie@example.com', isVIP: true, vipPack: 'Bronze VIP', isCreator: false, isVerified: false, avatarUrl: `https://picsum.photos/seed/valerie-vip/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, vipExpiryTimestamp: Date.now() + 5 * 24 * 60 * 60 * 1000, lastSeen: { seconds: Math.floor(Date.now()/1000) - 5 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false },
   { uid: 'nayem-vip', displayUid: '20000008', name: 'Nayem', email: 'nayem@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/nayem-is-great/200`, createdAt: { seconds: Date.now()/1000 - 100, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 2 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [] },
-  { uid: 'abdul-kaium-verified', displayUid: '20000009', name: 'Abdul-Kaium', email: 'abdulkaiumiqbel2005@gmail.com', isVerified: true, isVIP: false, vipPack: "Lifetime", isDevTeam: false, isCreator: false, avatarUrl: `https://picsum.photos/seed/kaium-verified/200`, createdAt: { seconds: Date.now()/1000 - 200, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 8 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [] },
+  { uid: 'abdul-kaium-verified', displayUid: '20000009', name: 'Abdul-Kaium', email: 'abdulkaiumiqbel2005@gmail.com', isDevTeam: true, isVerified: true, isCreator: true, isVIP: true, isMemeCreator: true, isBetaTester: true, vipPack: 'Lifetime', avatarUrl: `https://picsum.photos/seed/kaium-verified/200`, createdAt: { seconds: Date.now()/1000 - 200, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 8 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeOrder: ['dev'] },
   { uid: 'julker-nain-creator', displayUid: '30000001', name: 'Julker Nain', email: 'julker@example.com', isCreator: true, isVerified: true, isVIP: false, vipPack: undefined, avatarUrl: `https://picsum.photos/seed/julker-artist/200`, createdAt: { seconds: Date.now()/1000 - 250, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 3 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false, allowedNormalContacts: [] },
   { uid: 'al-amin-creator', displayUid: '30000002', name: 'Al-Amin', email: 'alamin@example.com', isCreator: true, isVerified: true, isVIP: false, vipPack: undefined, avatarUrl: `https://picsum.photos/seed/al-amin-creator/200`, createdAt: { seconds: Date.now()/1000 - 300, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 6 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false, allowedNormalContacts: [] },
   { uid: 'sakib-new-user', displayUid: '10000008', name: 'Sakib', email: 'sakib@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/sakib-user/200`, createdAt: { seconds: Date.now()/1000 - 400, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*6, nanoseconds: 0} as unknown as Timestamp },
-  { uid: 'walid-new-user', displayUid: '10000009', name: 'Walid', email: 'walid@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/walid-user/200`, createdAt: { seconds: Date.now()/1000 - 410, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*7, nanoseconds: 0} as unknown as Timestamp, isVIP: true, vipPack: "Starter VIP" },
+  { uid: 'walid-new-user', displayUid: '10000009', name: 'Walid', email: 'walid@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/walid-user/200`, createdAt: { seconds: Date.now()/1000 - 410, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*7, nanoseconds: 0} as unknown as Timestamp, isVIP: true, vipPack: "Starter VIP", isMemeCreator: true, isBetaTester: true },
   { uid: 'samia-new-user', displayUid: '10000010', name: 'Samia', email: 'samia@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/samia-user/200`, createdAt: { seconds: Date.now()/1000 - 420, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*8, nanoseconds: 0} as unknown as Timestamp },
   { uid: 'shamim-new-user', displayUid: '10000011', name: 'Shamim', email: 'shamim@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/shamim-user/200`, createdAt: { seconds: Date.now()/1000 - 430, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*9, nanoseconds: 0} as unknown as Timestamp, isVIP: true, vipPack: "Micro VIP" },
   { uid: 'jubayer-new-user', displayUid: '10000012', name: 'Jubayer', email: 'jubaye@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/jubaye-user/200`, createdAt: { seconds: Date.now()/1000 - 440, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*10, nanoseconds: 0} as unknown as Timestamp, isVIP: true, vipPack: "Silver VIP" },
@@ -237,18 +237,20 @@ const ensureAllUserChatsExist = (activeUserId: string) => {
 
 let chatListListeners: Array<{ userId: string, callback: (chats: Chat[]) => void }> = [];
 
-const notifyChatListListeners = (userId: string) => {
-    const userProfile = mockLocalUsers.find(p => p.uid === userId);
+export const notifyChatListListeners = (userId: string | null) => {
+    const userToNotifyId = userId || CURRENT_DEMO_USER_ID;
+    const userProfile = mockLocalUsers.find(p => p.uid === userToNotifyId);
 
     if (!userProfile) {
-        console.warn(`notifyChatListListeners: No user profile found for UID ${userId}. Notifying with empty list.`);
-        const relevantListeners = chatListListeners.filter(l => l.userId === userId);
+        console.warn(`notifyChatListListeners: No user profile found for UID ${userToNotifyId}. Notifying with empty list.`);
+        const relevantListeners = chatListListeners.filter(l => l.userId === userToNotifyId);
         relevantListeners.forEach(l => l.callback([]));
         return;
     }
     
     // This function is now just for a single user, so it's more efficient.
     ensureAllUserChatsExist(userProfile.uid);
+    const hasVipAccess = userProfile.isVIP || userProfile.isVerified || userProfile.isCreator || userProfile.isDevTeam;
 
     const userChats = mockChats.filter(chat => {
         if (!chat.participants.includes(userProfile.uid)) {
@@ -261,19 +263,24 @@ const notifyChatListListeners = (userId: string) => {
         const otherParticipantProfile = mockLocalUsers.find(u => u.uid === otherParticipantId);
         if (!otherParticipantProfile) return false;
         
-        // Always show Bot and Dev Team
-        if (otherParticipantProfile.isDevTeam || otherParticipantProfile.isBot) {
+        // Always show the bot
+        if (otherParticipantProfile.isBot) {
             return true;
+        }
+        
+        // Show Dev Team only if the user has VIP access
+        if (otherParticipantProfile.isDevTeam) {
+            return hasVipAccess;
         }
 
-        // Show users who are ONLY VIP (not also verified or creator)
-        if (otherParticipantProfile.isVIP && !otherParticipantProfile.isVerified && !otherParticipantProfile.isCreator) {
+        // Show users who are ONLY VIP (not also verified or creator) - treat them like normal users
+        if (otherParticipantProfile.isVIP && !otherParticipantProfile.isVerified && !otherParticipantProfile.isCreator && !otherParticipantProfile.isDevTeam) {
             return true;
         }
         
-        const isOtherUserExclusive = otherParticipantProfile.isVerified || otherParticipantProfile.isCreator;
+        const isOtherUserExclusive = otherParticipantProfile.isVerified || otherParticipantProfile.isCreator || otherParticipantProfile.isDevTeam;
         
-        // If the other user is a verified/creator type
+        // If the other user is a verified/creator/dev type (and not the main Dev Team account)
         if (isOtherUserExclusive) {
             // Check if current user has selected them
             const isSelected = userProfile.selectedVerifiedContacts?.includes(otherParticipantId);
@@ -304,7 +311,7 @@ const notifyChatListListeners = (userId: string) => {
         return { ...chat, participants: updatedParticipants, participantDetails };
     });
     
-    const relevantListeners = chatListListeners.filter(l => l.userId === userId);
+    const relevantListeners = chatListListeners.filter(l => l.userId === userToNotifyId);
     relevantListeners.forEach(listener => {
         try {
             listener.callback([...enrichedChats]);

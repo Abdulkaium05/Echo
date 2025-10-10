@@ -9,7 +9,8 @@ import {
     getUserProfile as fetchUserProfileFromMock, 
     updateUserProfile as syncUserProfileToMock,
     mockLocalUsers, 
-    setDemoUserId 
+    setDemoUserId, 
+    notifyChatListListeners
 } from '@/services/firestore'; 
 import type { UserProfile } from '@/types/user';
 import type { BadgeType } from '@/app/(app)/layout';
@@ -210,6 +211,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
      if(userWasUpdatedInAuthContext){
         console.log("AuthProvider: Updated user profile in AuthContext for", uid, data);
+        // This is the key fix: Notify all other users about the profile change.
+        notifyChatListListeners(uid);
      } else {
         console.warn("AuthProvider: Attempted to update profile for UID not in authContextMockUsers:", uid);
      }
@@ -233,3 +236,5 @@ export const useAuth = () => {
 };
 
 export { authContextMockUsers };
+
+    

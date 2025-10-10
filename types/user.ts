@@ -1,4 +1,3 @@
-
 // src/types/user.ts
 import type { Timestamp } from 'firebase/firestore';
 import type { BadgeType } from '@/app/(app)/layout';
@@ -17,6 +16,8 @@ export interface UserProfile {
   isVerified?: boolean;
   isDevTeam?: boolean;
   isCreator?: boolean; 
+  isMemeCreator?: boolean; // New badge property
+  isBetaTester?: boolean;  // New badge property
   lastSeen?: Timestamp; 
   selectedVerifiedContacts?: string[]; 
   allowedNormalContacts?: string[]; // List of normal user UIDs this verified user allows to message them.

@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, Star, QrCode, ShieldCheck } from 'lucide-react';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, Star, QrCode, ShieldCheck, SmilePlus, FlaskConical, BarChart } from 'lucide-react';
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
@@ -228,7 +228,7 @@ interface UserMenuProps {
   onOpenAllowUsersDialog: () => void;
 }
 
-export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot';
+export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester';
 
 const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     creator: ({className}) => <CreatorLetterCBBadgeIcon className={cn("h-4 w-4", className)} />,
@@ -236,6 +236,8 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     verified: ({className}) => <VerifiedBadge className={cn("h-4 w-4", className)} />,
     dev: ({className}) => <Wrench className={cn("h-4 w-4 text-blue-600", className)} />,
     bot: ({className}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} />,
+    meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
+    beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
 };
 
 
@@ -251,11 +253,13 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    if(user.isVerified && !user.isCreator) earnedBadges.push('verified');
    if(user.isDevTeam) earnedBadges.push('dev');
    if(user.isBot) earnedBadges.push('bot');
+   if(user.isMemeCreator) earnedBadges.push('meme_creator');
+   if(user.isBetaTester) earnedBadges.push('beta_tester');
 
    // Use the user's preferred order, but filter to only include badges they've actually earned.
    // Fallback to a default order if the user has no preference set.
-   const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot'];
-   const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge));
+   const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
+   const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
    const isAtLeastVerified = user.isVerified || user.isCreator || user.isDevTeam;
 
@@ -311,6 +315,12 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
                     <span>Allow Users</span>
                 </DropdownMenuItem>
             )}
+            {user.isDevTeam && (
+                <DropdownMenuItem onClick={() => router.push('/poll')}>
+                    <BarChart className="mr-2 h-4 w-4" />
+                    <span>Polls</span>
+                </DropdownMenuItem>
+            )}
          <DropdownMenuItem onClick={() => router.push('/settings')}>
                <Settings className="mr-2 h-4 w-4" />
                <span>More Settings</span>
@@ -332,3 +342,5 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
      </DropdownMenu>
    );
 }
+
+    
