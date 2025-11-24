@@ -44,9 +44,11 @@ export default function IndividualChatPage() {
     try {
       console.log(`IndividualChatPage: Fetching details for chat ${chatId}, user ${currentUser.uid}`);
       
+      const existingChatId = await findChatBetweenUsers(currentUser.uid, chatId);
+
       let partnerId: string | undefined = undefined;
       const { mockChats } = await import('@/services/firestore'); 
-      const chatDoc = mockChats.find(c => c.id === chatId && c.participants.includes(currentUser.uid));
+      const chatDoc = mockChats.find(c => (c.id === chatId || c.id === existingChatId) && c.participants.includes(currentUser.uid));
 
       if (!chatDoc) {
         const potentialPartnerProfile = await getUserProfile(chatId);
@@ -71,7 +73,7 @@ export default function IndividualChatPage() {
       if (!partnerProfile) {
         console.warn(`IndividualChatPage: Profile not found for partner ID: ${partnerId}`);
         setChatPartnerDetails({
-          id: chatId, 
+          id: chatDoc?.id || chatId, 
           partnerActualId: partnerId, 
           name: 'User Not Found',
           isVerified: false,
@@ -80,14 +82,14 @@ export default function IndividualChatPage() {
         });
       } else {
         setChatPartnerDetails({
-          id: chatId,
+          id: chatDoc?.id || chatId,
           partnerActualId: partnerProfile.uid,
           name: partnerProfile.name || 'User',
           avatarUrl: partnerProfile.avatarUrl, 
           iconIdentifier: partnerProfile.avatarUrl === 'dev-team-svg-placeholder' ? 'dev-team-svg' : undefined,
           isVerified: partnerProfile.isVerified,
           isVIP: partnerProfile.isVIP, 
-          isCreator: partnerProfile.isCreator, // Pass creator status
+          isCreator: partnerProfile.isCreator,
         });
       }
     } catch (err: any) {

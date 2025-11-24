@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { cn } from '@/lib/utils';
-import { Crown, Wrench, User as UserIcon, UserX, Trash2, UserCheck } from 'lucide-react';
+import { Crown, Wrench, User as UserIcon, UserX, Trash2, UserCheck, SmilePlus, FlaskConical } from 'lucide-react';
 import type { UserProfile } from '@/services/firestore';
 import { OutlineBirdIcon, SquareBotBadgeIcon, CreatorLetterCBBadgeIcon } from './bot-icons';
 import {
@@ -13,6 +13,8 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import type { BadgeType } from '@/app/(app)/layout';
+
 
 export interface ChatItemProps {
   id: string;
@@ -26,7 +28,10 @@ export interface ChatItemProps {
   isContactVIP?: boolean;
   isDevTeam?: boolean;
   isBot?: boolean;
-  isCreator?: boolean; 
+  isCreator?: boolean;
+  isMemeCreator?: boolean;
+  isBetaTester?: boolean;
+  badgeOrder?: BadgeType[];
   isActive?: boolean;
   href: string;
   iconIdentifier?: string;
@@ -47,9 +52,17 @@ const DevTeamIcon = () => (
   </svg>
 );
 
-const DevTeamBadge = () => (
-    <Wrench className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-);
+
+const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
+    creator: ({className}) => <CreatorLetterCBBadgeIcon className={cn("h-4 w-4", className)} />,
+    vip: ({className}) => <Crown className={cn("h-4 w-4 text-yellow-500", className)} />,
+    verified: ({className}) => <VerifiedBadge className={cn("h-4 w-4", className)} />,
+    dev: ({className}) => <Wrench className={cn("h-4 w-4 text-blue-600", className)} />,
+    bot: ({className}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} />,
+    meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
+    beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
+};
+
 
 export function ChatItem(props: ChatItemProps) {
   const {
@@ -64,8 +77,12 @@ export function ChatItem(props: ChatItemProps) {
     isDevTeam,
     isBot,
     isCreator,
+    isMemeCreator,
+    isBetaTester,
+    badgeOrder,
     isActive,
     href,
+    iconIdentifier,
     isLastMessageSentByCurrentUser,
     isOnline,
     isBlocked,
@@ -84,7 +101,19 @@ export function ChatItem(props: ChatItemProps) {
   };
 
   const fallbackInitials = name.substring(0, 2).toUpperCase();
-  const actualIsVerified = isVerified && !isCreator && !isDevTeam && !isBot;
+
+  const earnedBadges: BadgeType[] = [];
+  if(isCreator) earnedBadges.push('creator');
+  if(isContactVIP) earnedBadges.push('vip');
+  if(isVerified && !isCreator) earnedBadges.push('verified');
+  if(isDevTeam) earnedBadges.push('dev');
+  if(isBot) earnedBadges.push('bot');
+  if(isMemeCreator) earnedBadges.push('meme_creator');
+  if(isBetaTester) earnedBadges.push('beta_tester');
+
+  const badgeDisplayOrder = badgeOrder?.length ? badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
+  const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
+
 
   const renderAvatarOrIcon = () => {
     const avatarBaseClasses = "h-10 w-10";
@@ -101,7 +130,7 @@ export function ChatItem(props: ChatItemProps) {
           </AvatarFallback>
         </Avatar>
       );
-    } else if (isDevTeam) { 
+    } else if (iconIdentifier === 'dev-team-svg') { 
       avatarContent = (
          <div className={cn(iconWrapperClasses, "bg-muted text-muted-foreground")}>
            <DevTeamIcon />
@@ -152,16 +181,11 @@ export function ChatItem(props: ChatItemProps) {
             <p className="truncate text-sm font-medium text-foreground min-w-0">
               {name}
             </p>
-            <div className="flex items-center shrink-0">
-              {isBot && <SquareBotBadgeIcon />}
-              {!isBot && isDevTeam && <DevTeamBadge />}
-              {!isBot && !isDevTeam && (
-                  <>
-                  {isCreator && <CreatorLetterCBBadgeIcon className="h-3.5 w-3.5" />}
-                  {isContactVIP && <Crown className="h-4 w-4 text-yellow-500 shrink-0" />}
-                  {actualIsVerified && !isCreator && <VerifiedBadge className="shrink-0"/>}
-                  </>
-              )}
+            <div className="flex items-center shrink-0 gap-1">
+              {orderedBadges.map(badgeKey => {
+                  const BadgeComponent = BadgeComponents[badgeKey];
+                  return BadgeComponent ? <BadgeComponent key={badgeKey} className="shrink-0" /> : null;
+              })}
             </div>
           </div>
           <div className="ml-auto shrink-0">
