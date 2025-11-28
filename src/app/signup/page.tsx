@@ -1,4 +1,3 @@
-
 // src/app/signup/page.tsx
 'use client';
 
@@ -16,13 +15,11 @@ import { MailCheck, Loader2, AlertTriangle, Upload, UserCircle2 } from 'lucide-r
 import { useAuth } from '@/context/auth-context';
 import { sendWelcomeMessage } from '@/services/firestore';
 import { uploadAvatar as mockUploadAvatar } from '@/services/storage';
-import { useNotifications } from '@/context/notification-context';
 
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { signup: mockSignup, loading: authLoadingState, user } = useAuth();
-  const { addSystemNotification } = useNotifications();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -123,17 +120,10 @@ export default function SignupPage() {
       if (success && signedUpUser && signedUpUserProfile) {
         await sendWelcomeMessage(signedUpUser.uid);
         
-        addSystemNotification({
-            type: 'welcome',
-            title: 'Welcome to Echo!',
-            message: `Hi ${signedUpUserProfile.name}, thanks for joining!`,
-        });
-
-        // Add the promo code notification
-        addSystemNotification({
-            type: 'system',
-            title: 'Your Welcome Gift! 🎁',
-            message: "Here's a promo code for a 7-day Basic VIP plan: REDEEMBASIC7",
+        toast({
+            title: `Welcome to Echo, ${signedUpUserProfile.name}!`,
+            description: "Here's a promo code for a 7-day Basic VIP plan: REDEEMBASIC7",
+            duration: 10000,
         });
 
         toast({

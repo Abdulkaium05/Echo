@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, Star, QrCode, ShieldCheck, SmilePlus, FlaskConical, BarChart } from 'lucide-react';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, Star, QrCode, ShieldCheck, SmilePlus, FlaskConical, BarChart, Gift } from 'lucide-react';
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
@@ -23,17 +23,34 @@ import { NotificationPopover } from '@/components/chat/notification-popover';
 import { MusicPlayerProvider } from '@/context/music-player-context';
 import { ShareProfileDialog } from '@/components/profile/share-profile-dialog'; // Import ShareProfileDialog
 import { AllowNormalUsersDialog } from '@/components/chat/allow-normal-users-dialog';
+import { GiftBadgeDialog } from '@/components/dev/gift-badge-dialog';
+import { GiftReceivedDialog } from '@/components/dev/gift-received-dialog';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user: currentUser, userProfile: currentUserProfile, loading: authLoading, isUserProfileLoading, logout, updateMockUserProfile } = useAuth();
+  const { user: currentUser, userProfile: currentUserProfile, loading: authLoading, isUserProfileLoading, logout, updateMockUserProfile, giftInfo, setGiftInfo } = useAuth();
 
   const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
   const [isAppearanceDialogOpen, setAppearanceDialogOpen] = useState(false);
   const [isAboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [isShareProfileDialogOpen, setShareProfileDialogOpen] = useState(false);
   const [isAllowUsersDialogOpen, setAllowUsersDialogOpen] = useState(false);
+  const [isGiftBadgeDialogOpen, setIsGiftBadgeDialogOpen] = useState(false);
+  const [isGiftReceivedDialogOpen, setIsGiftReceivedDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (giftInfo.gifterProfile && giftInfo.giftedBadge) {
+      setIsGiftReceivedDialogOpen(true);
+    }
+  }, [giftInfo]);
+
+  const handleCloseGiftDialog = () => {
+    setIsGiftReceivedDialogOpen(false);
+    // Reset gift info after showing the dialog
+    setGiftInfo({ gifterProfile: null, giftedBadge: null });
+  };
+
 
   // This is the correct logic:
   // isChatPage should be true for the main chat list and individual chats.
@@ -139,6 +156,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       onOpenAboutDialog={() => setAboutDialogOpen(true)}
                       onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
                       onOpenAllowUsersDialog={() => setAllowUsersDialogOpen(true)}
+                      onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
                   />
                 )}
               </div>
@@ -161,6 +179,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   onOpenAboutDialog={() => setAboutDialogOpen(true)}
                   onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
                   onOpenAllowUsersDialog={() => setAllowUsersDialogOpen(true)}
+                  onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
               />
             )}
           </div>
@@ -212,6 +231,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             isOpen={isAllowUsersDialogOpen}
             onOpenChange={setAllowUsersDialogOpen}
           />
+          <GiftBadgeDialog
+            isOpen={isGiftBadgeDialogOpen}
+            onOpenChange={setIsGiftBadgeDialogOpen}
+          />
+           <GiftReceivedDialog 
+                isOpen={isGiftReceivedDialogOpen}
+                onOpenChange={handleCloseGiftDialog}
+                gifterProfile={giftInfo.gifterProfile}
+                giftedBadge={giftInfo.giftedBadge}
+            />
         </>
       )}
     </div>
@@ -226,6 +255,7 @@ interface UserMenuProps {
   onOpenAboutDialog: () => void;
   onOpenShareProfileDialog: () => void;
   onOpenAllowUsersDialog: () => void;
+  onOpenGiftBadgeDialog: () => void;
 }
 
 export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester';
@@ -241,7 +271,7 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
 };
 
 
-function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenAllowUsersDialog }: UserMenuProps) {
+function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenAllowUsersDialog, onOpenGiftBadgeDialog }: UserMenuProps) {
    const router = useRouter();
    const fallbackInitials = user.name ? user.name.substring(0, 2).toUpperCase() : '??';
 
@@ -316,10 +346,16 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
                 </DropdownMenuItem>
             )}
             {user.isDevTeam && (
+              <>
                 <DropdownMenuItem onClick={() => router.push('/poll')}>
                     <BarChart className="mr-2 h-4 w-4" />
                     <span>Polls</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={onOpenGiftBadgeDialog}>
+                    <Gift className="mr-2 h-4 w-4" />
+                    <span>Gift Badge</span>
+                </DropdownMenuItem>
+              </>
             )}
          <DropdownMenuItem onClick={() => router.push('/settings')}>
                <Settings className="mr-2 h-4 w-4" />
@@ -342,5 +378,3 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
      </DropdownMenu>
    );
 }
-
-    

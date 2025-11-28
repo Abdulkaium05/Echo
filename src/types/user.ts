@@ -1,3 +1,4 @@
+
 // src/types/user.ts
 import type { Timestamp } from 'firebase/firestore';
 import type { BadgeType } from '@/app/(app)/layout';
@@ -26,7 +27,15 @@ export interface UserProfile {
   
   // Badge Management
   badgeOrder?: BadgeType[];
+  badgeExpiry?: { // New property to store expiry dates for gifted badges
+    [key in BadgeType]?: number; // Unix timestamp in ms
+  };
 
   // Chat Customization
   chatColorPreferences?: { [chatId: string]: string | null };
+
+  // Transient property for notifications
+  giftedByUid?: string;
+  hasNewGift?: boolean;
+  lastGiftedBadge?: BadgeType;
 }

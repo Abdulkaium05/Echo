@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const protectedPaths = ['/chat', '/settings', '/subscribe'];
+const protectedPaths = ['/chat', '/settings', '/subscribe', '/poll', '/rate-report'];
 const SESSION_COOKIE_NAME = 'echoMessageSessionToken'; // Standardized cookie name
 
 export function middleware(request: NextRequest) {
@@ -39,4 +39,3 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico|verify-email).*)',
   ],
 };
-

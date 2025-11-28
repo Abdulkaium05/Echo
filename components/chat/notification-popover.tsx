@@ -9,12 +9,23 @@ import {
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Bell, CheckCheck, Inbox } from 'lucide-react';
-import { useNotifications } from '@/context/notification-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+// This component now relies on a mock implementation since the service was removed.
+// In a real app, this would come from a context.
+
+const mockNotifications = [
+    {id: '1', title: 'Welcome!', message: 'Thanks for joining Echo Message.', timestamp: Date.now() - 100000, isRead: false},
+    {id: '2', title: 'New Message', message: 'You have a new message from Twaha.', timestamp: Date.now() - 200000, isRead: true},
+];
 
 export function NotificationPopover() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const notifications = mockNotifications;
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  // Mock functions
+  const markAsRead = (id: string) => console.log('Marking as read:', id);
+  const markAllAsRead = () => console.log('Marking all as read');
 
   return (
     <Popover>

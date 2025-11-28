@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { cn } from '@/lib/utils';
-import { Crown, Wrench, User as UserIcon, UserX, Trash2, UserCheck } from 'lucide-react';
+import { Crown, Wrench, User as UserIcon, UserX, Trash2, UserCheck, SmilePlus, FlaskConical } from 'lucide-react';
 import type { UserProfile } from '@/services/firestore';
 import { OutlineBirdIcon, SquareBotBadgeIcon, CreatorLetterCBBadgeIcon } from './bot-icons';
 import {
@@ -13,6 +13,8 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import type { BadgeType } from '@/app/(app)/layout';
+
 
 export interface ChatItemProps {
   id: string;
@@ -26,7 +28,10 @@ export interface ChatItemProps {
   isContactVIP?: boolean;
   isDevTeam?: boolean;
   isBot?: boolean;
-  isCreator?: boolean; 
+  isCreator?: boolean;
+  isMemeCreator?: boolean;
+  isBetaTester?: boolean;
+  badgeOrder?: BadgeType[];
   isActive?: boolean;
   href: string;
   iconIdentifier?: string;
@@ -47,9 +52,17 @@ const DevTeamIcon = () => (
   </svg>
 );
 
-const DevTeamBadge = () => (
-    <Wrench className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-);
+
+const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
+    creator: ({className}) => <CreatorLetterCBBadgeIcon className={cn("h-4 w-4", className)} />,
+    vip: ({className}) => <Crown className={cn("h-4 w-4 text-yellow-500", className)} />,
+    verified: ({className}) => <VerifiedBadge className={cn("h-4 w-4", className)} />,
+    dev: ({className}) => <Wrench className={cn("h-4 w-4 text-blue-600", className)} />,
+    bot: ({className}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} />,
+    meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
+    beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
+};
+
 
 export function ChatItem(props: ChatItemProps) {
   const {
@@ -64,8 +77,12 @@ export function ChatItem(props: ChatItemProps) {
     isDevTeam,
     isBot,
     isCreator,
+    isMemeCreator,
+    isBetaTester,
+    badgeOrder,
     isActive,
     href,
+    iconIdentifier,
     isLastMessageSentByCurrentUser,
     isOnline,
     isBlocked,
@@ -75,60 +92,56 @@ export function ChatItem(props: ChatItemProps) {
     onViewProfile,
   } = props;
 
-  const handleAvatarClick = (event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!isBot && !isDevTeam) {
+  const handleContextProfileView = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent link navigation
+    if (!isBot && !isDevTeam && !isBlocked) {
       onViewProfile(contactUserId);
     }
   };
 
   const fallbackInitials = name.substring(0, 2).toUpperCase();
-  const actualIsVerified = isVerified && !isCreator && !isDevTeam && !isBot;
+
+  const earnedBadges: BadgeType[] = [];
+  if(isCreator) earnedBadges.push('creator');
+  if(isContactVIP) earnedBadges.push('vip');
+  if(isVerified && !isCreator) earnedBadges.push('verified');
+  if(isDevTeam) earnedBadges.push('dev');
+  if(isBot) earnedBadges.push('bot');
+  if(isMemeCreator) earnedBadges.push('meme_creator');
+  if(isBetaTester) earnedBadges.push('beta_tester');
+
+  const badgeDisplayOrder = badgeOrder?.length ? badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
+  const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
+
 
   const renderAvatarOrIcon = () => {
     const avatarBaseClasses = "h-10 w-10";
     const iconWrapperClasses = `${avatarBaseClasses} flex items-center justify-center rounded-full`;
     const dataAiHint = isBot ? "blue bird" : (isDevTeam ? "team avatar" : (isCreator ? "creator avatar" : "user avatar"));
 
-    let avatarContent;
-
     if (isBot && avatarUrl === 'outline-bird-avatar') {
-      avatarContent = (
+      return (
         <Avatar className={cn(avatarBaseClasses, "border-sky-500/50")}>
           <AvatarFallback className="bg-muted">
             <OutlineBirdIcon className="text-sky-500 p-1.5" />
           </AvatarFallback>
         </Avatar>
       );
-    } else if (isDevTeam) { 
-      avatarContent = (
+    } 
+    
+    if (iconIdentifier === 'dev-team-svg') { 
+      return (
          <div className={cn(iconWrapperClasses, "bg-muted text-muted-foreground")}>
            <DevTeamIcon />
          </div>
       );
-    } else { 
-      avatarContent = (
-        <Avatar className={avatarBaseClasses}>
-          <AvatarImage src={avatarUrl} alt={name} data-ai-hint={dataAiHint} />
-          <AvatarFallback>{fallbackInitials}</AvatarFallback>
-        </Avatar>
-      );
-    }
-
+    } 
+    
     return (
-        <div className="relative mr-3 shrink-0">
-            { !isBot && !isDevTeam ? (
-                <button onClick={handleAvatarClick} className="focus:outline-none p-0 border-none bg-transparent rounded-full" disabled={isBlocked}>
-                    {avatarContent}
-                </button>
-            ) : (
-                 avatarContent 
-            )}
-            {isOnline && (!isBot && !isDevTeam) && (
-                 <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-background animate-pulse" title="Online" />
-            )}
-        </div>
+      <Avatar className={avatarBaseClasses}>
+        <AvatarImage src={avatarUrl} alt={name} data-ai-hint={dataAiHint} />
+        <AvatarFallback>{fallbackInitials}</AvatarFallback>
+      </Avatar>
     );
   };
 
@@ -145,6 +158,9 @@ export function ChatItem(props: ChatItemProps) {
     >
       <div className="relative mr-3 shrink-0">
         {renderAvatarOrIcon()}
+         {isOnline && (!isBot && !isDevTeam) && (
+             <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-background animate-pulse" title="Online" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center gap-2 mb-0.5 min-w-0">
@@ -152,16 +168,11 @@ export function ChatItem(props: ChatItemProps) {
             <p className="truncate text-sm font-medium text-foreground min-w-0">
               {name}
             </p>
-            <div className="flex items-center shrink-0">
-              {isBot && <SquareBotBadgeIcon />}
-              {!isBot && isDevTeam && <DevTeamBadge />}
-              {!isBot && !isDevTeam && (
-                  <>
-                  {isCreator && <CreatorLetterCBBadgeIcon className="h-3.5 w-3.5" />}
-                  {isContactVIP && <Crown className="h-4 w-4 text-yellow-500 shrink-0" />}
-                  {actualIsVerified && !isCreator && <VerifiedBadge className="shrink-0"/>}
-                  </>
-              )}
+            <div className="flex items-center shrink-0 gap-1">
+              {orderedBadges.map(badgeKey => {
+                  const BadgeComponent = BadgeComponents[badgeKey];
+                  return BadgeComponent ? <BadgeComponent key={badgeKey} className="shrink-0" /> : null;
+              })}
             </div>
           </div>
           <div className="ml-auto shrink-0">
@@ -184,17 +195,15 @@ export function ChatItem(props: ChatItemProps) {
   return (
     <ContextMenu>
       <ContextMenuTrigger disabled={isBot || isDevTeam}>
-        {isBlocked ? (
-          <div aria-disabled="true">{chatItemContent}</div>
-        ) : (
-          <Link href={href} passHref legacyBehavior>
-            <a className="w-full no-underline text-inherit block">{chatItemContent}</a>
-          </Link>
-        )}
+        <Link href={href} passHref legacyBehavior>
+          <a className="w-full no-underline text-inherit block" aria-disabled={isBlocked}>
+            {chatItemContent}
+          </a>
+        </Link>
       </ContextMenuTrigger>
       {!isBot && !isDevTeam && (
         <ContextMenuContent className="w-48">
-          <ContextMenuItem onClick={() => onViewProfile(contactUserId)}>
+          <ContextMenuItem onClick={(e) => handleContextProfileView(e as unknown as React.MouseEvent)}>
             <UserIcon className="mr-2 h-4 w-4" />
             <span>View Profile</span>
           </ContextMenuItem>

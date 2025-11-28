@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
-import { useAuth } from './auth-context';
+import { useAuth } from '@/context/auth-context';
 
 interface BlockUserContextProps {
   blockedUserIds: string[];
