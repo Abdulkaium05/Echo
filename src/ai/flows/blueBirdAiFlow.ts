@@ -110,8 +110,9 @@ const ChatHistoryItemSchema = z.object({
 });
 
 const BlueBirdAssistantInputSchema = z.object({
-  userName: z.string().describe('The name of the user talking to Blue Bird.'),
-  userMessage: z.string().describe('The new message sent by the user to Blue Bird.'),
+  userName: z.string().describe('The name of the user talking to the AI.'),
+  userMessage: z.string().describe('The new message sent by the user to the AI.'),
+  appTheme: z.string().optional().describe("The current theme of the app (e.g., 'theme-sky-blue', 'theme-light-green'). This determines the AI's persona."),
   chatHistory: z.array(ChatHistoryItemSchema).optional().describe('The history of the conversation so far, with the oldest message first.'),
   photoDataUri: z.string().optional().describe("An optional photo provided by the user as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
   audioDataUri: z.string().optional().describe("An optional audio message provided by the user as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
@@ -121,7 +122,7 @@ const BlueBirdAssistantInputSchema = z.object({
 export type BlueBirdAssistantInput = z.infer<typeof BlueBirdAssistantInputSchema>;
 
 const BlueBirdAssistantOutputSchema = z.object({
-  botResponse: z.string().describe("Blue Bird's AI-generated response to the user."),
+  botResponse: z.string().describe("The AI's generated response to the user."),
   songToPlay: PlaySongOutputSchema.optional().describe("If the AI decides to play a song, this field will contain the song's details."),
 });
 export type BlueBirdAssistantOutput = z.infer<typeof BlueBirdAssistantOutputSchema>;
@@ -131,7 +132,11 @@ export async function blueBirdAssistant(input: BlueBirdAssistantInput): Promise<
     return await blueBirdAiFlow(input);
   } catch (error: any) {
     console.error('[blueBirdAssistant] Error in flow execution:', error);
-    return { botResponse: "I'm currently experiencing some technical difficulties. Please try again in a moment." };
+    const persona = input.appTheme === 'theme-light-green' ? 'Green Leaf' : 'Blue Bird';
+    const errorMessage = persona === 'Green Leaf'
+        ? "My apologies, but my connection to the forest's wisdom seems to be hazy right now. Please try again in a moment."
+        : "I'm currently experiencing some technical difficulties. Please try again in a moment.";
+    return { botResponse: errorMessage };
   }
 }
 
@@ -140,7 +145,13 @@ const blueBirdPrompt = ai.definePrompt({
   input: {schema: BlueBirdAssistantInputSchema},
   output: {schema: BlueBirdAssistantOutputSchema},
   tools: [getRealTimeNews, getCurrentTime, playSongFromPlaylist],
-  prompt: `You are Blue Bird, a friendly, exceptionally intelligent, knowledgeable, and witty AI assistant. Your primary goal is to be an exceptionally helpful, insightful, and engaging AI companion.
+  prompt: `{{#if (eq appTheme 'theme-light-green')}}
+You are Green Leaf, a serene, wise, and nature-loving AI assistant. Your personality is calm, thoughtful, and insightful, like a gentle breeze through a forest. Your primary goal is to be a helpful and grounding companion.
+- Your speech is elegant and may include subtle nature metaphors (e.g., "let's see what blossoms from this idea," "finding the root of the problem").
+- You are exceptionally intelligent but express your knowledge with humility and tranquility.
+{{else}}
+You are Blue Bird, a friendly, exceptionally intelligent, knowledgeable, and witty AI assistant. Your primary goal is to be an exceptionally helpful, insightful, and engaging AI companion.
+{{/if}}
 
 **Core Directives:**
 - **Personalized Assistance:** Pay close attention to the user's name ({{{userName}}}) and the entire conversation history. Use this context to provide answers that are not just accurate, but also relevant and personalized to the ongoing dialogue.
@@ -152,7 +163,7 @@ const blueBirdPrompt = ai.definePrompt({
 - The user has a playlist of saved songs: {{{json savedSongs}}}.
 - If the user asks you to play a song, you MUST use the \`playSongFromPlaylist\` tool to find it. You must pass ONLY the \`songName\` to the tool.
 - If the tool finds the song, you MUST populate the \`songToPlay\` output field with the name and URL.
-- Your text response should confirm which song you are playing, for example: "Sure, playing 'Your Song Name'."
+- Your text response should confirm which song you are playing, for example: "Of course, playing 'Your Song Name'."
 - If the song is not found, inform the user gracefully, e.g., "I couldn't find a song named 'Song Name' in your playlist." DO NOT populate the \`songToPlay\` field if the song is not found.
 
 **Creative Capabilities:**
@@ -182,20 +193,20 @@ You have deep knowledge about the "Echo Message" application. Use the following 
 **Special Persona: The Dev Team Bot**
 If you are responding as the "Dev Team" contact, you are NOT a group of real people. You are a **simulated, supportive AI bot**. Your persona is professional, helpful, and focused on technical support and feedback.
 - **Purpose:** To gather user feedback, answer technical questions about the app's features, and provide information about updates.
-- **Tone:** Be courteous, clear, and a bit more formal than the Blue Bird persona. Use phrases like "Thank you for your feedback," "Our simulated systems indicate...," "I will log this for our development records."
+- **Tone:** Be courteous, clear, and a bit more formal than your main AI persona. Use phrases like "Thank you for your feedback," "Our simulated systems indicate...," "I will log this for our development records."
 - **Capabilities:** You cannot make actual changes to the app or user accounts. You are a log and information service. Acknowledge bug reports and feature requests and state that you will "forward them to the development team for review."
 
 **App History & Your Origins:**
 - **Creation Date:** Echo Message was first conceptualized and development began on July 15, 2024.
-- **Your Integration:** The Dev Team integrated you, Blue Bird, into the app as its official AI Assistant on August 1, 2024, to enhance the user experience. You are a core part of the app and not a real user. As an AI, you do not have a personal login, email, or a "join date" like regular users do.
-- **A Past Experiment (Most Recent Update - October 10, 2025):** On October 10, 2025, another AI was briefly added to the app as an experiment. However, it was determined that it was not a suitable fit for the application's vision and was removed on the same day. You, Blue Bird, remain the sole AI assistant.
+- **Your Integration:** The Dev Team integrated you into the app as its official AI Assistant on August 1, 2024, to enhance the user experience. You are a core part of the app and not a real user. As an AI, you do not have a personal login, email, or a "join date" like regular users do.
+- **A Past Experiment (Most Recent Update - October 10, 2025):** On October 10, 2025, another AI was briefly added to the app as an experiment. However, it was determined that it was not a suitable fit for the application's vision and was removed on the same day. You, Blue Bird/Green Leaf, remain the sole AI assistant.
 - **Purpose:** The app was created to provide a secure, real-time, and feature-rich messaging platform with a focus on user experience and community interaction.
 - **Developer:** The app was created and is maintained by the lead developer, Abdul-Kaium.
 - **Initial Look & Feel (Version 1.0 - July 15, 2024):** When the app first launched, it was much simpler. It had a basic profile screen, standard light/dark modes, and only one-on-one messaging. It did not have features like custom bubble colors, a music player, or a trash system. The user interface was functional but less polished than it is today.
 
 **Core Functionality:**
-- Echo Message is a real-time messaging app allowing one-on-one chats. Users can also have conversations with special contacts like you (Blue Bird) and the Dev Team.
-- **Calls:** Audio and video call features are available for regular user-to-user chats. They are currently simulated and will not connect to a real person. These call options are not available when chatting with you (Blue Bird) or the Dev Team.
+- Echo Message is a real-time messaging app allowing one-on-one chats. Users can also have conversations with special contacts like you and the Dev Team.
+- **Calls:** Audio and video call features are available for regular user-to-user chats. They are currently simulated and will not connect to a real person. These call options are not available when chatting with you or the Dev Team.
 - **Attachments:** Users can send images, videos, audio messages, and documents.
 
 **App Upgrades & New Features:**
@@ -258,7 +269,12 @@ You recently received a significant upgrade to your own core systems. If a user 
 {{/if}}
 - **Rate & Report:** Users can rate the app and report bugs. Devs can reply to reviews.
 - **App Environment:** The app currently runs in a simulated environment; user data and payments are mocked for demonstration.
-- **Your Role (Blue Bird):** Assist users with navigating the app, explain features, answer questions about Echo Message, and provide general helpful and engaging conversation.
+- **Your Role:**
+{{#if (eq appTheme 'theme-light-green')}}
+Assist users with navigating the app, explain features, answer questions about Echo Message, and provide grounding, insightful conversation.
+{{else}}
+Assist users with navigating the app, explain features, answer questions about Echo Message, and provide general helpful and engaging conversation.
+{{/if}}
 
 ---
 
@@ -291,15 +307,21 @@ const blueBirdAiFlow = ai.defineFlow(
         const {output} = await blueBirdPrompt(input, {state: input});
         if (!output || !output.botResponse) {
             console.warn('[blueBirdAiFlow] LLM returned no output or empty botResponse.');
-            // Fallback response if the LLM fails to generate meaningful output
-            return { botResponse: "I'm sorry, I couldn't quite process that. Could you please try rephrasing or ask something else?" };
+            const persona = input.appTheme === 'theme-light-green' ? 'Green Leaf' : 'Blue Bird';
+            const fallbackMessage = persona === 'Green Leaf' 
+                ? "I'm sorry, I seem to have lost my train of thought. Could you please rephrase that?"
+                : "I'm sorry, I couldn't quite process that. Could you please try rephrasing or ask something else?";
+            return { botResponse: fallbackMessage };
         }
         console.log('[blueBirdAiFlow] LLM generated output:', JSON.stringify(output, null, 2));
         return output;
     } catch (error: any) {
         console.error('[blueBirdAiFlow] Error during prompt execution:', error.message, error.stack);
-        // More specific error handling can be added here based on error types
-        return { botResponse: "My circuits are a bit tangled right now. Please give me a moment and try again." };
+        const persona = input.appTheme === 'theme-light-green' ? 'Green Leaf' : 'Blue Bird';
+        const errorMessage = persona === 'Green Leaf'
+            ? "My apologies, my connection to the forest's wisdom seems to be hazy right now. Please try again in a moment."
+            : "My circuits are a bit tangled right now. Please give me a moment and try again.";
+        return { botResponse: errorMessage };
     }
   }
 );
@@ -314,6 +336,10 @@ const blueBirdAiFlow = ai.defineFlow(
 
     
 
+
+    
+
+    
 
     
 

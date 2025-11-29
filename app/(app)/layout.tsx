@@ -7,8 +7,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, Star, QrCode, ShieldCheck, SmilePlus, FlaskConical, BarChart, Gift } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, Star, QrCode, ShieldCheck, SmilePlus, FlaskConical, BarChart, Gift, Code, Check } from 'lucide-react';
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,7 @@ import { ShareProfileDialog } from '@/components/profile/share-profile-dialog'; 
 import { AllowNormalUsersDialog } from '@/components/chat/allow-normal-users-dialog';
 import { GiftBadgeDialog } from '@/components/dev/gift-badge-dialog';
 import { GiftReceivedDialog } from '@/components/dev/gift-received-dialog';
+import { ScanQrDialog } from '@/components/chat/scan-qr-dialog';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -38,6 +39,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isAllowUsersDialogOpen, setAllowUsersDialogOpen] = useState(false);
   const [isGiftBadgeDialogOpen, setIsGiftBadgeDialogOpen] = useState(false);
   const [isGiftReceivedDialogOpen, setIsGiftReceivedDialogOpen] = useState(false);
+  const [isScanQrDialogOpen, setIsScanQrDialogOpen] = useState(false);
 
   useEffect(() => {
     if (giftInfo.gifterProfile && giftInfo.giftedBadge) {
@@ -157,6 +159,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
                       onOpenAllowUsersDialog={() => setAllowUsersDialogOpen(true)}
                       onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
+                      onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
+                      onProfileUpdate={handleProfileUpdate}
                   />
                 )}
               </div>
@@ -180,6 +184,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
                   onOpenAllowUsersDialog={() => setAllowUsersDialogOpen(true)}
                   onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
+                  onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
+                  onProfileUpdate={handleProfileUpdate}
               />
             )}
           </div>
@@ -241,6 +247,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 gifterProfile={giftInfo.gifterProfile}
                 giftedBadge={giftInfo.giftedBadge}
             />
+            <ScanQrDialog
+                isOpen={isScanQrDialogOpen}
+                onOpenChange={setIsScanQrDialogOpen}
+            />
         </>
       )}
     </div>
@@ -256,9 +266,12 @@ interface UserMenuProps {
   onOpenShareProfileDialog: () => void;
   onOpenAllowUsersDialog: () => void;
   onOpenGiftBadgeDialog: () => void;
+  onOpenScanQrDialog: () => void;
+  onProfileUpdate: (data: Partial<UserProfile>) => void;
 }
 
 export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester';
+export type BadgeColor = 'sky-blue' | 'light-green' | 'red' | 'orange' | 'yellow' | 'purple' | 'pink' | 'indigo' | 'teal' | 'white' | 'black';
 
 const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     creator: ({className}) => <CreatorLetterCBBadgeIcon className={cn("h-4 w-4", className)} />,
@@ -271,7 +284,7 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
 };
 
 
-function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenAllowUsersDialog, onOpenGiftBadgeDialog }: UserMenuProps) {
+function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenAllowUsersDialog, onOpenGiftBadgeDialog, onOpenScanQrDialog, onProfileUpdate }: UserMenuProps) {
    const router = useRouter();
    const fallbackInitials = user.name ? user.name.substring(0, 2).toUpperCase() : '??';
 
@@ -292,6 +305,24 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
    const isAtLeastVerified = user.isVerified || user.isCreator || user.isDevTeam;
+   
+   const handleBadgeColorChange = (color: BadgeColor | null) => {
+     onProfileUpdate({ verifiedBadgeColor: color });
+   };
+   
+   const badgeColors: { name: string; value: BadgeColor; colorClass: string }[] = [
+      { name: "Sky Blue", value: "sky-blue", colorClass: "bg-sky-500" },
+      { name: "Light Green", value: "light-green", colorClass: "bg-green-500" },
+      { name: "Red", value: "red", colorClass: "bg-red-500" },
+      { name: "Orange", value: "orange", colorClass: "bg-orange-500" },
+      { name: "Yellow", value: "yellow", colorClass: "bg-yellow-400" },
+      { name: "Purple", value: "purple", colorClass: "bg-purple-500" },
+      { name: "Pink", value: "pink", colorClass: "bg-pink-500" },
+      { name: "Indigo", value: "indigo", colorClass: "bg-indigo-500" },
+      { name: "Teal", value: "teal", colorClass: "bg-teal-500" },
+      { name: "White", value: "white", colorClass: "bg-white" },
+      { name: "Black", value: "black", colorClass: "bg-black" },
+   ];
 
    return (
      <DropdownMenu>
@@ -310,6 +341,9 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
                 <span className="truncate">{user.name || 'User'}</span>
                 {orderedBadges.map(badgeKey => {
                     const BadgeComponent = BadgeComponents[badgeKey];
+                    if (badgeKey === 'verified' && user.verifiedBadgeColor) {
+                      return <VerifiedBadge key={badgeKey} className="shrink-0" style={{ color: `hsl(var(--badge-${user.verifiedBadgeColor}))`}}/>
+                    }
                     return BadgeComponent ? <BadgeComponent key={badgeKey} className="shrink-0" /> : null;
                 })}
              </p>
@@ -335,10 +369,36 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
               <Palette className="mr-2 h-4 w-4" />
               <span>Theme</span>
             </DropdownMenuItem>
+            {isAtLeastVerified && (
+               <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                    <Palette className="mr-2 h-4 w-4" />
+                    <span>Badge Color</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={() => handleBadgeColorChange(null)}>
+                        Reset to Default
+                        {(user.verifiedBadgeColor === null || user.verifiedBadgeColor === undefined) && <Check className="ml-auto h-4 w-4" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {badgeColors.map(color => (
+                        <DropdownMenuItem key={color.value} onClick={() => handleBadgeColorChange(color.value)}>
+                            <div className={cn("w-4 h-4 rounded-full mr-2 border", color.colorClass)} />
+                            <span>{color.name}</span>
+                            {user.verifiedBadgeColor === color.value && <Check className="ml-auto h-4 w-4" />}
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuSubContent>
+               </DropdownMenuSub>
+            )}
            <DropdownMenuItem onClick={() => router.push('/subscribe')}>
                <Crown className="mr-2 h-4 w-4 text-yellow-500" />
                <span>{user.isVIP ? 'Manage VIP' : 'Get VIP'}</span>
            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onOpenScanQrDialog}>
+                <QrCode className="mr-2 h-4 w-4" />
+                <span>Scan QR Code</span>
+            </DropdownMenuItem>
             {isAtLeastVerified && (
                  <DropdownMenuItem onClick={onOpenAllowUsersDialog}>
                     <ShieldCheck className="mr-2 h-4 w-4" />
@@ -347,9 +407,9 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
             )}
             {user.isDevTeam && (
               <>
-                <DropdownMenuItem onClick={() => router.push('/poll')}>
-                    <BarChart className="mr-2 h-4 w-4" />
-                    <span>Polls</span>
+                <DropdownMenuItem onClick={() => router.push('/dev-tools')}>
+                    <Code className="mr-2 h-4 w-4" />
+                    <span>Dev Tools</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onOpenGiftBadgeDialog}>
                     <Gift className="mr-2 h-4 w-4" />
@@ -362,10 +422,6 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
                <span>More Settings</span>
          </DropdownMenuItem>
          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => router.push('/rate-report')}>
-              <Star className="mr-2 h-4 w-4" />
-              <span>Rate &amp; Report</span>
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={onOpenAboutDialog}>
              <Info className="mr-2 h-4 w-4" />
              <span>About</span>

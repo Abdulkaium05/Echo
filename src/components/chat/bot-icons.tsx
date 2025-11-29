@@ -1,6 +1,6 @@
 // src/components/chat/bot-icons.tsx
 import { cn } from '@/lib/utils';
-import { Bot } from 'lucide-react';
+import { Bot, Leaf } from 'lucide-react';
 
 // New Main Avatar for Blue Bird
 export const OutlineBirdIcon = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
@@ -21,9 +21,10 @@ export const OutlineBirdIcon = ({ className, ...props }: React.SVGProps<SVGSVGEl
 // Badge for Blue Bird - Uses Lucide Bot icon
 export const SquareBotBadgeIcon = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
   <Bot
-    className={cn("h-3.5 w-3.5 text-sky-500 shrink-0", className)}
-    strokeWidth={props.strokeWidth || 2} // Ensure strokeWidth can be passed or defaults
-    {...props} // Spread remaining props
+    className={cn("h-4 w-4 text-[hsl(var(--bot-accent-color))] shrink-0", className)}
+    strokeWidth={props.strokeWidth || 2}
+    fill="none"
+    {...props}
   />
 );
 

@@ -7,17 +7,18 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Check, Bell, Lock, Crown, CheckCircle, FileUp, Music, Play, Pause, SkipBack, SkipForward, Loader2, FolderOpen, Trash2, Volume2, ListMusic, PlusCircle, X, ExternalLink } from "lucide-react";
+import { Check, Bell, Lock, Crown, CheckCircle, FileUp, Music, Play, Pause, SkipBack, SkipForward, Loader2, FolderOpen, Trash2, Volume2, ListMusic, PlusCircle, X, ExternalLink, SmilePlus, FlaskConical } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { useVIP } from '@/context/vip-context';
 import { Input } from '@/components/ui/input';
 import { useMusicPlayer, type SavedSong } from '@/context/music-player-context';
-import { useNotifications } from '@/context/notification-context';
 import { TrashDialog } from '@/components/settings/trash-dialog'; // Import the new dialog
 import { cn } from '@/lib/utils';
 import { useSound } from '@/context/sound-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/context/auth-context';
+import type { BadgeType } from '@/app/(app)/layout';
 
 const AudioVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
     return (
@@ -87,11 +88,53 @@ const AddSongDialog = ({ isOpen, onOpenChange, onSave, initialUrl }: { isOpen: b
 };
 
 
+const TrialBadgeTimer = ({ badgeType, expiryTimestamp }: { badgeType: BadgeType, expiryTimestamp: number }) => {
+    const [remainingTime, setRemainingTime] = useState('');
+
+    useEffect(() => {
+        const updateTimer = () => {
+            const timeLeft = expiryTimestamp - Date.now();
+            if (timeLeft <= 0) {
+                setRemainingTime("Expired");
+                return;
+            }
+            const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+            const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
+            const seconds = Math.floor((timeLeft / 1000) % 60);
+            setRemainingTime(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+        };
+        updateTimer();
+        const intervalId = setInterval(updateTimer, 1000);
+        return () => clearInterval(intervalId);
+    }, [expiryTimestamp]);
+
+    const badgeInfo = {
+        meme_creator: { icon: SmilePlus, label: "Meme Creator", color: "text-green-500" },
+        beta_tester: { icon: FlaskConical, label: "Beta Tester", color: "text-orange-500" },
+    };
+
+    const info = badgeInfo[badgeType as keyof typeof badgeInfo];
+    if (!info) return null;
+    const Icon = info.icon;
+
+    return (
+        <div className="flex items-center justify-between p-2 rounded-md border">
+            <div className="flex items-center gap-2">
+                <Icon className={cn("h-5 w-5", info.color)} />
+                <span className="text-sm font-medium">{info.label}</span>
+            </div>
+            <div className="text-sm text-muted-foreground font-mono">{remainingTime}</div>
+        </div>
+    );
+};
+
+
 export default function SettingsPage() {
   const { isVIP, vipPack } = useVIP();
   const { toast } = useToast();
-  const { addSystemNotification } = useNotifications();
   const { soundEnabled, setSoundEnabled } = useSound();
+  const { userProfile } = useAuth();
   
   const [notificationPermission, setNotificationPermission] = useState('default');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -109,6 +152,10 @@ export default function SettingsPage() {
   const audioInputRef = useRef<HTMLInputElement>(null);
   const [isAddSongDialogOpen, setIsAddSongDialogOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  
+  const trialBadges = Object.entries(userProfile?.badgeExpiry || {})
+      .filter(([_, expiry]) => expiry && expiry > Date.now())
+      .map(([badgeType, expiry]) => ({ badgeType: badgeType as BadgeType, expiryTimestamp: expiry! }));
 
   useEffect(() => {
     setIsClient(true);
@@ -186,12 +233,6 @@ export default function SettingsPage() {
         action: <CheckCircle className="h-5 w-5 text-green-500" />
     });
     
-    addSystemNotification({
-        type: 'system',
-        title: 'Verification Submitted',
-        message: 'Your application has been received and will be reviewed by our team.',
-    });
-
     setDocumentFile(null);
     setIsApplying(false);
   };
@@ -218,11 +259,6 @@ export default function SettingsPage() {
   
   const sendTestNotification = () => {
       if (notificationsEnabled) {
-          addSystemNotification({
-              type: 'system',
-              title: 'Test Notification',
-              message: 'This is a test notification from Echo Message!',
-          });
           toast({ title: 'Test Sent', description: 'Check your notifications panel or system alerts.'});
       } else {
           toast({ title: 'Notifications Disabled', description: 'Please enable notifications to receive a test.', variant: 'destructive'});
@@ -304,6 +340,22 @@ export default function SettingsPage() {
            </CardContent>
          </Card>
         
+        {trialBadges.length > 0 && (
+            <Card className="lg:col-span-2">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><CheckCircle className="h-5 w-5 text-primary" /> Active Trials</CardTitle>
+                    <CardDescription>
+                        Time remaining for your trial badges.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    {trialBadges.map(badge => (
+                        <TrialBadgeTimer key={badge.badgeType} badgeType={badge.badgeType} expiryTimestamp={badge.expiryTimestamp} />
+                    ))}
+                </CardContent>
+            </Card>
+        )}
+
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><CheckCircle className="h-5 w-5 text-primary" /> Apply for Verification</CardTitle>

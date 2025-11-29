@@ -1,3 +1,4 @@
+
 // src/components/chat/scan-qr-dialog.tsx
 'use client';
 
@@ -11,11 +12,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Loader2, VideoOff, ShieldAlert, CheckCircle, QrCode, Upload } from 'lucide-react';
+import { Loader2, ShieldAlert, CheckCircle, QrCode, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getUserProfile, findChatBetweenUsers, createChat } from '@/services/firestore';
+import { getUserProfile, findChatBetweenUsers, createChat, redeemBadgeGiftCode } from '@/services/firestore';
 import { useAuth } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -61,27 +61,14 @@ export function ScanQrDialog({ isOpen, onOpenChange }: ScanQrDialogProps) {
 
         try {
             const data = JSON.parse(decodedText);
-            if (data.type !== 'user_profile' || !data.uid) {
-                throw new Error("Invalid QR code format.");
+            
+            if (data.type === 'user_profile' && data.uid) {
+                await processUserProfileCode(data.uid);
+            } else if (data.type === 'badge_gift' && data.code) {
+                await processBadgeGiftCode(data.code);
+            } else {
+                throw new Error("Invalid or unsupported QR code format.");
             }
-            if (data.uid === currentUser.uid) {
-                toast({ title: 'Cannot Add Self', description: "You cannot add yourself from a QR code.", variant: 'destructive' });
-                setIsProcessing(false);
-                onOpenChange(false);
-                return;
-            }
-
-            const profile = await getUserProfile(data.uid);
-            if (!profile) throw new Error("User profile from QR code not found.");
-
-            toast({ title: "User Found!", description: `Found ${profile.name}. Creating chat...`, action: <CheckCircle className="h-5 w-5 text-green-500" /> });
-
-            let chatId = await findChatBetweenUsers(currentUser.uid, profile.uid);
-            if (!chatId) {
-                chatId = await createChat(currentUser.uid, profile.uid);
-            }
-            onOpenChange(false);
-            router.push(`/chat/${chatId}`);
         } catch (err: any) {
             console.error("Error processing QR code:", err);
             toast({ title: 'Error', description: err.message || 'Could not process QR code.', variant: 'destructive' });
@@ -89,6 +76,41 @@ export function ScanQrDialog({ isOpen, onOpenChange }: ScanQrDialogProps) {
             setErrorMessage(err.message || 'Could not process QR code.');
             setIsProcessing(false);
         }
+    };
+
+    const processUserProfileCode = async (profileUid: string) => {
+        if (profileUid === currentUser?.uid) {
+            toast({ title: 'Cannot Add Self', description: "You cannot add yourself from a QR code.", variant: 'destructive' });
+            setIsProcessing(false);
+            onOpenChange(false);
+            return;
+        }
+
+        const profile = await getUserProfile(profileUid);
+        if (!profile) throw new Error("User profile from QR code not found.");
+
+        toast({ title: "User Found!", description: `Found ${profile.name}. Creating chat...`, action: <CheckCircle className="h-5 w-5 text-green-500" /> });
+
+        let chatId = await findChatBetweenUsers(currentUser!.uid, profile.uid);
+        if (!chatId) {
+            chatId = await createChat(currentUser!.uid, profile.uid);
+        }
+        onOpenChange(false);
+        router.push(`/chat/${chatId}`);
+    };
+
+    const processBadgeGiftCode = async (code: string) => {
+        if (!currentUser) return;
+        const result = await redeemBadgeGiftCode(currentUser.uid, code);
+        
+        toast({
+            title: "Badge Redeemed!",
+            description: `You've received the ${result.badgeType} badge for ${result.durationDays} days.`,
+            duration: 7000
+        });
+        
+        onOpenChange(false);
+        setIsProcessing(false);
     };
 
     const scanFromFrame = () => {
@@ -176,7 +198,7 @@ export function ScanQrDialog({ isOpen, onOpenChange }: ScanQrDialogProps) {
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><QrCode/> Scan User QR Code</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2"><QrCode/> Scan QR Code</DialogTitle>
                     <DialogDescription>
                         Point your camera at a QR code, or upload an image from your gallery.
                     </DialogDescription>
@@ -230,3 +252,5 @@ export function ScanQrDialog({ isOpen, onOpenChange }: ScanQrDialogProps) {
         </Dialog>
     );
 }
+
+    

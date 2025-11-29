@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { cn } from '@/lib/utils';
-import { Crown, Wrench, User as UserIcon, UserX, Trash2, UserCheck, SmilePlus, FlaskConical } from 'lucide-react';
+import { Crown, Wrench, User as UserIcon, UserX, Trash2, UserCheck, SmilePlus, FlaskConical, Leaf } from 'lucide-react';
 import type { UserProfile } from '@/services/firestore';
 import { OutlineBirdIcon, SquareBotBadgeIcon, CreatorLetterCBBadgeIcon } from './bot-icons';
 import {
@@ -25,6 +25,7 @@ export interface ChatItemProps {
   timestamp: string;
   lastMessageTimestampValue: number;
   isVerified?: boolean;
+  verifiedBadgeColor?: string | null;
   isContactVIP?: boolean;
   isDevTeam?: boolean;
   isBot?: boolean;
@@ -53,14 +54,14 @@ const DevTeamIcon = () => (
 );
 
 
-const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
-    creator: ({className}) => <CreatorLetterCBBadgeIcon className={cn("h-4 w-4", className)} />,
-    vip: ({className}) => <Crown className={cn("h-4 w-4 text-yellow-500", className)} />,
-    verified: ({className}) => <VerifiedBadge className={cn("h-4 w-4", className)} />,
-    dev: ({className}) => <Wrench className={cn("h-4 w-4 text-blue-600", className)} />,
-    bot: ({className}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} />,
-    meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
-    beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
+const BadgeComponents: Record<BadgeType, React.FC<{className?: string, style?: React.CSSProperties}>> = {
+    creator: ({className, style}) => <CreatorLetterCBBadgeIcon className={cn("h-4 w-4", className)} style={style} />,
+    vip: ({className, style}) => <Crown className={cn("h-4 w-4 text-yellow-500", className)} style={style} />,
+    verified: ({className, style}) => <VerifiedBadge className={cn("h-4 w-4", className)} style={style} />,
+    dev: ({className, style}) => <Wrench className={cn("h-4 w-4 text-blue-600", className)} style={style} />,
+    bot: ({className, style}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} style={style} />,
+    meme_creator: ({className, style}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} style={style} />,
+    beta_tester: ({className, style}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} style={style} />,
 };
 
 
@@ -73,6 +74,7 @@ export function ChatItem(props: ChatItemProps) {
     lastMessage,
     timestamp,
     isVerified,
+    verifiedBadgeColor,
     isContactVIP,
     isDevTeam,
     isBot,
@@ -117,17 +119,27 @@ export function ChatItem(props: ChatItemProps) {
   const renderAvatarOrIcon = () => {
     const avatarBaseClasses = "h-10 w-10";
     const iconWrapperClasses = `${avatarBaseClasses} flex items-center justify-center rounded-full`;
-    const dataAiHint = isBot ? "blue bird" : (isDevTeam ? "team avatar" : (isCreator ? "creator avatar" : "user avatar"));
+    const dataAiHint = isBot ? "green leaf" : (isDevTeam ? "team avatar" : (isCreator ? "creator avatar" : "user avatar"));
 
-    if (isBot && avatarUrl === 'outline-bird-avatar') {
+    if (iconIdentifier === 'outline-bird-avatar') {
       return (
-        <Avatar className={cn(avatarBaseClasses, "border-sky-500/50")}>
+        <Avatar className={cn(avatarBaseClasses, "border-[hsl(var(--bot-accent-color))]")}>
           <AvatarFallback className="bg-muted">
-            <OutlineBirdIcon className="text-sky-500 p-1.5" />
+            <OutlineBirdIcon className="text-[hsl(var(--bot-accent-color))] p-1.5" />
           </AvatarFallback>
         </Avatar>
       );
     } 
+
+    if (iconIdentifier === 'green-leaf-icon') {
+        return (
+            <Avatar className={cn(avatarBaseClasses, "border-[hsl(var(--bot-accent-color))]")}>
+                <AvatarFallback className="bg-green-100 dark:bg-green-900/50">
+                    <Leaf className="text-green-600 dark:text-green-400 p-1" />
+                </AvatarFallback>
+            </Avatar>
+        );
+    }
     
     if (iconIdentifier === 'dev-team-svg') { 
       return (
@@ -152,6 +164,7 @@ export function ChatItem(props: ChatItemProps) {
       className={cn(
         "flex items-center p-2.5 hover:bg-accent/50 dark:hover:bg-sidebar-accent/50 rounded-lg transition-colors border border-transparent w-full",
         isActive && "bg-accent dark:bg-sidebar-accent border-primary/20",
+        isActive && isBot && "border-[hsl(var(--bot-accent-color))]",
         !isActive && "hover:border-border",
         isBlocked ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer"
       )}
@@ -169,9 +182,10 @@ export function ChatItem(props: ChatItemProps) {
               {name}
             </p>
             <div className="flex items-center shrink-0 gap-1">
-              {orderedBadges.map(badgeKey => {
+              {isBot ? <SquareBotBadgeIcon style={{color: 'hsl(var(--bot-accent-color))'}} /> : orderedBadges.map(badgeKey => {
                   const BadgeComponent = BadgeComponents[badgeKey];
-                  return BadgeComponent ? <BadgeComponent key={badgeKey} className="shrink-0" /> : null;
+                  const style = (badgeKey === 'verified' && verifiedBadgeColor) ? { color: `hsl(var(--badge-${verifiedBadgeColor}))` } : {};
+                  return BadgeComponent ? <BadgeComponent key={badgeKey} className="shrink-0" style={style} /> : null;
               })}
             </div>
           </div>
@@ -183,7 +197,7 @@ export function ChatItem(props: ChatItemProps) {
           <p className={cn(
             "w-0 flex-1 truncate text-sm",
             isLastMessageSentByCurrentUser ? "text-muted-foreground" : "font-semibold text-foreground",
-            isBot && !isLastMessageSentByCurrentUser && "text-sky-500"
+            isBot && !isLastMessageSentByCurrentUser && "text-[hsl(var(--bot-accent-color))]"
           )}>
             {displayLastMessage}
           </p>

@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatItem, type ChatItemProps } from './chat-item';
-import { Search, Users, MessageCircle, UserPlus, Loader2, AlertCircle, Edit } from 'lucide-react';
+import { Search, Users, MessageCircle, UserPlus, Loader2, AlertCircle, Edit, Leaf } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { AddContactDialog } from './add-contact-dialog';
@@ -60,6 +60,32 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     isOpen: boolean;
     profile: UserProfile | null;
   }>({ isOpen: false, profile: null });
+  
+  const [currentTheme, setCurrentTheme] = useState('theme-sky-blue');
+
+  useEffect(() => {
+    // This effect ensures the component re-renders when the theme is toggled globally.
+    if (typeof window === 'undefined') return;
+
+    const checkGlobalTheme = () => {
+        const savedTheme = localStorage.getItem('theme_color') || 'theme-sky-blue';
+        setCurrentTheme(savedTheme);
+    };
+    checkGlobalTheme();
+
+    // Also listen for storage changes from other tabs
+    const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === 'theme_color') {
+            checkGlobalTheme();
+        }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const hasVIPAccess = userProfile?.isVIP || userProfile?.isVerified || userProfile?.isCreator || userProfile?.isDevTeam;
   
@@ -209,18 +235,30 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
      }
 
      const renderChatItems = (chatItems: ChatItemProps[]) => {
-        return chatItems.map((chat) => (
-            <ChatItem 
-                key={chat.id} 
-                {...chat} 
-                isActive={chat.id === currentChatId}
-                isBlocked={isUserBlocked(chat.contactUserId)}
-                onBlockUser={handleBlockUser}
-                onUnblockUser={handleUnblockUser}
-                onDeleteChat={handleDeleteChat}
-                onViewProfile={handleViewProfile}
-            />
-        ));
+        return chatItems.map((chat) => {
+            const isBotChat = chat.contactUserId === BOT_UID;
+            const isGreenTheme = currentTheme === 'theme-light-green';
+            const botName = isGreenTheme ? 'Green Leaf' : 'Blue Bird (AI Assistant)';
+            
+            const itemProps = { ...chat };
+            if (isBotChat) {
+                itemProps.name = botName;
+                itemProps.iconIdentifier = isGreenTheme ? 'green-leaf-icon' : 'outline-bird-avatar';
+            }
+
+            return (
+                <ChatItem 
+                    key={itemProps.id} 
+                    {...itemProps} 
+                    isActive={itemProps.id === currentChatId}
+                    isBlocked={isUserBlocked(itemProps.contactUserId)}
+                    onBlockUser={handleBlockUser}
+                    onUnblockUser={handleUnblockUser}
+                    onDeleteChat={handleDeleteChat}
+                    onViewProfile={handleViewProfile}
+                />
+            );
+        });
      }
 
   return (

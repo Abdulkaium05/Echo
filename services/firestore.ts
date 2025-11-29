@@ -6,6 +6,7 @@ import type { ChatItemProps } from '@/components/chat/chat-item';
 import { blueBirdAssistant, type BlueBirdAssistantInput, type BlueBirdAssistantOutput } from '@/ai/flows/blueBirdAiFlow';
 import type { UserProfile } from '@/types/user';
 import type { SavedSong } from '@/context/music-player-context';
+import type { BadgeType } from '@/app/(app)/layout';
 
 export const BOT_UID = 'blue-bird-bot';
 export const DEV_UID = 'vip-dev';
@@ -13,6 +14,29 @@ export const DEV_UID = 'vip-dev';
 export type { UserProfile };
 
 const MOCK_USERS_STORAGE_KEY = 'echo_mock_users';
+const MOCK_VIP_CODES_STORAGE_KEY = 'echo_vip_promo_codes';
+const MOCK_BADGE_GIFT_CODES_STORAGE_KEY = 'echo_badge_gift_codes';
+
+export interface VipPromoCode {
+  code: string;
+  durationDays: number;
+  totalUses: number;
+  usesPerUser: number;
+  claimedBy: { [userId: string]: number }; // Maps user ID to number of times they claimed it
+  createdAt: number;
+}
+
+export interface BadgeGiftCode {
+    type: 'badge_gift';
+    code: string;
+    badgeType: BadgeType;
+    durationDays: number; // Infinity for lifetime
+    totalUses: number;
+    usesPerUser: number;
+    claimedBy: { [userId: string]: number };
+    createdAt: number;
+}
+
 
 const initialMockUsers: UserProfile[] = [
   { uid: BOT_UID, displayUid: '00000001', name: 'Blue Bird (AI Assistant)', email: null, isBot: true, isVerified: false, isCreator: false, avatarUrl: 'outline-bird-avatar', lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp},
@@ -74,6 +98,27 @@ export const saveUsersToLocalStorage = (users: UserProfile[]) => {
     }
 };
 
+const getPersistedData = <T>(key: string, defaultValue: T): T => {
+    if (typeof window === 'undefined') return defaultValue;
+    try {
+        const storedData = localStorage.getItem(key);
+        if (storedData) return JSON.parse(storedData);
+    } catch (error) {
+        console.error(`Failed to parse ${key} from localStorage`, error);
+    }
+    return defaultValue;
+}
+
+const savePersistedData = <T>(key: string, data: T) => {
+    if (typeof window !== 'undefined') {
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+        } catch (error) {
+            console.error(`Failed to save ${key} to localStorage`, error);
+        }
+    }
+}
+
 export const updateUserProfile = async (user: FirebaseAuthUser, additionalData?: Partial<UserProfile>): Promise<void> => {
   console.log(`[updateUserProfile] Updating profile for UID: ${user.uid}`, additionalData);
   const users = getPersistedUsers();
@@ -101,6 +146,7 @@ export const updateUserProfile = async (user: FirebaseAuthUser, additionalData?:
         isBot: user.uid === BOT_UID,
         isDevTeam: user.uid === DEV_UID || additionalData?.isDevTeam || false,
         isVerified: additionalData?.isVerified || user.uid === BOT_UID || user.uid === DEV_UID || (additionalData?.isDevTeam || false),
+        verifiedBadgeColor: additionalData?.verifiedBadgeColor || null,
         isCreator: additionalData?.isCreator || false,
         isMemeCreator: additionalData?.isMemeCreator || false,
         isBetaTester: additionalData?.isBetaTester || false,
@@ -291,41 +337,28 @@ export const notifyChatListListeners = (userId: string | null) => {
 
     const userChats = mockChats.filter(chat => {
         if (!chat.participants.includes(userProfile.uid)) {
-            return false; // Chat is not for the current user
+            return false;
         }
-
+        
         const otherParticipantId = chat.participants.find(p => p !== userProfile.uid);
         if (!otherParticipantId) return false;
 
         const otherParticipantProfile = allUsers.find(u => u.uid === otherParticipantId);
-        if (!otherParticipantProfile) return false; // Don't show chats with deleted/unknown users
+        if (!otherParticipantProfile) return false;
 
-        // Always show chats with the bot and regular users
-        if (otherParticipantProfile.isBot || (!otherParticipantProfile.isVerified && !otherParticipantProfile.isDevTeam && !otherParticipantProfile.isCreator)) {
+        const isOtherUserExclusive = otherParticipantProfile.isVerified || otherParticipantProfile.isCreator || otherParticipantProfile.isDevTeam;
+        
+        // If the other user is NOT exclusive (i.e., a normal user) or is the bot, always show the chat.
+        if (!isOtherUserExclusive || otherParticipantProfile.isBot) {
             return true;
         }
-        
-        // Show chats with Dev Team only if the current user has VIP access
-        if (otherParticipantId === DEV_UID) {
-            return hasVipAccess;
-        }
-        
-        // Logic for other exclusive users (Verified, Creator)
-        const isOtherUserExclusive = otherParticipantProfile.isVerified || otherParticipantProfile.isCreator;
 
-        if (isOtherUserExclusive) {
-             const isSelectedByCurrentUser = userProfile.selectedVerifiedContacts?.includes(otherParticipantId);
-             const isAllowedByOtherUser = otherParticipantProfile.allowedNormalContacts?.includes(userProfile.uid);
-             const hasExistingMessages = (mockMessages[chat.id!]?.length || 0) > 0;
+        // If the other user IS exclusive, apply permission checks.
+        const isAllowedByOtherUser = otherParticipantProfile.allowedNormalContacts?.includes(userProfile.uid);
+        const isSelectedByCurrentUser = userProfile.selectedVerifiedContacts?.includes(otherParticipantId);
         
-             // Show if the user has VIP access and has selected them, OR if the verified user has allowed them, OR if a chat already exists.
-             return (hasVipAccess && isSelectedByCurrentUser) || isAllowedByOtherUser || hasExistingMessages;
-        }
-        
-        // Fallback for any other case
-        return true;
+        return isAllowedByOtherUser || (hasVipAccess && isSelectedByCurrentUser);
     });
-
 
     const enrichedChats = userChats.map(chat => {
         const participantDetails: Chat['participantDetails'] = {};
@@ -334,7 +367,7 @@ export const notifyChatListListeners = (userId: string | null) => {
             if (profile) {
                 participantDetails[pId] = {
                     uid: pId, name: profile.name, avatarUrl: profile.avatarUrl,
-                    isVIP: profile.isVIP, isVerified: profile.isVerified, isDevTeam: profile.isDevTeam, isBot: profile.isBot, isCreator: profile.isCreator,
+                    isVIP: profile.isVIP, isVerified: profile.isVerified, verifiedBadgeColor: profile.verifiedBadgeColor, isDevTeam: profile.isDevTeam, isBot: profile.isBot, isCreator: profile.isCreator,
                     isMemeCreator: profile.isMemeCreator, isBetaTester: profile.isBetaTester, badgeOrder: profile.badgeOrder,
                     lastSeen: profile.lastSeen
                 };
@@ -768,6 +801,7 @@ export const mapChatToChatItem = (
     timestamp: formatTimestamp(chat.lastMessageTimestamp),
     lastMessageTimestampValue: chat.lastMessageTimestamp.seconds,
     isVerified: !!otherDetails?.isVerified,
+    verifiedBadgeColor: otherDetails?.verifiedBadgeColor,
     isContactVIP: !!otherDetails?.isVIP,
     isDevTeam: !!otherDetails?.isDevTeam,
     isBot: !!otherDetails?.isBot,
@@ -895,7 +929,7 @@ export interface AppRating {
   devReply?: string;
 }
 
-let mockRatings: AppRating[] = [
+const mockRatings: AppRating[] = [
     {
         id: 'rating-1',
         userId: 'julker-nain-creator',
@@ -951,6 +985,142 @@ export const addDevReply = async (ratingId: string, replyText: string): Promise<
     return Promise.resolve();
 };
 
-export { mockChats };
+export const createVipPromoCode = async (durationDays: number, totalUses: number, usesPerUser: number): Promise<string> => {
+    const code = `VIP-${durationDays}D-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const allCodes = getPersistedData<VipPromoCode[]>(MOCK_VIP_CODES_STORAGE_KEY, []);
+    const newCode: VipPromoCode = {
+        code,
+        durationDays,
+        totalUses,
+        usesPerUser,
+        claimedBy: {},
+        createdAt: Date.now(),
+    };
+    savePersistedData(MOCK_VIP_CODES_STORAGE_KEY, [...allCodes, newCode]);
+    return code;
+};
 
+export const redeemVipPromoCode = async (userId: string, code: string): Promise<{ success: boolean, durationDays: number }> => {
+    const allCodes = getPersistedData<VipPromoCode[]>(MOCK_VIP_CODES_STORAGE_KEY, []);
+    const codeIndex = allCodes.findIndex(c => c.code === code);
+
+    if (codeIndex === -1) {
+        throw new Error("Invalid promo code.");
+    }
+
+    const promoCode = allCodes[codeIndex];
+    const totalClaims = Object.values(promoCode.claimedBy).reduce((sum, count) => sum + count, 0);
+
+    if (totalClaims >= promoCode.totalUses) {
+        throw new Error("This promo code has reached its maximum number of uses.");
+    }
+
+    const userClaims = promoCode.claimedBy[userId] || 0;
+    if (userClaims >= promoCode.usesPerUser) {
+        throw new Error("You have already redeemed this promo code the maximum number of times.");
+    }
+
+    // Update claim count
+    promoCode.claimedBy[userId] = (promoCode.claimedBy[userId] || 0) + 1;
+    allCodes[codeIndex] = promoCode;
+    savePersistedData(MOCK_VIP_CODES_STORAGE_KEY, allCodes);
+
+    // Apply VIP status
+    await updateVIPStatus(userId, true, `Promo (${promoCode.durationDays} days)`, promoCode.durationDays);
+
+    return { success: true, durationDays: promoCode.durationDays };
+};
+
+export const createBadgeGiftCode = async (badgeType: BadgeType, durationDays: number, totalUses: number, usesPerUser: number): Promise<BadgeGiftCode> => {
+    const code = `GIFT-${badgeType.toUpperCase()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    const allCodes = getPersistedData<BadgeGiftCode[]>(MOCK_BADGE_GIFT_CODES_STORAGE_KEY, []);
+    const newCode: BadgeGiftCode = {
+        type: 'badge_gift',
+        code,
+        badgeType,
+        durationDays,
+        totalUses,
+        usesPerUser,
+        claimedBy: {},
+        createdAt: Date.now(),
+    };
+    savePersistedData(MOCK_BADGE_GIFT_CODES_STORAGE_KEY, [...allCodes, newCode]);
+    return newCode;
+};
+
+export const redeemBadgeGiftCode = async (userId: string, code: string): Promise<{ success: true, badgeType: string, durationDays: number }> => {
+    const allCodes = getPersistedData<BadgeGiftCode[]>(MOCK_BADGE_GIFT_CODES_STORAGE_KEY, []);
+    const codeIndex = allCodes.findIndex(c => c.code === code);
+
+    if (codeIndex === -1) {
+        throw new Error("Invalid or expired gift code.");
+    }
     
+    const giftCode = allCodes[codeIndex];
+    const totalClaims = Object.values(giftCode.claimedBy || {}).reduce((sum, count) => sum + count, 0);
+    if (totalClaims >= giftCode.totalUses) {
+        throw new Error("This gift code has reached its maximum number of uses.");
+    }
+    const userClaims = (giftCode.claimedBy || {})[userId] || 0;
+    if (userClaims >= giftCode.usesPerUser) {
+        throw new Error("You have already claimed this gift code the maximum number of times.");
+    }
+
+    const users = getPersistedUsers();
+    const userIndex = users.findIndex(u => u.uid === userId);
+
+    if (userIndex === -1) {
+        throw new Error("User not found.");
+    }
+
+    const userProfile = users[userIndex];
+    const badgeKey = `is${giftCode.badgeType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('')}` as keyof UserProfile;
+
+    // Apply badge
+    (userProfile as any)[badgeKey] = true;
+
+    // Set expiry if it's a timed gift
+    if (giftCode.durationDays !== Infinity) {
+        if (!userProfile.badgeExpiry) {
+            userProfile.badgeExpiry = {};
+        }
+        const expiryTimestamp = Date.now() + giftCode.durationDays * 24 * 60 * 60 * 1000;
+        userProfile.badgeExpiry[giftCode.badgeType] = expiryTimestamp;
+    }
+
+    users[userIndex] = userProfile;
+    saveUsersToLocalStorage(users);
+    
+    // Update and save claim count for the code
+    giftCode.claimedBy[userId] = (giftCode.claimedBy[userId] || 0) + 1;
+    allCodes[codeIndex] = giftCode;
+    savePersistedData(MOCK_BADGE_GIFT_CODES_STORAGE_KEY, allCodes);
+
+    return { success: true, badgeType: giftCode.badgeType, durationDays: giftCode.durationDays };
+};
+
+export const getVipPromoCodes = async (): Promise<VipPromoCode[]> => {
+    const codes = getPersistedData<VipPromoCode[]>(MOCK_VIP_CODES_STORAGE_KEY, []);
+    return codes.sort((a,b) => a.createdAt - b.createdAt);
+};
+
+export const getBadgeGiftCodes = async (): Promise<BadgeGiftCode[]> => {
+    const codes = getPersistedData<BadgeGiftCode[]>(MOCK_BADGE_GIFT_CODES_STORAGE_KEY, []);
+    return codes.sort((a,b) => a.createdAt - b.createdAt);
+};
+
+export const deleteVipPromoCode = async (code: string): Promise<void> => {
+    const allCodes = getPersistedData<VipPromoCode[]>(MOCK_VIP_CODES_STORAGE_KEY, []);
+    const updatedCodes = allCodes.filter(c => c.code !== code);
+    savePersistedData(MOCK_VIP_CODES_STORAGE_KEY, updatedCodes);
+    return Promise.resolve();
+};
+
+export const deleteBadgeGiftCode = async (code: string): Promise<void> => {
+    const allCodes = getPersistedData<BadgeGiftCode[]>(MOCK_BADGE_GIFT_CODES_STORAGE_KEY, []);
+    const updatedCodes = allCodes.filter(c => c.code !== code);
+    savePersistedData(MOCK_BADGE_GIFT_CODES_STORAGE_KEY, updatedCodes);
+    return Promise.resolve();
+};
+
+export { mockChats };

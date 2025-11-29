@@ -1,3 +1,4 @@
+
 // src/components/chat/chat-window.tsx
 'use client';
 
@@ -9,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './message-bubble';
 import { MessageInput, type MessageInputHandle } from './message-input';
 import { VerifiedBadge } from '@/components/verified-badge';
-import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban, Trash2, UserX, UserCheck } from 'lucide-react';
+import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban, Trash2, UserX, UserCheck, Leaf } from 'lucide-react';
 import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
@@ -70,7 +71,7 @@ const DevTeamAvatarIcon = () => (
 );
 
 
-export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, chatIconIdentifier, isVerified, isVIP, isCreator }: ChatWindowProps) {
+export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, chatAvatarUrl, chatIconIdentifier, isVerified, isVIP, isCreator }: ChatWindowProps) {
   const { user: currentUser, userProfile, updateMockUserProfile } = useAuth();
   const { hasVipAccess } = useVIP();
   const { toast } = useToast();
@@ -97,6 +98,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
 
   const [isAudioCallDialogOpen, setIsAudioCallDialogOpen] = useState(false);
   const [isTransparentMode, setIsTransparentMode] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState('theme-sky-blue');
   
   const [dialogState, setDialogState] = useState<{ isOpen: boolean; type: 'block' | 'delete' | null }>({ isOpen: false, type: null });
 
@@ -105,31 +107,47 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
   const customBubbleColor = userProfile?.chatColorPreferences?.[chatId];
   const amBlockedByPartner = partnerProfileDetails?.blockedUsers?.includes(currentUser?.uid ?? '') ?? false;
   const iHaveBlockedPartner = isUserBlocked(chatPartnerId);
+  
+  const isChattingWithBot = chatPartnerId === BOT_UID;
+  const chatName = isChattingWithBot && currentTheme === 'theme-light-green' ? 'Green Leaf' : initialChatName;
+
 
   useEffect(() => {
-    // This effect ensures the component re-renders when transparent mode is toggled globally.
+    // This effect ensures the component re-renders when transparent mode or theme is toggled globally.
     if (typeof window === 'undefined') return;
 
-    // Initial check
-    const checkTransparentMode = () => {
+    const checkGlobalClasses = () => {
         const isTransparent = document.documentElement.classList.contains('transparent-mode');
         setIsTransparentMode(isTransparent);
+        
+        const savedTheme = localStorage.getItem('theme_color') || 'theme-sky-blue';
+        setCurrentTheme(savedTheme);
     };
-    checkTransparentMode();
+    checkGlobalClasses();
 
-    // Set up an observer to watch for class changes on the <html> element
     const observer = new MutationObserver((mutationsList) => {
         for (const mutation of mutationsList) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                checkTransparentMode();
+                checkGlobalClasses();
             }
         }
     });
 
     observer.observe(document.documentElement, { attributes: true });
 
-    // Cleanup observer on component unmount
-    return () => observer.disconnect();
+    // Also listen for storage changes from other tabs
+    const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === 'theme_color' || event.key === 'transparent_mode') {
+            checkGlobalClasses();
+        }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+
+    return () => {
+        observer.disconnect();
+        window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const handleBubbleColorChange = (color: string | null) => {
@@ -304,6 +322,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
         const aiInput: BlueBirdAssistantInput = {
           userName: userProfile.name,
           userMessage: textToSend || `[User sent an ${attachmentData?.type}]`,
+          appTheme: currentTheme,
           chatHistory: historyForFlow,
           photoDataUri,
           audioDataUri,
@@ -424,13 +443,23 @@ export function ChatWindow({ chatId, chatPartnerId, chatName, chatAvatarUrl, cha
   };
 
  const renderChatHeaderAvatar = () => {
-    const isBotWithNewAvatar = chatAvatarUrl === 'outline-bird-avatar';
+    const isBot = chatPartnerId === BOT_UID;
+    const isGreenTheme = currentTheme === 'theme-light-green';
     const isDev = chatIconIdentifier === 'dev-team-svg';
     const avatarBaseClasses = "h-8 w-8 md:h-9 md:w-9 mr-2 md:mr-3 shrink-0";
-    const dataAiHint = isBotWithNewAvatar ? "blue bird" : (isDev ? "team avatar" : (isCreator ? "creator avatar" : "user avatar"));
+    const dataAiHint = isBot ? "green leaf" : (isDev ? "team avatar" : (isCreator ? "creator avatar" : "user avatar"));
 
 
-    if (isBotWithNewAvatar) {
+    if (isBot) {
+      if (isGreenTheme) {
+        return (
+          <Avatar className={cn(avatarBaseClasses, "border-green-500/50")}>
+            <AvatarFallback className="bg-green-100 dark:bg-green-900/50">
+              <Leaf className="text-green-600 dark:text-green-400 p-1" />
+            </AvatarFallback>
+          </Avatar>
+        );
+      }
         return (
           <Avatar className={cn(avatarBaseClasses, "border-sky-500/50")}>
             <AvatarFallback className="bg-muted">
@@ -503,8 +532,8 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
              <p className="text-sm font-medium text-foreground truncate whitespace-nowrap">{chatName}</p>
-            {chatAvatarUrl === 'outline-bird-avatar' ? (
-                <SquareBotBadgeIcon />
+            {chatPartnerId === BOT_UID ? (
+                currentTheme === 'theme-light-green' ? <Leaf className="h-4 w-4 text-green-500" /> : <SquareBotBadgeIcon />
             ) : chatIconIdentifier === 'dev-team-svg' ? (
                 <Wrench className="h-4 w-4 text-blue-600 shrink-0" />
             ) : (
@@ -635,7 +664,7 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
       {chatPartnerId === BOT_UID && isBotTyping && (
         <div className="px-3 md:px-4 pb-1 pt-1 text-left flex items-center gap-2 shrink-0">
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          <p className="text-xs text-muted-foreground italic">Blue Bird is typing...</p>
+          <p className="text-xs text-muted-foreground italic">{chatName} is typing...</p>
         </div>
       )}
 
@@ -736,3 +765,7 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
     </>
   );
 }
+
+    
+
+    

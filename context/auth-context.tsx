@@ -120,7 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (updatedProfile.badgeExpiry) {
         const now = Date.now();
         const badgeExpiry = { ...updatedProfile.badgeExpiry };
-        let expiredBadgeName = '';
+        let expiredBadges: { name: string, type: BadgeType }[] = [];
 
         for (const key in badgeExpiry) {
             const badgeType = key as BadgeType;
@@ -129,18 +129,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 (updatedProfile as any)[badgeKey] = false;
                 delete badgeExpiry[badgeType];
                 profileWasModified = true;
-                if(badgeType === 'meme_creator') expiredBadgeName = 'Meme Creator';
-                if(badgeType === 'beta_tester') expiredBadgeName = 'Beta Tester';
-                if(badgeType === 'vip') expiredBadgeName = 'VIP';
+                if(badgeType === 'meme_creator') expiredBadges.push({ name: 'Meme Creator', type: 'meme_creator'});
+                if(badgeType === 'beta_tester') expiredBadges.push({ name: 'Beta Tester', type: 'beta_tester'});
+                if(badgeType === 'vip') expiredBadges.push({ name: 'VIP', type: 'vip'});
             }
         }
         updatedProfile.badgeExpiry = badgeExpiry;
-        if(expiredBadgeName) {
-            toast({
-                title: 'Trial Badge Expired',
-                description: `Your ${expiredBadgeName} trial badge has expired.`,
-                variant: 'destructive',
+
+        if (expiredBadges.length > 0) {
+          setTimeout(() => {
+            expiredBadges.forEach(badge => {
+              toast({
+                  title: 'Trial Badge Expired',
+                  description: `Your ${badge.name} trial badge has expired.`,
+                  variant: 'destructive',
+              });
             });
+          }, 1000); // Delay toast to ensure it's visible after login
         }
     }
 

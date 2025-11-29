@@ -1,7 +1,7 @@
 
 // src/types/user.ts
 import type { Timestamp } from 'firebase/firestore';
-import type { BadgeType } from '@/app/(app)/layout';
+import type { BadgeType, BadgeColor } from '@/app/(app)/layout';
 
 export interface UserProfile {
   uid: string;
@@ -15,6 +15,7 @@ export interface UserProfile {
   createdAt?: Timestamp;
   isBot?: boolean;
   isVerified?: boolean;
+  verifiedBadgeColor?: BadgeColor | null;
   isDevTeam?: boolean;
   isCreator?: boolean; 
   isMemeCreator?: boolean; // New badge property

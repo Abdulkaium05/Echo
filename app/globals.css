@@ -62,6 +62,22 @@ body {
     --received-bubble-fg: hsl(var(--card-foreground));
     --received-bubble-border: hsl(var(--border));
     --bubble-radius: 0.75rem; /* Corresponds to rounded-xl */
+
+    /* Bot specific color */
+    --bot-accent-color: 200 100% 50%;
+
+    /* Badge Colors */
+    --badge-sky-blue: 200 100% 50%;
+    --badge-light-green: 130 65% 55%;
+    --badge-red: 0 84% 60%;
+    --badge-orange: 25 95% 53%;
+    --badge-yellow: 48 95% 58%;
+    --badge-purple: 262 84% 58%;
+    --badge-pink: 322 84% 58%;
+    --badge-indigo: 243 75% 59%;
+    --badge-teal: 162 72% 45%;
+    --badge-white: 0 0% 100%;
+    --badge-black: 0 0% 10%;
   }
 
   .theme-light-green {
@@ -76,6 +92,9 @@ body {
     --sidebar-accent-foreground: 130 65% 55%;
     --sidebar-ring: 130 65% 55%;
     --avatar-border-accent: 130 65% 55%;
+
+    /* Bot specific color */
+    --bot-accent-color: 130 65% 55%;
   }
   
   .dark {
@@ -101,6 +120,10 @@ body {
     --sidebar-background: 0 0% 10%;
     --sidebar-foreground: 0 0% 85%;
     --avatar-border-accent: 200 100% 50%;
+
+    /* Badge Colors */
+    --badge-white: 0 0% 100%;
+    --badge-black: 0 0% 10%;
   }
 
   .dark.theme-sky-blue {
@@ -132,6 +155,7 @@ body {
     --sidebar-border: 210 10% 27%;
     --sidebar-ring: 200 100% 50%;
     --avatar-border-accent: 200 100% 50%;
+    --bot-accent-color: 200 100% 50%;
   }
 
   .dark.theme-light-green {
@@ -146,6 +170,7 @@ body {
     --sidebar-accent-foreground: 130 65% 60%;
     --sidebar-ring: 130 65% 60%; /* Light Green */
     --avatar-border-accent: 130 65% 60%;
+    --bot-accent-color: 130 65% 60%;
   }
 
   /* VIP Theme Support (Legacy - now just applies the light-green theme) */

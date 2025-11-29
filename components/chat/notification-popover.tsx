@@ -14,10 +14,7 @@ import { cn } from '@/lib/utils';
 // This component now relies on a mock implementation since the service was removed.
 // In a real app, this would come from a context.
 
-const mockNotifications = [
-    {id: '1', title: 'Welcome!', message: 'Thanks for joining Echo Message.', timestamp: Date.now() - 100000, isRead: false},
-    {id: '2', title: 'New Message', message: 'You have a new message from Twaha.', timestamp: Date.now() - 200000, isRead: true},
-];
+const mockNotifications: any[] = [];
 
 export function NotificationPopover() {
   const notifications = mockNotifications;

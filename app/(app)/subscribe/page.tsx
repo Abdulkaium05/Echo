@@ -25,15 +25,10 @@ import { useVIP } from '@/context/vip-context';
 import { useAuth } from '@/context/auth-context';
 import { 
     updateVIPStatus as mockUpdateVIPStatus,
-    mockLocalUsers, 
-    findChatBetweenUsers, 
-    createChat, 
-    BOT_UID, 
-    DEV_UID 
+    redeemVipPromoCode,
 } from '@/services/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { useNotifications } from '@/context/notification-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const subscriptionPlans = [
@@ -49,21 +44,6 @@ const subscriptionPlans = [
     { planName: 'Elite Yearly', price: 75, durationDays: 365, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
 ];
 
-const redeemableCodes: { [code: string]: { planName: string; durationDays: number } } = {
-  "REDEEMBASIC7": { planName: 'Basic Pack', durationDays: 7 },
-  "REDEEMSILVER30": { planName: 'Silver', durationDays: 60 },
-  "ECHOFREEVIP": { planName: 'Starter', durationDays: 14 },
-  "VIPTEST1": { planName: 'Micro VIP', durationDays: 1 },
-  "GETBRONZE": { planName: 'Bronze', durationDays: 30 },
-  "GOLDVIP24": { planName: 'Gold', durationDays: 90 },
-  "ECHOPROMO": { planName: 'Basic Pack', durationDays: 7 },
-  "STARTNOW": { planName: 'Starter', durationDays: 14 },
-  "SILVERBADGE": { planName: 'Silver', durationDays: 60 },
-  "PLATINUMGIFT": { planName: 'Platinum', durationDays: 180 },
-  "3DAYSFREE": { planName: 'Mini Pass', durationDays: 3 },
-  "FASTVIP": { planName: 'Micro VIP', durationDays: 1 },
-};
-
 const lifetimePlan = {
   planName: 'Lifetime VIP',
   price: 50,
@@ -78,7 +58,6 @@ export default function SubscribePage() {
   const router = useRouter();
   const { user, userProfile, loading: authLoading, isUserProfileLoading, updateMockUserProfile } = useAuth();
   const { isVIP: hasVipBadge, hasVipAccess, setVIPStatus: setContextVIPStatus } = useVIP();
-  const { addSystemNotification } = useNotifications();
 
   const isDevTeamUser = userProfile?.isDevTeam;
   const isEligibleForLifetime = userProfile?.isVerified || userProfile?.isCreator;
@@ -183,10 +162,9 @@ export default function SubscribePage() {
       
       setShowConfirmationDialog(true);
       
-      addSystemNotification({
-          type: 'system',
+      toast({
           title: `VIP Activated: ${plan.planName}`,
-          message: 'Congratulations! Your VIP benefits are now active.'
+          description: 'Congratulations! Your VIP benefits are now active.'
       });
 
     } catch (error) {
@@ -243,45 +221,46 @@ export default function SubscribePage() {
   };
 
   const handleRedeemCode = async () => {
-    if (!user) {
+    if (!user || !userProfile) {
       toast({ title: "Not Logged In", description: "You must be logged in to redeem a code.", variant: "destructive"});
       router.push('/login');
       return;
     }
     if (!redeemCodeInput.trim()) {
-      toast({
-        title: "Empty Redeem Code",
-        description: "Please enter a redeem code.",
-        variant: "destructive",
-      });
+      toast({ title: "Empty Redeem Code", description: "Please enter a redeem code.", variant: "destructive" });
       return;
     }
 
+    setIsProcessing(true);
     const code = redeemCodeInput.trim().toUpperCase();
-    const matchedCodePlan = redeemableCodes[code];
 
-    if (matchedCodePlan) {
-      const allPlans = [...subscriptionPlans, lifetimePlan];
-      const planDetails = allPlans.find(p => p.planName === matchedCodePlan.planName);
-
-      if (planDetails) {
-        toast({
-            title: "Redeeming Code...",
-            description: `Activating ${planDetails.planName} for ${planDetails.durationDays} days.`,
+    try {
+        const result = await redeemVipPromoCode(user.uid, code);
+        const planName = `VIP (${result.durationDays} days)`;
+        
+        // Use the duration from the result to update the profile
+        const expiry = Date.now() + result.durationDays * 24 * 60 * 60 * 1000;
+        updateMockUserProfile(user.uid, { 
+            isVIP: true, 
+            vipPack: planName, 
+            vipExpiryTimestamp: expiry,
         });
-        await handleSubscribe(planDetails);
-      } else {
-         toast({ title: "Plan Not Found", description: `Could not find details for ${matchedCodePlan.planName}.`, variant: "destructive"});
-      }
+        setContextVIPStatus(true, planName);
+        
+        setSubscribedPlan({ name: planName, features: ['VIP Badge', 'Exclusive Access'] });
+        setShowConfirmationDialog(true);
+        
+        toast({
+          title: "Code Redeemed!",
+          description: `You have successfully activated ${result.durationDays} days of VIP access.`,
+        });
 
-    } else {
-      toast({
-        title: "Invalid Redeem Code",
-        description: `The redeem code "${code}" is not valid.`,
-        variant: "destructive",
-      });
+    } catch (error: any) {
+        toast({ title: "Redemption Failed", description: error.message, variant: "destructive" });
+    } finally {
+        setIsProcessing(false);
+        setRedeemCodeInput('');
     }
-    setRedeemCodeInput('');
   };
 
 
@@ -478,3 +457,5 @@ export default function SubscribePage() {
     </ScrollArea>
   );
 }
+
+    
