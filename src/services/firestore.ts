@@ -16,6 +16,8 @@ export type { UserProfile };
 const MOCK_USERS_STORAGE_KEY = 'echo_mock_users';
 const MOCK_VIP_CODES_STORAGE_KEY = 'echo_vip_promo_codes';
 const MOCK_BADGE_GIFT_CODES_STORAGE_KEY = 'echo_badge_gift_codes';
+const MOCK_POINTS_PROMO_CODES_STORAGE_KEY = 'echo_points_promo_codes';
+
 
 export interface VipPromoCode {
   code: string;
@@ -24,6 +26,14 @@ export interface VipPromoCode {
   usesPerUser: number;
   claimedBy: { [userId: string]: number }; // Maps user ID to number of times they claimed it
   createdAt: number;
+}
+
+export interface PointsPromoCode {
+    code: string;
+    amount: number;
+    totalUses: number;
+    claimedBy: { [userId: string]: number };
+    createdAt: number;
 }
 
 export interface BadgeGiftCode {
@@ -39,32 +49,32 @@ export interface BadgeGiftCode {
 
 
 const initialMockUsers: UserProfile[] = [
-  { uid: BOT_UID, displayUid: '00000001', name: 'Blue Bird (AI Assistant)', email: null, isBot: true, isVerified: false, isCreator: false, avatarUrl: 'outline-bird-avatar', lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp},
-  { uid: DEV_UID, displayUid: '00000002', name: 'Dev Team', email: 'devteam@example.com', isDevTeam: true, isVerified: false, isCreator: false, isVIP: false, avatarUrl: 'dev-team-svg-placeholder', createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [] },
-  { uid: 'test-user', displayUid: '10000001', name: 'Test User', email: 'test@example.com', isVIP: false, isVerified: false, isCreator: false, avatarUrl: `https://picsum.photos/seed/test-user/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp, selectedVerifiedContacts: [], hasMadeVipSelection: false, allowedNormalContacts: [], badgeExpiry: {} },
-  { uid: 'verified-contact-1', displayUid: '20000001', name: 'Twaha mizan', email: 'twahamizan04@gmail.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/twaha-the-great/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 1 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [], badgeExpiry: {} },
-  { uid: 'verified-contact-2', displayUid: '20000002', name: 'Rakib', email: 'rakib@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/rakib-verified/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 10 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeExpiry: {} },
-  { uid: 'regular-user-1', displayUid: '10000002', name: 'Ashadul', email: 'ashadul@example.com', isCreator: false, isVerified: false, avatarUrl: `https://picsum.photos/seed/ashadul-regular/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 30 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeExpiry: {} },
-  { uid: 'monk-user-1', displayUid: '10000003', name: 'Karim Ahmed', email: 'monk1@example.com', isCreator: false, isVIP: true, vipPack: 'Gold VIP', avatarUrl: `https://picsum.photos/seed/monk-peaceful/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*2, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {} },
-  { uid: 'monk-user-2', displayUid: '10000004', name: 'Sajid Islam', email: 'monk2@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/monk-zen/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*3, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {} },
-  { uid: 'monk-user-3', displayUid: '10000005', name: 'Ayesha Siddika', email: 'monk3@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/monk-silent/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*4, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {} },
-  { uid: 'monk-user-4', displayUid: '10000006', name: 'Fatima Akter', email: 'monk4@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/monk-meditative/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*5, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {} },
-  { uid: 'monk-user-tanvir', displayUid: '20000003', name: 'Tanvir Ahhamed', email: 'tanvir@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/tanvir-the-great/200`, createdAt: { seconds: Date.now()/1000 - 500, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 5 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeExpiry: {} },
-  { uid: 'verified-contact-3', displayUid: '20000004', name: 'Asad', email: 'asad@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/asad-verified/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 4 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeExpiry: {} },
-  { uid: 'verified-contact-4', displayUid: '20000005', name: 'Saidul', email: 'saidul@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/saidul-verified/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 15 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeExpiry: {} },
-  { uid: 'vip-user-2', displayUid: '20000006', name: 'Maria Oishee', email: 'maria@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/maria-oishee-new/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 1 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [], badgeExpiry: {} },
-  { uid: 'vip-user-3', displayUid: '20000007', name: 'Rafi', email: 'rafi@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/rafi-developer/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 25 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [], badgeExpiry: {} },
-  { uid: 'vip-only-user', displayUid: '10000007', name: 'Rahim Uddin', email: 'valerie@example.com', isVIP: true, vipPack: 'Bronze VIP', isCreator: false, isVerified: false, avatarUrl: `https://picsum.photos/seed/valerie-vip/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, vipExpiryTimestamp: Date.now() + 5 * 24 * 60 * 60 * 1000, lastSeen: { seconds: Math.floor(Date.now()/1000) - 5 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false, badgeExpiry: {} },
-  { uid: 'nayem-vip', displayUid: '20000008', name: 'Nayem', email: 'nayem@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/nayem-is-great/200`, createdAt: { seconds: Date.now()/1000 - 100, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 2 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [], badgeExpiry: {} },
-  { uid: 'abdul-kaium-verified', displayUid: '20000009', name: 'Abdul-Kaium', email: 'abdulkaiumiqbel2005@gmail.com', isDevTeam: true, isVerified: true, isCreator: true, isVIP: true, isMemeCreator: true, isBetaTester: true, vipPack: 'Lifetime', avatarUrl: `https://picsum.photos/seed/kaium-verified/200`, createdAt: { seconds: Date.now()/1000 - 200, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 8 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeOrder: ['dev'], badgeExpiry: {} },
-  { uid: 'julker-nain-creator', displayUid: '30000001', name: 'Julker Nain', email: 'julker@example.com', isCreator: true, isVerified: true, isVIP: false, vipPack: undefined, avatarUrl: `https://picsum.photos/seed/julker-artist/200`, createdAt: { seconds: Date.now()/1000 - 250, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 3 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false, allowedNormalContacts: [], badgeExpiry: {} },
-  { uid: 'al-amin-creator', displayUid: '30000002', name: 'Al-Amin', email: 'alamin@example.com', isCreator: true, isVerified: true, isVIP: false, vipPack: undefined, avatarUrl: `https://picsum.photos/seed/al-amin-creator/200`, createdAt: { seconds: Date.now()/1000 - 300, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 6 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false, allowedNormalContacts: [], badgeExpiry: {} },
-  { uid: 'sakib-new-user', displayUid: '10000008', name: 'Sakib', email: 'sakib@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/sakib-user/200`, createdAt: { seconds: Date.now()/1000 - 400, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*6, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {} },
-  { uid: 'walid-new-user', displayUid: '10000009', name: 'Walid', email: 'walid@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/walid-user/200`, createdAt: { seconds: Date.now()/1000 - 410, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*7, nanoseconds: 0} as unknown as Timestamp, isVIP: true, vipPack: "Starter VIP", isMemeCreator: false, isBetaTester: true, badgeExpiry: {} },
-  { uid: 'samia-new-user', displayUid: '10000010', name: 'Samia', email: 'samia@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/samia-user/200`, createdAt: { seconds: Date.now()/1000 - 420, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*8, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {} },
-  { uid: 'shamim-new-user', displayUid: '10000011', name: 'Shamim', email: 'shamim@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/shamim-user/200`, createdAt: { seconds: Date.now()/1000 - 430, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*9, nanoseconds: 0} as unknown as Timestamp, isVIP: true, vipPack: "Micro VIP", badgeExpiry: {} },
-  { uid: 'jubayer-new-user', displayUid: '10000012', name: 'Jubayer', email: 'jubaye@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/jubaye-user/200`, createdAt: { seconds: Date.now()/1000 - 440, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*10, nanoseconds: 0} as unknown as Timestamp, isVIP: true, vipPack: "Silver VIP", badgeExpiry: {} },
-  { uid: 'hadi-new-user', displayUid: '10000013', name: 'Hadi', email: 'hadi@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/hadi-user/200`, createdAt: { seconds: Date.now()/1000 - 450, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*11, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {} },
+  { uid: BOT_UID, displayUid: '00000001', name: 'Blue Bird (AI Assistant)', email: null, isBot: true, isVerified: false, isCreator: false, avatarUrl: 'outline-bird-avatar', lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp, points: 0},
+  { uid: DEV_UID, displayUid: '00000002', name: 'Dev Team', email: 'devteam@example.com', isDevTeam: true, isVerified: false, isCreator: false, isVIP: false, avatarUrl: 'dev-team-svg-placeholder', createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], points: 99999 },
+  { uid: 'test-user', displayUid: '10000001', name: 'Test User', email: 'test@example.com', isVIP: false, isVerified: false, isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-1/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp, selectedVerifiedContacts: [], hasMadeVipSelection: false, allowedNormalContacts: [], badgeExpiry: {}, points: 100 },
+  { uid: 'verified-contact-1', displayUid: '20000001', name: 'Twaha mizan', email: 'twahamizan04@gmail.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-2/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 1 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [], badgeExpiry: {}, points: 50 },
+  { uid: 'verified-contact-2', displayUid: '20000002', name: 'Rakib', email: 'rakib@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-3/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 10 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeExpiry: {}, points: 50 },
+  { uid: 'regular-user-1', displayUid: '10000002', name: 'Ashadul', email: 'ashadul@example.com', isCreator: false, isVerified: false, avatarUrl: `https://picsum.photos/seed/fresh-face-4/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 30 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeExpiry: {}, points: 20 },
+  { uid: 'monk-user-1', displayUid: '10000003', name: 'Karim Ahmed', email: 'monk1@example.com', isCreator: false, isVIP: true, vipPack: 'Gold VIP', avatarUrl: `https://picsum.photos/seed/fresh-face-5/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*2, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {}, points: 250 },
+  { uid: 'monk-user-2', displayUid: '10000004', name: 'Sajid Islam', email: 'monk2@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-6/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*3, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {}, points: 10 },
+  { uid: 'monk-user-3', displayUid: '10000005', name: 'Ayesha Siddika', email: 'monk3@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-7/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*4, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {}, points: 5 },
+  { uid: 'monk-user-4', displayUid: '10000006', name: 'Fatima Akter', email: 'monk4@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-8/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*5, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {}, points: 15 },
+  { uid: 'monk-user-tanvir', displayUid: '20000003', name: 'Tanvir Ahhamed', email: 'tanvir@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-9/200`, createdAt: { seconds: Date.now()/1000 - 500, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 5 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeExpiry: {}, points: 150 },
+  { uid: 'verified-contact-3', displayUid: '20000004', name: 'Asad', email: 'asad@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-10/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 4 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeExpiry: {}, points: 75 },
+  { uid: 'verified-contact-4', displayUid: '20000005', name: 'Saidul', email: 'saidul@example.com', isVerified: true, isVIP: false, vipPack: undefined, isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-11/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 15 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeExpiry: {}, points: 80 },
+  { uid: 'vip-user-2', displayUid: '20000006', name: 'Maria Oishee', email: 'maria@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/fresh-face-12/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 1 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [], badgeExpiry: {}, points: 200 },
+  { uid: 'vip-user-3', displayUid: '20000007', name: 'Rafi', email: 'rafi@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/fresh-face-13/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 25 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [], badgeExpiry: {}, points: 300 },
+  { uid: 'vip-only-user', displayUid: '10000007', name: 'Rahim Uddin', email: 'valerie@example.com', isVIP: true, vipPack: 'Bronze VIP', isCreator: false, isVerified: false, avatarUrl: `https://picsum.photos/seed/fresh-face-14/200`, createdAt: { seconds: Date.now()/1000, nanoseconds: 0} as unknown as Timestamp, vipExpiryTimestamp: Date.now() + 5 * 24 * 60 * 60 * 1000, lastSeen: { seconds: Math.floor(Date.now()/1000) - 5 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false, badgeExpiry: {}, points: 500 },
+  { uid: 'nayem-vip', displayUid: '20000008', name: 'Nayem', email: 'nayem@example.com', isVIP: false, vipPack: undefined, isCreator: false, isVerified: true, avatarUrl: `https://picsum.photos/seed/fresh-face-15/200`, createdAt: { seconds: Date.now()/1000 - 100, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 2 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: true, allowedNormalContacts: [], badgeExpiry: {}, points: 400 },
+  { uid: 'abdul-kaium-verified', displayUid: '20000009', name: 'Abdul-Kaium', email: 'abdulkaiumiqbel2005@gmail.com', isDevTeam: true, isVerified: false, isCreator: false, isVIP: false, isMemeCreator: false, isBetaTester: false, vipPack: 'Lifetime', avatarUrl: `https://picsum.photos/seed/kaium-verified/200`, createdAt: { seconds: Date.now()/1000 - 200, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 8 * 60, nanoseconds: 0} as unknown as Timestamp, allowedNormalContacts: [], badgeOrder: ['dev'], badgeExpiry: {}, points: 99999 },
+  { uid: 'julker-nain-creator', displayUid: '30000001', name: 'Julker Nain', email: 'julker@example.com', isCreator: true, isVerified: true, isVIP: false, vipPack: undefined, avatarUrl: `https://picsum.photos/seed/fresh-face-16/200`, createdAt: { seconds: Date.now()/1000 - 250, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 3 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false, allowedNormalContacts: [], badgeExpiry: {}, points: 600 },
+  { uid: 'al-amin-creator', displayUid: '30000002', name: 'Al-Amin', email: 'alamin@example.com', isCreator: true, isVerified: true, isVIP: false, vipPack: undefined, avatarUrl: `https://picsum.photos/seed/fresh-face-17/200`, createdAt: { seconds: Date.now()/1000 - 300, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 6 * 60, nanoseconds: 0} as unknown as Timestamp, hasMadeVipSelection: false, allowedNormalContacts: [], badgeExpiry: {}, points: 700 },
+  { uid: 'sakib-new-user', displayUid: '10000008', name: 'Sakib', email: 'sakib@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-18/200`, createdAt: { seconds: Date.now()/1000 - 400, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*6, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {}, points: 0 },
+  { uid: 'walid-new-user', displayUid: '10000009', name: 'Walid', email: 'walid@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-19/200`, createdAt: { seconds: Date.now()/1000 - 410, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*7, nanoseconds: 0} as unknown as Timestamp, isVIP: true, vipPack: "Starter VIP", isMemeCreator: false, isBetaTester: true, badgeExpiry: {}, points: 80 },
+  { uid: 'samia-new-user', displayUid: '10000010', name: 'Samia', email: 'samia@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-20/200`, createdAt: { seconds: Date.now()/1000 - 420, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*8, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {}, points: 5 },
+  { uid: 'shamim-new-user', displayUid: '10000011', name: 'Shamim', email: 'shamim@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-21/200`, createdAt: { seconds: Date.now()/1000 - 430, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*9, nanoseconds: 0} as unknown as Timestamp, isVIP: true, vipPack: "Micro VIP", badgeExpiry: {}, points: 10 },
+  { uid: 'jubayer-new-user', displayUid: '10000012', name: 'Jubayer', email: 'jubaye@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-22/200`, createdAt: { seconds: Date.now()/1000 - 440, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*10, nanoseconds: 0} as unknown as Timestamp, isVIP: true, vipPack: "Silver VIP", badgeExpiry: {}, points: 90 },
+  { uid: 'hadi-new-user', displayUid: '10000013', name: 'Hadi', email: 'hadi@example.com', isCreator: false, avatarUrl: `https://picsum.photos/seed/fresh-face-23/200`, createdAt: { seconds: Date.now()/1000 - 450, nanoseconds: 0} as unknown as Timestamp, lastSeen: { seconds: Math.floor(Date.now()/1000) - 60*60*11, nanoseconds: 0} as unknown as Timestamp, badgeExpiry: {}, points: 15 },
 ];
 
 // Function to get users from localStorage or initial state
@@ -140,13 +150,13 @@ export const updateUserProfile = async (user: FirebaseAuthUser, additionalData?:
         name: additionalData?.name || user.displayName || 'User',
         email: additionalData?.email || user.email,
         avatarUrl: additionalData?.avatarUrl || `https://picsum.photos/seed/${user.uid}/200`,
+        points: additionalData?.points || 0,
         isVIP: additionalData?.isVIP || false,
         vipPack: additionalData?.vipPack,
         vipExpiryTimestamp: additionalData?.vipExpiryTimestamp,
         isBot: user.uid === BOT_UID,
         isDevTeam: user.uid === DEV_UID || additionalData?.isDevTeam || false,
         isVerified: additionalData?.isVerified || user.uid === BOT_UID || user.uid === DEV_UID || (additionalData?.isDevTeam || false),
-        verifiedBadgeColor: additionalData?.verifiedBadgeColor || null,
         isCreator: additionalData?.isCreator || false,
         isMemeCreator: additionalData?.isMemeCreator || false,
         isBetaTester: additionalData?.isBetaTester || false,
@@ -236,86 +246,58 @@ export const setDemoUserId = (userId: string) => {
     const users = getPersistedUsers();
     CURRENT_USER_PROFILE = users.find(u => u.uid === userId) || null;
 
+    if (CURRENT_USER_PROFILE) {
+      ensureAllUserChatsExist(userId);
+    }
+
     // Update lastSeen for the logged-in user to 'now'
     const userIndex = users.findIndex(u => u.uid === userId);
     if(userIndex !== -1) {
         users[userIndex].lastSeen = { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as unknown as Timestamp;
         saveUsersToLocalStorage(users);
     }
-
-    mockChats = mockChats.map(chat => {
-        const newParticipants = chat.participants.map(p => p === 'test-user-placeholder' ? userId : p).sort();
-        if (chat.participants.includes(BOT_UID) && !newParticipants.includes(BOT_UID)) newParticipants.push(BOT_UID);
-        if (chat.participants.includes(DEV_UID) && !newParticipants.includes(DEV_UID)) newParticipants.push(DEV_UID);
-
-        return {
-            ...chat,
-            participants: [...new Set(newParticipants)].sort(),
-            lastMessageSenderId: chat.lastMessageSenderId === 'test-user-placeholder' ? userId : chat.lastMessageSenderId,
-        };
-    });
-
-    for (const chatId in mockMessages) {
-        mockMessages[chatId] = mockMessages[chatId].map(msg => ({
-            ...msg,
-            senderId: msg.senderId === 'test-user-placeholder' ? userId : msg.senderId
-        }));
-    }
+    
     console.log(`[firestore] Demo User ID set to: ${userId}. Mock data participants and sender IDs updated.`);
     notifyChatListListeners(userId);
 };
 
 
 let mockChats: Chat[] = [
-    { id: 'chat-blue-bird', participants: ['test-user-placeholder', BOT_UID].sort(), lastMessage: 'Hi, how can I help?', lastMessageSenderId: BOT_UID, lastMessageTimestamp: { seconds: Date.now()/1000 - 1800, nanoseconds: 0} as unknown as Timestamp, createdAt: { seconds: Date.now()/1000 - 3600, nanoseconds: 0} as unknown as Timestamp },
+    // This will be populated by ensureAllUserChatsExist
 ];
 
 let mockMessages: { [chatId: string]: Message[] } = {
-    'chat-blue-bird': [
-        { id: 'm3', chatId: 'chat-blue-bird', senderId: 'test-user-placeholder', senderName: 'Test User', text: 'Hi Blue Bird!', timestamp: { seconds: Date.now()/1000 - 1800, nanoseconds: 0} as unknown as Timestamp, seenBy: [BOT_UID] },
-        { id: 'm4', chatId: 'chat-blue-bird', senderId: BOT_UID, senderName: 'Blue Bird (AI Assistant)', text: 'Hi, how can I help?', timestamp: { seconds: Date.now()/1000 - 1700, nanoseconds: 0} as unknown as Timestamp },
-    ],
+    // This will be populated dynamically
 };
 
-const ensureAllUserChatsExist = (activeUserId: string) => {
+// This function guarantees that a chat object exists for every pair of users.
+export const ensureAllUserChatsExist = (activeUserId: string) => {
     const allUsers = getPersistedUsers();
     allUsers.forEach(user => {
-        // Skip creating a chat with self
-        if (user.uid === activeUserId) return;
+        if (user.uid === activeUserId) return; // Skip self
 
-        const chatExists = mockChats.some(c => 
-            c.participants.includes(activeUserId) && c.participants.includes(user.uid)
-        );
+        const sortedParticipants = [activeUserId, user.uid].sort();
+        const existingChat = mockChats.find(c => c.participants.join(',') === sortedParticipants.join(','));
 
-        if (!chatExists) {
-            const newChatId = `chat-${activeUserId}-${user.uid}`;
-            const isBotOrDev = user.isBot || user.isDevTeam;
+        if (!existingChat) {
+            const newChatId = `chat-${sortedParticipants[0]}-${sortedParticipants[1]}`;
+            
             const newChat: Chat = {
                 id: newChatId,
-                participants: [activeUserId, user.uid].sort(),
-                lastMessage: isBotOrDev ? `Welcome! Chat with ${user.name} now.` : `Say hi to ${user.name}!`,
-                lastMessageSenderId: isBotOrDev ? user.uid : 'system',
-                lastMessageTimestamp: { seconds: (Date.now()/1000) - (Math.random() * 10000 + 1500), nanoseconds: 0} as unknown as Timestamp,
+                participants: sortedParticipants,
+                lastMessage: `Say hi to ${user.name}!`,
+                lastMessageSenderId: 'system',
+                lastMessageTimestamp: { seconds: (Date.now()/1000) - (Math.random() * 10000 + 3600), nanoseconds: 0} as unknown as Timestamp,
+                createdAt: { seconds: (Date.now()/1000) - (Math.random() * 20000 + 7200), nanoseconds: 0} as unknown as Timestamp,
             };
             mockChats.push(newChat);
-            
-            // Ensure message list exists for new chat
+
             if (!mockMessages[newChatId]) {
                 mockMessages[newChatId] = [];
             }
-
-            // Pre-populate with welcome message for bot/dev chats
-             if (isBotOrDev && mockMessages[newChatId].length === 0) {
-                mockMessages[newChatId].push({
-                    id: `msg-welcome-${user.uid}`,
-                    chatId: newChatId,
-                    senderId: user.uid,
-                    text: newChat.lastMessage,
-                    timestamp: newChat.lastMessageTimestamp,
-                });
-            }
         }
     });
+    console.log(`[ensureAllUserChatsExist] Verified chats for user ${activeUserId}. Total chats: ${mockChats.length}`);
 }
 
 
@@ -345,14 +327,13 @@ export const notifyChatListListeners = (userId: string | null) => {
 
         const otherParticipantProfile = allUsers.find(u => u.uid === otherParticipantId);
         if (!otherParticipantProfile) return false;
-
+        
         const isOtherUserExclusive = otherParticipantProfile.isVerified || otherParticipantProfile.isCreator || otherParticipantProfile.isDevTeam;
         
-        // If the other user is NOT exclusive (i.e., a normal user) or is the bot, always show the chat.
         if (!isOtherUserExclusive || otherParticipantProfile.isBot) {
-            return true;
+            return true; // Always show chats with normal users and the bot
         }
-
+        
         // If the other user IS exclusive, apply permission checks.
         const isAllowedByOtherUser = otherParticipantProfile.allowedNormalContacts?.includes(userProfile.uid);
         const isSelectedByCurrentUser = userProfile.selectedVerifiedContacts?.includes(otherParticipantId);
@@ -367,7 +348,7 @@ export const notifyChatListListeners = (userId: string | null) => {
             if (profile) {
                 participantDetails[pId] = {
                     uid: pId, name: profile.name, avatarUrl: profile.avatarUrl,
-                    isVIP: profile.isVIP, isVerified: profile.isVerified, verifiedBadgeColor: profile.verifiedBadgeColor, isDevTeam: profile.isDevTeam, isBot: profile.isBot, isCreator: profile.isCreator,
+                    isVIP: profile.isVIP, isVerified: profile.isVerified, isDevTeam: profile.isDevTeam, isBot: profile.isBot, isCreator: profile.isCreator,
                     isMemeCreator: profile.isMemeCreator, isBetaTester: profile.isBetaTester, badgeOrder: profile.badgeOrder,
                     lastSeen: profile.lastSeen
                 };
@@ -407,6 +388,7 @@ export const getUserChats = (
 
   try {
     // Initial fetch for the subscriber
+    ensureAllUserChatsExist(userId);
     notifyChatListListeners(userId);
   } catch (e: any) {
     onError(e);
@@ -801,7 +783,6 @@ export const mapChatToChatItem = (
     timestamp: formatTimestamp(chat.lastMessageTimestamp),
     lastMessageTimestampValue: chat.lastMessageTimestamp.seconds,
     isVerified: !!otherDetails?.isVerified,
-    verifiedBadgeColor: otherDetails?.verifiedBadgeColor,
     isContactVIP: !!otherDetails?.isVIP,
     isDevTeam: !!otherDetails?.isDevTeam,
     isBot: !!otherDetails?.isBot,
@@ -901,7 +882,7 @@ export const markMessagesAsSeen = async (chatId: string, userId: string): Promis
 
 export const getVerifiedUsers = async (): Promise<UserProfile[]> => {
     const users = getPersistedUsers();
-    return Promise.resolve(users.filter(u => u.isVerified && !u.isBot && !u.isDevTeam));
+    return Promise.resolve(users.filter(u => (u.isVerified || u.isDevTeam) && !u.isBot));
 };
 
 export const getNormalUsers = async (): Promise<UserProfile[]> => {
@@ -916,73 +897,6 @@ export const getVerifiedContactLimit = (vipPack?: string): number => {
     if (pack.includes('starter') || pack.includes('bronze') || pack.includes('silver')) return 5;
     if (pack.includes('micro') || pack.includes('mini') || pack.includes('basic')) return 3;
     return 0;
-};
-
-export interface AppRating {
-  id: string;
-  userId: string;
-  userName: string;
-  userAvatar?: string;
-  rating: number; // 1-5
-  review: string;
-  timestamp: Timestamp;
-  devReply?: string;
-}
-
-const mockRatings: AppRating[] = [
-    {
-        id: 'rating-1',
-        userId: 'julker-nain-creator',
-        userName: 'Julker Nain',
-        userAvatar: getPersistedUsers().find(u => u.uid === 'julker-nain-creator')?.avatarUrl,
-        rating: 5,
-        review: 'This app is amazing! So smooth and the features are fantastic. The AI assistant is surprisingly helpful. Highly recommended!',
-        timestamp: { seconds: Math.floor(Date.now() / 1000) - (2 * 24 * 60 * 60), nanoseconds: 0 } as Timestamp,
-        devReply: 'Thank you so much for the kind words, Julker! We\'re thrilled you\'re enjoying the experience. More great features are on the way!'
-    },
-    {
-        id: 'rating-2',
-        userId: 'vip-only-user',
-        userName: 'Rahim Uddin',
-        userAvatar: getPersistedUsers().find(u => u.uid === 'vip-only-user')?.avatarUrl,
-        rating: 4,
-        review: 'Pretty good app. The VIP features are nice and I like the clean design. Sometimes it feels a bit slow when sending images.',
-        timestamp: { seconds: Math.floor(Date.now() / 1000) - (1 * 24 * 60 * 60), nanoseconds: 0 } as Timestamp,
-    }
-];
-
-export const getRatings = async (): Promise<AppRating[]> => {
-  console.log('[getRatings] Fetching all app ratings.');
-  return Promise.resolve([...mockRatings].sort((a, b) => b.timestamp.seconds - a.timestamp.seconds));
-};
-
-export const addRating = async (ratingData: Omit<AppRating, 'id' | 'timestamp'>): Promise<void> => {
-    console.log(`[addRating] User ${ratingData.userId} is adding/updating a rating.`);
-    const existingRatingIndex = mockRatings.findIndex(r => r.userId === ratingData.userId);
-
-    const newRating: AppRating = {
-        ...ratingData,
-        id: `rating-${Date.now()}`,
-        timestamp: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 } as Timestamp
-    };
-
-    if (existingRatingIndex !== -1) {
-        mockRatings[existingRatingIndex] = { ...mockRatings[existingRatingIndex], ...ratingData, timestamp: newRating.timestamp };
-    } else {
-        mockRatings.push(newRating);
-    }
-    return Promise.resolve();
-};
-
-export const addDevReply = async (ratingId: string, replyText: string): Promise<void> => {
-    console.log(`[addDevReply] Adding reply to rating ${ratingId}.`);
-    const ratingIndex = mockRatings.findIndex(r => r.id === ratingId);
-    if (ratingIndex !== -1) {
-        mockRatings[ratingIndex].devReply = replyText;
-    } else {
-        throw new Error('Rating not found.');
-    }
-    return Promise.resolve();
 };
 
 export const createVipPromoCode = async (durationDays: number, totalUses: number, usesPerUser: number): Promise<string> => {
@@ -1009,7 +923,7 @@ export const redeemVipPromoCode = async (userId: string, code: string): Promise<
     }
 
     const promoCode = allCodes[codeIndex];
-    const totalClaims = Object.values(promoCode.claimedBy).reduce((sum, count) => sum + count, 0);
+    const totalClaims = Object.values(promoCode.claimedBy || {}).reduce((sum, count) => sum + count, 0);
 
     if (totalClaims >= promoCode.totalUses) {
         throw new Error("This promo code has reached its maximum number of uses.");
@@ -1123,4 +1037,83 @@ export const deleteBadgeGiftCode = async (code: string): Promise<void> => {
     return Promise.resolve();
 };
 
+export const createPointsPromoCode = async (amount: number, totalUses: number): Promise<string> => {
+    const code = `PTS-${amount}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const allCodes = getPersistedData<PointsPromoCode[]>(MOCK_POINTS_PROMO_CODES_STORAGE_KEY, []);
+    const newCode: PointsPromoCode = {
+        code,
+        amount,
+        totalUses,
+        claimedBy: {},
+        createdAt: Date.now(),
+    };
+    savePersistedData(MOCK_POINTS_PROMO_CODES_STORAGE_KEY, [...allCodes, newCode]);
+    return code;
+};
+
+export const getPointsPromoCodes = async (): Promise<PointsPromoCode[]> => {
+    const codes = getPersistedData<PointsPromoCode[]>(MOCK_POINTS_PROMO_CODES_STORAGE_KEY, []);
+    return codes.sort((a, b) => a.createdAt - b.createdAt);
+};
+
+export const redeemPointsPromoCode = async (userId: string, code: string): Promise<{ success: boolean; amount: number }> => {
+    const allCodes = getPersistedData<PointsPromoCode[]>(MOCK_POINTS_PROMO_CODES_STORAGE_KEY, []);
+    const codeIndex = allCodes.findIndex(c => c.code === code);
+
+    if (codeIndex === -1) throw new Error("Invalid points promo code.");
+
+    const promoCode = allCodes[codeIndex];
+    const totalClaims = Object.values(promoCode.claimedBy || {}).length;
+
+    if (totalClaims >= promoCode.totalUses) throw new Error("This promo code has reached its maximum uses.");
+    if (promoCode.claimedBy[userId]) throw new Error("You have already redeemed this code.");
+    
+    // Mark as claimed
+    promoCode.claimedBy[userId] = 1;
+    allCodes[codeIndex] = promoCode;
+    savePersistedData(MOCK_POINTS_PROMO_CODES_STORAGE_KEY, allCodes);
+
+    return { success: true, amount: promoCode.amount };
+};
+
+export const deletePointsPromoCode = async (code: string): Promise<void> => {
+    const allCodes = getPersistedData<PointsPromoCode[]>(MOCK_POINTS_PROMO_CODES_STORAGE_KEY, []);
+    const updatedCodes = allCodes.filter(c => c.code !== code);
+    savePersistedData(MOCK_POINTS_PROMO_CODES_STORAGE_KEY, updatedCodes);
+};
+
+export const giftPoints = async (fromUid: string, toUid: string, amount: number): Promise<void> => {
+    const users = getPersistedUsers();
+    const fromUserIndex = users.findIndex(u => u.uid === fromUid);
+    const toUserIndex = users.findIndex(u => u.uid === toUid);
+
+    if (fromUserIndex === -1 || toUserIndex === -1) {
+        throw new Error("Sender or receiver not found.");
+    }
+
+    const fromUser = users[fromUserIndex];
+    if ((fromUser.points || 0) < amount) {
+        throw new Error("Insufficient points.");
+    }
+    
+    // Update balances
+    users[fromUserIndex].points = (fromUser.points || 0) - amount;
+    users[toUserIndex].points = (users[toUserIndex].points || 0) + amount;
+
+    // Set transient properties for notification
+    users[toUserIndex].hasNewPointsGift = true;
+    users[toUserIndex].pointsGifterUid = fromUid;
+    users[toUserIndex].lastGiftedPointsAmount = amount;
+
+    saveUsersToLocalStorage(users);
+
+    // Notify listeners if the updated users are the current user
+    if (fromUid === CURRENT_DEMO_USER_ID) notifyChatListListeners(fromUid);
+    if (toUid === CURRENT_DEMO_USER_ID) notifyChatListListeners(toUid);
+
+    return Promise.resolve();
+};
+
 export { mockChats };
+
+    

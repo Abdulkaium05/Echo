@@ -4,11 +4,12 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Code, Gift, QrCode, History } from 'lucide-react';
+import { Code, Gift, QrCode, History, Coins } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VipCodeGeneratorTab } from '@/components/dev/tools/vip-code-generator';
 import { BadgeQrGeneratorTab } from '@/components/dev/tools/badge-qr-generator';
+import { PointsCodeGeneratorTab } from '@/components/dev/tools/points-code-generator';
 import { CodeHistoryTab } from '@/components/dev/tools/code-history';
 
 
@@ -46,14 +47,18 @@ export default function DevToolsPage() {
         </div>
 
         <Tabs defaultValue="promo" className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="promo">
                     <Gift className="mr-2 h-4 w-4" />
-                    Promo Code
+                    VIP Code
                 </TabsTrigger>
                 <TabsTrigger value="qr">
                     <QrCode className="mr-2 h-4 w-4" />
                     QR Code
+                </TabsTrigger>
+                 <TabsTrigger value="points">
+                    <Coins className="mr-2 h-4 w-4" />
+                    Points Code
                 </TabsTrigger>
                 <TabsTrigger value="history">
                     <History className="mr-2 h-4 w-4" />
@@ -66,6 +71,9 @@ export default function DevToolsPage() {
             </TabsContent>
             <TabsContent value="qr" className="flex-1 mt-6">
                 <BadgeQrGeneratorTab />
+            </TabsContent>
+            <TabsContent value="points" className="flex-1 mt-6">
+                <PointsCodeGeneratorTab />
             </TabsContent>
             <TabsContent value="history" className="flex-1 mt-6">
                 <CodeHistoryTab />

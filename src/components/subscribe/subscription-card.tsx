@@ -1,23 +1,28 @@
+
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SubscriptionCardProps {
   planName: string;
   price: number;
+  points: number;
   durationDays: number;
   features: string[];
   isPopular?: boolean;
+  paymentMethod: 'money' | 'points';
   onSubscribe: () => void;
 }
 
 export function SubscriptionCard({
   planName,
   price,
+  points,
   durationDays,
   features,
   isPopular = false,
+  paymentMethod,
   onSubscribe,
 }: SubscriptionCardProps) {
   return (
@@ -37,8 +42,15 @@ export function SubscriptionCard({
       </CardHeader>
       <CardContent className="flex-1 px-4 sm:px-6 pb-4">
         <div className="mb-4">
-          <span className="text-3xl sm:text-4xl font-bold">${price}</span>
-          {durationDays !== Infinity && <span className="text-muted-foreground text-xs sm:text-sm"> / {durationDays} days</span>}
+            {paymentMethod === 'money' ? (
+                <span className="text-3xl sm:text-4xl font-bold">${price}</span>
+            ) : (
+                <div className="flex items-center gap-2">
+                    <span className="text-3xl sm:text-4xl font-bold">{points}</span>
+                    <Coins className="h-7 w-7 text-yellow-500" />
+                </div>
+            )}
+          {durationDays !== Infinity && paymentMethod === 'money' && <span className="text-muted-foreground text-xs sm:text-sm"> / {durationDays} days</span>}
         </div>
         <ul className="space-y-1.5 sm:space-y-2">
           {features.map((feature, index) => (

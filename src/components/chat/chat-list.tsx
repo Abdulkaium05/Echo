@@ -94,43 +94,43 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     : getVerifiedContactLimit(userProfile?.vipPack);
   
   useEffect(() => {
-    if (!currentUserId) {
-        console.warn("ChatList: No current user ID provided. Waiting for auth.");
-        setLoading(false);
-        return;
-    }
-
-    if (isUserProfileLoading || !userProfile) {
-        setLoading(true); // Keep showing loading until profile is ready
+    if (!currentUserId || isUserProfileLoading || !userProfile) {
+        setLoading(true); // Keep showing loading until profile and user ID are ready
         return;
     }
 
     setLoading(true);
     setError(null);
-    setChats([]);
     
     console.log("ChatList: Subscribing to chats for user:", currentUserId);
     
-    // Pass the userProfile directly to the subscription function
+    // The subscription function that will handle updates
+    const handleChatUpdates = (fetchedChats: Chat[]) => {
+        console.log(`ChatList: Received ${fetchedChats.length} chats for user ${currentUserId}`);
+        const chatItems = fetchedChats.map(chat => mapChatToChatItem(
+            chat, 
+            currentUserId,
+        ));
+        setChats(chatItems);
+        setLoading(false);
+    };
+
+    // The error handler for the subscription
+    const handleSubscriptionError = (err: Error) => {
+        console.error("ChatList: Error fetching chats:", err);
+        setError(err.message || "Failed to load chats.");
+        setLoading(false);
+    };
+
+    // Establish the subscription
     const unsubscribe = getUserChats(
         currentUserId,
         userProfile, 
-        (fetchedChats: Chat[]) => {
-            console.log(`ChatList: Received ${fetchedChats.length} chats for user ${currentUserId}`);
-            const chatItems = fetchedChats.map(chat => mapChatToChatItem(
-                chat, 
-                currentUserId,
-            ));
-            setChats(chatItems);
-            setLoading(false);
-        },
-        (err) => {
-            console.error("ChatList: Error fetching chats:", err);
-            setError(err.message || "Failed to load chats.");
-            setLoading(false);
-        }
+        handleChatUpdates,
+        handleSubscriptionError
     );
 
+    // Cleanup function to unsubscribe when the component unmounts or dependencies change
     return () => {
         console.log("ChatList: Unsubscribing from chats for user:", currentUserId);
         unsubscribe();
@@ -164,7 +164,7 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
       addBlockedUser(dialogState.userId);
       toast({
         title: `User Blocked`,
-        description: `You have blocked ${dialogState.userName}. You can unblock them from the chat list.`,
+        description: `You have blocked ${dialogState.userName}. You can unblock them from the chat list context menu.`,
         variant: "destructive"
       });
     }

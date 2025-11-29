@@ -1,14 +1,15 @@
+
 // src/components/dev/tools/code-history.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, History, Trash2, Copy, Crown, SmilePlus, FlaskConical } from 'lucide-react';
+import { Loader2, History, Trash2, Copy, Crown, SmilePlus, FlaskConical, Coins } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
-    getVipPromoCodes, getBadgeGiftCodes, 
-    type VipPromoCode, type BadgeGiftCode, 
-    deleteVipPromoCode, deleteBadgeGiftCode 
+    getVipPromoCodes, getBadgeGiftCodes, getPointsPromoCodes,
+    type VipPromoCode, type BadgeGiftCode, type PointsPromoCode,
+    deleteVipPromoCode, deleteBadgeGiftCode, deletePointsPromoCode,
 } from '@/services/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,13 +42,15 @@ export function CodeHistoryTab() {
 
   const [promoCodeHistory, setPromoCodeHistory] = useState<VipPromoCode[]>([]);
   const [badgeCodeHistory, setBadgeCodeHistory] = useState<BadgeGiftCode[]>([]);
+  const [pointsCodeHistory, setPointsCodeHistory] = useState<PointsPromoCode[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
   const fetchHistory = async () => {
     setIsLoadingHistory(true);
-    const [vips, badges] = await Promise.all([getVipPromoCodes(), getBadgeGiftCodes()]);
+    const [vips, badges, points] = await Promise.all([getVipPromoCodes(), getBadgeGiftCodes(), getPointsPromoCodes()]);
     setPromoCodeHistory(vips);
     setBadgeCodeHistory(badges);
+    setPointsCodeHistory(points);
     setIsLoadingHistory(false);
   };
   
@@ -74,6 +77,16 @@ export function CodeHistoryTab() {
         toast({ title: "Error Deleting Code", description: error.message, variant: "destructive" });
     }
   };
+  
+  const handleDeletePointsCode = async (code: string) => {
+      try {
+        await deletePointsPromoCode(code);
+        toast({ title: "Points Code Deleted", description: "The points promo code has been removed.", variant: "destructive" });
+        await fetchHistory();
+    } catch (error: any) {
+        toast({ title: "Error Deleting Code", description: error.message, variant: "destructive" });
+    }
+  };
 
   const copyToClipboard = (e: React.MouseEvent, text: string) => {
     e.stopPropagation(); // Prevent the popover from opening when copying
@@ -95,7 +108,7 @@ export function CodeHistoryTab() {
                 Generated Code History
             </CardTitle>
             <CardDescription>
-                A list of all VIP promo codes and Badge Gift QR codes that have been created. Click a code or icon to see details.
+                A list of all generated promo codes. Click a code or icon to see details.
             </CardDescription>
         </CardHeader>
         <CardContent>
@@ -104,9 +117,9 @@ export function CodeHistoryTab() {
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
             ) : (
-                <div className="grid gap-8 lg:grid-cols-1 xl:grid-cols-2">
+                <div className="grid gap-8 lg:grid-cols-1">
                     <div className="space-y-4">
-                        <h3 className="font-semibold text-lg">VIP Promo Codes</h3>
+                        <h3 className="font-semibold text-lg flex items-center gap-2"><Crown className="h-5 w-5 text-yellow-500"/> VIP Promo Codes</h3>
                         <div className="border rounded-lg max-h-96 overflow-y-auto">
                             <Table>
                                 <TableHeader>
@@ -160,6 +173,66 @@ export function CodeHistoryTab() {
                                     )) : (
                                         <TableRow>
                                             <TableCell colSpan={2} className="text-center text-muted-foreground h-24">No VIP codes generated yet.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                     <div className="space-y-4">
+                        <h3 className="font-semibold text-lg flex items-center gap-2"><Coins className="h-5 w-5 text-yellow-500"/> Points Promo Codes</h3>
+                         <div className="border rounded-lg max-h-96 overflow-y-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Code</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {pointsCodeHistory.length > 0 ? pointsCodeHistory.map(code => (
+                                        <TableRow key={code.code}>
+                                            <TableCell>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button variant="link" className="font-mono p-0 h-auto">{code.code}</Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto text-sm">
+                                                        <div className="space-y-2">
+                                                            <p><strong>Amount:</strong> {code.amount} points</p>
+                                                            <p><strong>Uses:</strong> {Object.keys(code.claimedBy || {}).length} / {code.totalUses}</p>
+                                                        </div>
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </TableCell>
+                                            <TableCell className="text-right space-x-1">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => copyToClipboard(e, code.code)}>
+                                                    <Copy className="h-4 w-4" />
+                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/70 hover:text-destructive">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Delete Points Code?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Are you sure you want to delete the code <code className="bg-muted px-1 py-0.5 rounded">{code.code}</code>? This action cannot be undone.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeletePointsCode(code.code)}>Delete</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow>
+                                            <TableCell colSpan={2} className="text-center text-muted-foreground h-24">No points codes generated yet.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -232,3 +305,5 @@ export function CodeHistoryTab() {
     </Card>
   );
 }
+
+    

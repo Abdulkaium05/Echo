@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { UserProfile } from "@/context/auth-context";
-import { Crown, Mail, MessageSquare, Loader2, Wrench, Bot, Cake, Clock, UserCircle2, SmilePlus, FlaskConical } from "lucide-react";
+import { Crown, Mail, MessageSquare, Loader2, Wrench, Bot, Cake, Clock, UserCircle2, SmilePlus, FlaskConical, Coins } from "lucide-react";
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { useRouter } from "next/navigation";
 import { findChatBetweenUsers, createChat, formatLastSeen } from '@/services/firestore';
@@ -158,6 +158,10 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
                         <span className="text-muted-foreground font-mono tracking-wider">{profile.displayUid}</span>
                     </div>
                  )}
+                 <div className="flex items-center text-sm p-3 rounded-md border bg-secondary/50">
+                    <Coins className="h-5 w-5 text-muted-foreground mr-3" />
+                    <span className="text-muted-foreground font-semibold">{profile.points || 0} Points</span>
+                 </div>
                  {profile.email && (
                     <div className="flex items-center text-sm p-3 rounded-md border bg-secondary/50">
                         <Mail className="h-5 w-5 text-muted-foreground mr-3" />

@@ -1,7 +1,7 @@
 
 // src/types/user.ts
 import type { Timestamp } from 'firebase/firestore';
-import type { BadgeType, BadgeColor } from '@/app/(app)/layout';
+import type { BadgeType } from '@/app/(app)/layout';
 
 export interface UserProfile {
   uid: string;
@@ -9,13 +9,13 @@ export interface UserProfile {
   name: string;
   email: string | null;
   avatarUrl?: string; 
+  points?: number; // User's points balance
   isVIP?: boolean;
   vipPack?: string;
   vipExpiryTimestamp?: number; // Unix timestamp in milliseconds for VIP expiry
   createdAt?: Timestamp;
   isBot?: boolean;
   isVerified?: boolean;
-  verifiedBadgeColor?: BadgeColor | null;
   isDevTeam?: boolean;
   isCreator?: boolean; 
   isMemeCreator?: boolean; // New badge property
@@ -39,4 +39,10 @@ export interface UserProfile {
   giftedByUid?: string;
   hasNewGift?: boolean;
   lastGiftedBadge?: BadgeType;
+  
+  pointsGifterUid?: string;
+  hasNewPointsGift?: boolean;
+  lastGiftedPointsAmount?: number;
 }
+
+    

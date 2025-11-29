@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SubscriptionCard } from '@/components/subscribe/subscription-card';
 import { useToast } from '@/hooks/use-toast';
-import { Crown, Check, PartyPopper, Ban, Loader2, Clock, Ticket } from 'lucide-react';
+import { Crown, Check, PartyPopper, Ban, Loader2, Clock, Ticket, Coins } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,27 +26,29 @@ import { useAuth } from '@/context/auth-context';
 import { 
     updateVIPStatus as mockUpdateVIPStatus,
     redeemVipPromoCode,
+    redeemPointsPromoCode,
 } from '@/services/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const subscriptionPlans = [
-    { planName: 'Micro VIP', price: 1, durationDays: 1, features: ['VIP Badge', 'Select 3 Verified Users', 'Exclusive Chat Access'] },
-    { planName: 'Mini Pass', price: 2, durationDays: 3, features: ['VIP Badge', 'Select 3 Verified Users', 'Exclusive Chat Access'] },
-    { planName: 'Basic Pack', price: 4, durationDays: 7, features: ['VIP Badge', 'Select 3 Verified Users', 'Exclusive Chat Access'] },
-    { planName: 'Starter', price: 7, durationDays: 14, features: ['VIP Badge', 'Select 5 Verified Users', 'Exclusive Chat Access'] },
-    { planName: 'Bronze', price: 12, durationDays: 30, features: ['VIP Badge', 'Select 5 Verified Users', 'Exclusive Chat Access', 'Early Feature Access'] },
-    { planName: 'Silver', price: 20, durationDays: 60, features: ['VIP Badge', 'Select 5 Verified Users', 'Exclusive Chat Access', 'Early Feature Access', 'Custom Theme'], isPopular: true },
-    { planName: 'Gold', price: 30, durationDays: 90, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme'] },
-    { planName: 'Platinum', price: 50, durationDays: 180, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
-    { planName: 'Diamond', price: 60, durationDays: 270, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
-    { planName: 'Elite Yearly', price: 75, durationDays: 365, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
+    { planName: 'Micro VIP', price: 1, points: 100, durationDays: 1, features: ['VIP Badge', 'Select 3 Verified Users', 'Exclusive Chat Access'] },
+    { planName: 'Mini Pass', price: 2, points: 200, durationDays: 3, features: ['VIP Badge', 'Select 3 Verified Users', 'Exclusive Chat Access'] },
+    { planName: 'Basic Pack', price: 4, points: 400, durationDays: 7, features: ['VIP Badge', 'Select 3 Verified Users', 'Exclusive Chat Access'] },
+    { planName: 'Starter', price: 7, points: 700, durationDays: 14, features: ['VIP Badge', 'Select 5 Verified Users', 'Exclusive Chat Access'] },
+    { planName: 'Bronze', price: 12, points: 1200, durationDays: 30, features: ['VIP Badge', 'Select 5 Verified Users', 'Exclusive Chat Access', 'Early Feature Access'] },
+    { planName: 'Silver', price: 20, points: 2000, durationDays: 60, features: ['VIP Badge', 'Select 5 Verified Users', 'Exclusive Chat Access', 'Early Feature Access', 'Custom Theme'], isPopular: true },
+    { planName: 'Gold', price: 30, points: 3000, durationDays: 90, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme'] },
+    { planName: 'Platinum', price: 50, points: 5000, durationDays: 180, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
+    { planName: 'Diamond', price: 60, points: 6000, durationDays: 270, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
+    { planName: 'Elite Yearly', price: 75, points: 7500, durationDays: 365, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
 ];
 
 const lifetimePlan = {
   planName: 'Lifetime VIP',
   price: 50,
+  points: 5000,
   durationDays: Infinity,
   features: ['Permanent VIP Badge', 'All current & future VIP features', 'Highest chat limits', 'Priority support'],
   isPopular: false,
@@ -69,6 +71,8 @@ export default function SubscribePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [remainingTime, setRemainingTime] = useState<string | null>(null);
   const [redeemCodeInput, setRedeemCodeInput] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'money' | 'points'>('money');
+
 
   const formatRemainingTime = (ms: number): string => {
     if (ms <= 0) return "Expired";
@@ -130,16 +134,30 @@ export default function SubscribePage() {
   }, [hasVipBadge, vipExpiryTimestamp, handleSubscriptionExpired, isDevTeamUser]);
 
 
-  const handleSubscribe = async (plan: { planName: string, price: number, durationDays: number, features: string[] }) => {
-    if (!user) {
+  const handleSubscribe = async (plan: { planName: string; price: number; points: number; durationDays: number; features: string[] }) => {
+    if (!user || !userProfile) {
        toast({ title: "Not Logged In", description: "You must be logged in to subscribe.", variant: "destructive"});
        router.push('/login');
        return;
     }
     setIsProcessing(true);
     setSubscribedPlan({ name: plan.planName, features: plan.features });
+    
+    if (paymentMethod === 'points') {
+        const userPoints = userProfile.points || 0;
+        if (userPoints < plan.points) {
+            toast({
+              title: "Insufficient Points",
+              description: `You need ${plan.points} points, but you only have ${userPoints}.`,
+              variant: "destructive",
+            });
+            setIsProcessing(false);
+            return;
+        }
+    }
 
-    if (plan.price > 0) { 
+
+    if (paymentMethod === 'money' && plan.price > 0) { 
         toast({
           title: "Processing Payment...",
           description: `Processing payment for ${plan.planName}. Please wait.`,
@@ -150,13 +168,19 @@ export default function SubscribePage() {
 
     try {
       const expiry = plan.durationDays === Infinity ? undefined : Date.now() + plan.durationDays * 24 * 60 * 60 * 1000;
+      let updatedPoints = userProfile.points || 0;
+      if (paymentMethod === 'points') {
+          updatedPoints -= plan.points;
+      }
+      
       await mockUpdateVIPStatus(user.uid, true, plan.planName, plan.durationDays);
       updateMockUserProfile(user.uid, { 
           isVIP: true, 
           vipPack: plan.planName, 
           vipExpiryTimestamp: expiry,
           selectedVerifiedContacts: userProfile?.selectedVerifiedContacts || [], 
-          hasMadeVipSelection: userProfile?.hasMadeVipSelection || false, 
+          hasMadeVipSelection: userProfile?.hasMadeVipSelection || false,
+          points: updatedPoints,
       });
       setContextVIPStatus(true, plan.planName);
       
@@ -164,7 +188,7 @@ export default function SubscribePage() {
       
       toast({
           title: `VIP Activated: ${plan.planName}`,
-          description: 'Congratulations! Your VIP benefits are now active.'
+          description: `Congratulations! Your VIP benefits are now active. Paid with ${paymentMethod}.`,
       });
 
     } catch (error) {
@@ -222,38 +246,50 @@ export default function SubscribePage() {
 
   const handleRedeemCode = async () => {
     if (!user || !userProfile) {
-      toast({ title: "Not Logged In", description: "You must be logged in to redeem a code.", variant: "destructive"});
-      router.push('/login');
-      return;
+        toast({ title: "Not Logged In", description: "You must be logged in to redeem a code.", variant: "destructive" });
+        router.push('/login');
+        return;
     }
     if (!redeemCodeInput.trim()) {
-      toast({ title: "Empty Redeem Code", description: "Please enter a redeem code.", variant: "destructive" });
-      return;
+        toast({ title: "Empty Redeem Code", description: "Please enter a redeem code.", variant: "destructive" });
+        return;
     }
 
     setIsProcessing(true);
     const code = redeemCodeInput.trim().toUpperCase();
 
     try {
-        const result = await redeemVipPromoCode(user.uid, code);
-        const planName = `VIP (${result.durationDays} days)`;
-        
-        // Use the duration from the result to update the profile
-        const expiry = Date.now() + result.durationDays * 24 * 60 * 60 * 1000;
-        updateMockUserProfile(user.uid, { 
-            isVIP: true, 
-            vipPack: planName, 
-            vipExpiryTimestamp: expiry,
-        });
-        setContextVIPStatus(true, planName);
-        
-        setSubscribedPlan({ name: planName, features: ['VIP Badge', 'Exclusive Access'] });
-        setShowConfirmationDialog(true);
-        
-        toast({
-          title: "Code Redeemed!",
-          description: `You have successfully activated ${result.durationDays} days of VIP access.`,
-        });
+        if (code.startsWith('VIP-')) {
+            const result = await redeemVipPromoCode(user.uid, code);
+            const planName = `VIP (${result.durationDays} days)`;
+            
+            const expiry = Date.now() + result.durationDays * 24 * 60 * 60 * 1000;
+            updateMockUserProfile(user.uid, { 
+                isVIP: true, 
+                vipPack: planName, 
+                vipExpiryTimestamp: expiry,
+            });
+            setContextVIPStatus(true, planName);
+            
+            setSubscribedPlan({ name: planName, features: ['VIP Badge', 'Exclusive Access'] });
+            setShowConfirmationDialog(true);
+            
+            toast({
+                title: "Code Redeemed!",
+                description: `You have successfully activated ${result.durationDays} days of VIP access.`,
+            });
+        } else if (code.startsWith('PTS-')) {
+            const result = await redeemPointsPromoCode(user.uid, code);
+            updateMockUserProfile(user.uid, {
+                points: (userProfile.points || 0) + result.amount,
+            });
+            toast({
+                title: "Code Redeemed!",
+                description: `You have received ${result.amount} points! Your new balance is ${(userProfile.points || 0) + result.amount}.`,
+            });
+        } else {
+            throw new Error("Unknown code format. Please check the code and try again.");
+        }
 
     } catch (error: any) {
         toast({ title: "Redemption Failed", description: error.message, variant: "destructive" });
@@ -261,7 +297,7 @@ export default function SubscribePage() {
         setIsProcessing(false);
         setRedeemCodeInput('');
     }
-  };
+};
 
 
   if (authLoading || isUserProfileLoading) {
@@ -324,20 +360,29 @@ export default function SubscribePage() {
       <div className="text-center mb-8 md:mb-12">
         <Crown className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-primary" />
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-          Get a VIP Badge
+          {hasVipBadge ? "Extend Your VIP Plan" : "Get a VIP Badge"}
         </h1>
         <span className="mt-3 md:mt-4 text-base md:text-lg text-muted-foreground max-w-2xl mx-auto block">
-            {hasVipAccess 
+            {hasVipAccess && !hasVipBadge
               ? "You already have VIP feature access! Purchase a plan to get the exclusive VIP crown badge next to your name."
               : "Unlock exclusive features like the VIP theme, select verified users to chat with, get a VIP badge, and support Echo Message."
             }
         </span>
       </div>
 
+        <div className="flex justify-center items-center gap-4 my-8">
+            <Button variant={paymentMethod === 'money' ? 'default' : 'outline'} onClick={() => setPaymentMethod('money')}>Pay with Money</Button>
+            <Button variant={paymentMethod === 'points' ? 'default' : 'outline'} onClick={() => setPaymentMethod('points')}>
+                Pay with Points ({userProfile?.points || 0})
+                <Coins className="ml-2 h-4 w-4" />
+            </Button>
+        </div>
+
        {isEligibleForLifetime && (
         <div className="mb-12 flex justify-center">
             <SubscriptionCard
                 {...lifetimePlan}
+                paymentMethod={paymentMethod}
                 onSubscribe={() => handleSubscribe(lifetimePlan)}
             />
         </div>
@@ -354,6 +399,7 @@ export default function SubscribePage() {
           <SubscriptionCard
             key={index}
             {...plan}
+            paymentMethod={paymentMethod}
             onSubscribe={() => handleSubscribe(plan)}
           />
         ))}
@@ -369,37 +415,37 @@ export default function SubscribePage() {
     <ScrollArea className="h-full">
       <div className="container mx-auto py-8 px-4 md:px-6 lg:px-8">
         <div className="w-full">
-          {hasVipBadge ? renderManageSubscription() : renderSubscribe()}
+          {hasVipBadge && renderManageSubscription()}
+          
+          {renderSubscribe()}
 
-          {!hasVipBadge && (
-            <Card className="w-full max-w-md mx-auto mt-12">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-xl">
-                        <Ticket className="h-6 w-6 text-primary" />
-                        Redeem a Code
-                    </CardTitle>
-                    <CardDescription>Enter your code to activate a VIP plan.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    <div>
-                        <Label htmlFor="redeem-code-input" className="sr-only">Redeem Code</Label>
-                        <Input
-                            id="redeem-code-input"
-                            type="text"
-                            placeholder="Enter your redeem code"
-                            value={redeemCodeInput}
-                            onChange={(e) => setRedeemCodeInput(e.target.value)}
-                            className="text-base"
-                            disabled={isProcessing}
-                        />
-                    </div>
-                    <Button onClick={handleRedeemCode} className="w-full" disabled={isProcessing || !redeemCodeInput.trim()}>
-                      {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Redeem Code
-                    </Button>
-                </CardContent>
-            </Card>
-          )}
+          <Card className="w-full max-w-md mx-auto mt-12">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                      <Ticket className="h-6 w-6 text-primary" />
+                      Redeem a Code
+                  </CardTitle>
+                  <CardDescription>Enter your code to activate a VIP plan or get points.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                  <div>
+                      <Label htmlFor="redeem-code-input" className="sr-only">Redeem Code</Label>
+                      <Input
+                          id="redeem-code-input"
+                          type="text"
+                          placeholder="Enter your redeem code"
+                          value={redeemCodeInput}
+                          onChange={(e) => setRedeemCodeInput(e.target.value)}
+                          className="text-base"
+                          disabled={isProcessing}
+                      />
+                  </div>
+                  <Button onClick={handleRedeemCode} className="w-full" disabled={isProcessing || !redeemCodeInput.trim()}>
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Redeem Code
+                  </Button>
+              </CardContent>
+          </Card>
         </div>
 
         <AlertDialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
@@ -457,5 +503,3 @@ export default function SubscribePage() {
     </ScrollArea>
   );
 }
-
-    

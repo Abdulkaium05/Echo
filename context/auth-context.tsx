@@ -13,6 +13,7 @@ import {
     getPersistedUsers,
     saveUsersToLocalStorage,
     getUserProfile,
+    ensureAllUserChatsExist,
 } from '@/services/firestore'; 
 import type { UserProfile } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +24,11 @@ export interface GiftInfo {
     giftedBadge: BadgeType | null;
 }
 
+export interface PointsGiftInfo {
+    gifterProfile: UserProfile | null;
+    giftedPointsAmount: number | null;
+}
+
 interface AuthContextProps {
   user: User | null; 
   userProfile: UserProfile | null; 
@@ -30,6 +36,8 @@ interface AuthContextProps {
   isUserProfileLoading: boolean;
   giftInfo: GiftInfo;
   setGiftInfo: React.Dispatch<React.SetStateAction<GiftInfo>>;
+  pointsGiftInfo: PointsGiftInfo;
+  setPointsGiftInfo: React.Dispatch<React.SetStateAction<PointsGiftInfo>>;
   login: (email: string, pass: string) => Promise<{ success: boolean; message: string; user?: User; userProfile?: UserProfile }>;
   signup: (name: string, email: string, pass: string, avatarDataUri?: string) => Promise<{ success: boolean; message: string; user?: User; userProfile?: UserProfile }>;
   logout: () => Promise<void>;
@@ -60,6 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isUserProfileLoading, setIsUserProfileLoading] = useState(false);
   const [giftInfo, setGiftInfo] = useState<GiftInfo>({ gifterProfile: null, giftedBadge: null });
+  const [pointsGiftInfo, setPointsGiftInfo] = useState<PointsGiftInfo>({ gifterProfile: null, giftedPointsAmount: null });
   const { toast } = useToast();
 
   const updateMockUserProfile = useCallback(async (uid: string, data: Partial<UserProfile>) => {
@@ -109,13 +118,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
         }
       
-      // Clear the flags after processing
       delete updatedProfile.hasNewGift;
       delete updatedProfile.giftedByUid;
       delete updatedProfile.lastGiftedBadge;
       profileWasModified = true;
     }
     
+    // Check for gifted points
+    if (updatedProfile.hasNewPointsGift && updatedProfile.pointsGifterUid && updatedProfile.lastGiftedPointsAmount) {
+        const gifterProfile = await getUserProfile(updatedProfile.pointsGifterUid);
+        if (gifterProfile) {
+            setPointsGiftInfo({
+                gifterProfile: gifterProfile,
+                giftedPointsAmount: updatedProfile.lastGiftedPointsAmount,
+            });
+        }
+        delete updatedProfile.hasNewPointsGift;
+        delete updatedProfile.pointsGifterUid;
+        delete updatedProfile.lastGiftedPointsAmount;
+        profileWasModified = true;
+    }
+
     // Check for expired badges
     if (updatedProfile.badgeExpiry) {
         const now = Date.now();
@@ -172,6 +195,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (foundUserInStorage) {
         
         processLogin(foundUserInStorage).then(loggedInProfile => {
+            ensureAllUserChatsExist(loggedInProfile.uid);
             loggedInProfile.lastSeen = { seconds: Math.floor(Date.now()/1000), nanoseconds: 0 } as unknown as Timestamp;
     
             const mockUserObj = {
@@ -215,6 +239,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const foundUser = users.find(u => u.email === email.toLowerCase());
 
     if (foundUser) {
+      ensureAllUserChatsExist(foundUser.uid);
       const loggedInProfile = await processLogin(foundUser);
       loggedInProfile.lastSeen = { seconds: Math.floor(Date.now()/1000), nanoseconds: 0 } as unknown as Timestamp; // Update last seen on login
 
@@ -274,6 +299,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       name: name,
       email: email.toLowerCase(),
       avatarUrl: avatarDataUri || `https://picsum.photos/seed/${newUserUid}/200`,
+      points: 0,
       isVIP: false,
       createdAt: { seconds: Math.floor(Date.now()/1000), nanoseconds: 0} as Timestamp,
       isVerified: false,
@@ -330,7 +356,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     clearSessionData();
   }, [user]);
 
-  const value = { user, userProfile, loading, isUserProfileLoading, giftInfo, setGiftInfo, login, signup, logout, updateMockUserProfile };
+  const value = { user, userProfile, loading, isUserProfileLoading, giftInfo, setGiftInfo, pointsGiftInfo, setPointsGiftInfo, login, signup, logout, updateMockUserProfile };
 
   return (
     <AuthContext.Provider value={value}>
@@ -346,3 +372,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
