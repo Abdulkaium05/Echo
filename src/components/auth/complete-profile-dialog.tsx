@@ -1,4 +1,3 @@
-
 // src/components/auth/complete-profile-dialog.tsx
 'use client';
 
@@ -22,9 +21,11 @@ import { uploadAvatar as uploadAvatarToStorage } from '@/services/storage';
 interface CompleteProfileDialogProps {
   user: UserProfile;
   onProfileUpdate: (updatedData: Partial<UserProfile>) => Promise<void>;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
 }
 
-export function CompleteProfileDialog({ user, onProfileUpdate }: CompleteProfileDialogProps) {
+export function CompleteProfileDialog({ user, onProfileUpdate, isOpen, onOpenChange }: CompleteProfileDialogProps) {
   const { toast } = useToast();
   const { storage: firebaseStorage } = useAuth();
   const [username, setUsername] = useState(user.name || '');
@@ -42,7 +43,7 @@ export function CompleteProfileDialog({ user, onProfileUpdate }: CompleteProfile
       toast({ title: "Username Required", description: "Please enter a username.", variant: "destructive" });
       return;
     }
-    if (!newAvatarFile) {
+    if (!avatarPreview) {
         toast({ title: "Avatar Required", description: "Please upload an avatar.", variant: "destructive" });
         return;
     }
@@ -65,7 +66,7 @@ export function CompleteProfileDialog({ user, onProfileUpdate }: CompleteProfile
         title: "Profile Complete!",
         description: "Welcome to Echo Message!",
       });
-      // The dialog will close automatically as the parent component re-renders
+      onOpenChange(false);
 
     } catch (error: any) {
       console.error("[CompleteProfileDialog] Error saving profile:", error);
@@ -73,6 +74,25 @@ export function CompleteProfileDialog({ user, onProfileUpdate }: CompleteProfile
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSkip = async () => {
+      setIsLoading(true);
+      try {
+          await onProfileUpdate({
+              hasCompletedOnboarding: true,
+          });
+          toast({
+              title: "Profile Skipped",
+              description: "You can update your profile later in the settings.",
+          });
+          onOpenChange(false);
+      } catch (error: any) {
+          console.error("[CompleteProfileDialog] Error skipping profile:", error);
+          toast({ title: "Skip Failed", description: error.message || "Could not update profile.", variant: "destructive" });
+      } finally {
+          setIsLoading(false);
+      }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,10 +114,10 @@ export function CompleteProfileDialog({ user, onProfileUpdate }: CompleteProfile
   };
   
   const fallbackInitials = username.substring(0, 2).toUpperCase() || user?.name?.substring(0, 2).toUpperCase() || '??';
-  const isSaveDisabled = isLoading || !username.trim() || !newAvatarFile;
+  const isSaveDisabled = isLoading || !username.trim() || !avatarPreview;
 
   return (
-    <Dialog open={true} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden" hideCloseButton>
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="text-2xl font-bold text-center">Complete Your Profile</DialogTitle>
@@ -134,11 +154,14 @@ export function CompleteProfileDialog({ user, onProfileUpdate }: CompleteProfile
             </div>
         </div>
 
-        <div className="bg-secondary/50 p-4 border-t">
+        <div className="bg-secondary/50 p-4 border-t flex flex-col gap-2">
           <Button type="button" className="w-full" onClick={handleSave} disabled={isSaveDisabled}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {isLoading ? 'Saving...' : 'Save and Continue'}
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save and Continue
           </Button>
+           <Button type="button" variant="ghost" className="w-full" onClick={handleSkip} disabled={isLoading}>
+              Skip for Now
+           </Button>
         </div>
       </DialogContent>
     </Dialog>

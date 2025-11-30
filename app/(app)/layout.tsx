@@ -1,4 +1,3 @@
-
 // src/app/(app)/layout.tsx
 'use client';
 
@@ -43,6 +42,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isGiftReceivedDialogOpen, setIsGiftReceivedDialogOpen] = useState(false);
   const [isPointsReceivedDialogOpen, setIsPointsReceivedDialogOpen] = useState(false);
   const [isScanQrDialogOpen, setIsScanQrDialogOpen] = useState(false);
+  const [isCompleteProfileOpen, setIsCompleteProfileOpen] = useState(false);
 
   useEffect(() => {
     if (giftInfo.gifterProfile && giftInfo.giftedBadge) {
@@ -55,6 +55,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         setIsPointsReceivedDialogOpen(true);
     }
   }, [pointsGiftInfo]);
+
+  useEffect(() => {
+      if (currentUserProfile && !currentUserProfile.hasCompletedOnboarding && !isUserProfileLoading) {
+          setIsCompleteProfileOpen(true);
+      } else {
+          setIsCompleteProfileOpen(false);
+      }
+  }, [currentUserProfile, isUserProfileLoading]);
+
 
   const handleCloseGiftDialog = () => {
     setIsGiftReceivedDialogOpen(false);
@@ -87,9 +96,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [authLoading, currentUser, isUserProfileLoading, router]);
 
-  const showCompleteProfileDialog = currentUserProfile && !currentUserProfile.hasCompletedOnboarding;
-
-   if (authLoading || (currentUser && isUserProfileLoading && !currentUserProfile)) {
+   if (authLoading || (currentUser && isUserProfileLoading)) {
        return (
            <div className="flex h-screen w-full items-center justify-center bg-background">
                <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -98,7 +105,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
        );
    }
 
-    if (!authLoading && !currentUser && !isUserProfileLoading) {
+    if (!currentUser) {
          return (
              <div className="flex h-screen w-full items-center justify-center bg-background">
                  <Loader2 className="h-8 w-8 animate-spin text-destructive" />
@@ -107,7 +114,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
          );
     }
   
-    if (currentUser && !currentUserProfile && !isUserProfileLoading) {
+    if (!currentUserProfile) {
          return (
              <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4 p-4 text-center">
                  <Loader2 className="h-8 w-8 animate-spin text-destructive" />
@@ -116,24 +123,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
              </div>
          );
     }
-    
-    if (!currentUserProfile && currentUser) { 
-        return (
-          <div className="flex h-screen w-full items-center justify-center bg-background text-center p-4">
-            <p className="text-destructive">Error: User profile is unexpectedly missing. Please try logging out and logging back in.</p>
-            <Button onClick={handleLogout} variant="outline" className="mt-4">Logout</Button>
-          </div>
-        );
-    }
-    if(!currentUserProfile && !currentUser && !authLoading && !isUserProfileLoading) {
-        return (
-            <div className="flex h-screen w-full items-center justify-center bg-background">
-                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                 <p className="ml-2 text-muted-foreground">Finalizing authentication...</p>
-            </div>
-        );
-    }
-
 
   return (
     <div className={cn(
@@ -211,8 +200,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {currentUserProfile && (
         <>
-          {showCompleteProfileDialog && currentUser && (
+          {currentUser && (
              <CompleteProfileDialog 
+                isOpen={isCompleteProfileOpen}
+                onOpenChange={setIsCompleteProfileOpen}
                 user={currentUserProfile}
                 onProfileUpdate={handleProfileUpdate}
              />
