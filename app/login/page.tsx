@@ -17,7 +17,7 @@ import { useAuth } from '@/context/auth-context';
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { login: mockLogin, loading: authLoadingState, user } = useAuth();
+  const { login, loading: authLoadingState, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +46,7 @@ export default function LoginPage() {
 
     try {
       console.log("LoginPage: Attempting login for email:", email);
-      const { success, message: loginMessage } = await mockLogin(email, password);
+      const { success, message: loginMessage } = await login(email, password);
 
       if (success) {
         toast({

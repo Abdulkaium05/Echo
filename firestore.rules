@@ -3,32 +3,68 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // DEMO MODE / FIREBASE DISCONNECTED
-    //
-    // If this app were connected to a live Firebase project,
-    // these rules would need to be properly secured.
-    // For a disconnected demo or local emulator testing,
-    // allowing all reads and writes can simplify development.
-    //
-    // For a production app, NEVER use rules this open.
-    //
-    // Example of more secure rules (adapt as needed):
-    //
-    // match /users/{userId} {
-    //   allow read: if request.auth != null;
-    //   allow write: if request.auth != null && request.auth.uid == userId;
-    // }
-    //
-    // match /chats/{chatId} {
-    //   allow read, write: if request.auth != null && request.auth.uid in resource.data.participants;
-    //   match /messages/{messageId} {
-    //     allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
-    //   }
-    // }
+  
+    // Helper functions
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isChatParticipant(chatId) {
+      return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+    }
 
-    // For Demo: Allow all reads and writes to all paths
+    // Users Collection
+    // Allow users to read their own profile.
+    // Allow users to create their own profile upon signup.
+    // Allow users to update specific, non-critical fields of their own profile.
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) && !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVIP', 'isVerified', 'isCreator', 'isDevTeam', 'isBot', 'points']));
+    }
+
+    // Chats Collection
+    // Allow users to read, create, and update chats they are a part of.
+    match /chats/{chatId} {
+      allow read, write: if isChatParticipant(chatId);
+      
+      // Messages Subcollection
+      // Allow participants to read, create, and delete their own messages.
+      match /messages/{messageId} {
+        allow read: if isChatParticipant(chatId);
+        allow create: if isChatParticipant(chatId) && request.resource.data.senderId == request.auth.uid;
+        // Allow updating only to delete a message (isDeleted flag) by the original sender.
+        allow update: if isChatParticipant(chatId) 
+                      && resource.data.senderId == request.auth.uid
+                      && request.resource.data.isDeleted == true
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'text', 'attachmentUrl', 'attachmentName', 'attachmentType', 'reactions', 'replyingTo']);
+      }
+    }
+    
+    // Promo Codes
+    // Only allow reads. Creation/deletion should be handled by a trusted server/dev environment.
+    match /vipPromoCodes/{code} {
+      allow read: if isSignedIn();
+      allow write: if false; // Disallow client-side writes
+    }
+    
+    match /pointsPromoCodes/{code} {
+      allow read: if isSignedIn();
+      allow write: if false; // Disallow client-side writes
+    }
+    
+    match /badgeGiftCodes/{code} {
+      allow read: if isSignedIn();
+      allow write: if false; // Disallow client-side writes
+    }
+    
+    // Deny all other reads/writes by default
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

@@ -1,4 +1,3 @@
-
 // src/components/dev/gift-badge-dialog.tsx
 'use client';
 
@@ -16,7 +15,7 @@ import {
 import { Loader2, Gift, Crown, Bot, Wrench, SmilePlus, FlaskConical, Clock } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
-import { getNormalUsers, type UserProfile, getPersistedUsers } from '@/services/firestore';
+import { getNormalUsers, type UserProfile, getUserProfile } from '@/services/firestore';
 import { UserMultiSelect } from '@/components/poll/multi-select-users';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -96,7 +95,7 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
             expiryTimestamp = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days from now
         }
         
-        const recipientProfile = getPersistedUsers().find(u => u.uid === selectedUser.uid);
+        const recipientProfile = await getUserProfile(selectedUser.uid);
         if (!recipientProfile) {
             throw new Error("Could not find the recipient's profile to update.");
         }

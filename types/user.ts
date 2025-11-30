@@ -35,6 +35,9 @@ export interface UserProfile {
   // Chat Customization
   chatColorPreferences?: { [chatId: string]: string | null };
 
+  // Onboarding
+  hasCompletedOnboarding?: boolean;
+
   // Transient property for notifications
   giftedByUid?: string;
   hasNewGift?: boolean;
@@ -44,5 +47,3 @@ export interface UserProfile {
   hasNewPointsGift?: boolean;
   lastGiftedPointsAmount?: number;
 }
-
-    

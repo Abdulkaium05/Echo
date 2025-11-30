@@ -27,6 +27,7 @@ import { GiftBadgeDialog } from '@/components/dev/gift-badge-dialog';
 import { GiftReceivedDialog } from '@/components/dev/gift-received-dialog';
 import { ScanQrDialog } from '@/components/chat/scan-qr-dialog';
 import { PointsReceivedDialog } from '@/components/dev/points-received-dialog';
+import { CompleteProfileDialog } from '@/components/auth/complete-profile-dialog';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -67,42 +68,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setPointsGiftInfo({ gifterProfile: null, giftedPointsAmount: null });
   };
 
-
-  // This is the correct logic:
-  // isChatPage should be true for the main chat list and individual chats.
   const isChatPage = /^\/chat(\/.*)?$/.test(pathname);
-  // isViewingChat should ONLY be true for individual chats, to hide the list on mobile.
   const isViewingChat = /^\/chat\/[^/]+$/.test(pathname);
   const currentChatId = isViewingChat ? pathname.split('/')[2] : undefined;
 
-
   const handleLogout = async () => {
-    console.log("AppLayout: Handling logout.");
     await logout();
-    console.log("AppLayout: Logout processed. Middleware will redirect if necessary.");
   };
 
    const handleProfileUpdate = async (updatedData: Partial<UserProfile>) => {
-     if (!currentUser || !currentUserProfile) {
-         console.error("AppLayout: Cannot update profile, current user or profile missing.");
-         return;
-     }
-      console.log("AppLayout: Handling profile update.", updatedData);
-      try {
-          updateMockUserProfile(currentUser.uid, updatedData);
-          console.log("AppLayout: Profile update request sent to AuthContext.");
-      } catch (error) {
-          console.error("AppLayout: Error processing profile update:", error);
-      }
+     if (!currentUser || !currentUserProfile) return;
+      updateMockUserProfile(currentUser.uid, updatedData);
    };
 
   useEffect(() => {
     if (!authLoading && !currentUser && !isUserProfileLoading) {
-      console.warn("AppLayout: No authenticated user after load. Redirecting to login.");
       router.replace('/login');
     }
   }, [authLoading, currentUser, isUserProfileLoading, router]);
 
+  const showCompleteProfileDialog = currentUserProfile && !currentUserProfile.hasCompletedOnboarding;
 
    if (authLoading || (currentUser && isUserProfileLoading && !currentUserProfile)) {
        return (
@@ -114,7 +99,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
    }
 
     if (!authLoading && !currentUser && !isUserProfileLoading) {
-        console.warn("AppLayout: No authenticated user after load. Preparing redirect to login.");
          return (
              <div className="flex h-screen w-full items-center justify-center bg-background">
                  <Loader2 className="h-8 w-8 animate-spin text-destructive" />
@@ -124,7 +108,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   
     if (currentUser && !currentUserProfile && !isUserProfileLoading) {
-         console.error("AppLayout: Authenticated user found but profile data is missing after load.");
          return (
              <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4 p-4 text-center">
                  <Loader2 className="h-8 w-8 animate-spin text-destructive" />
@@ -228,6 +211,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {currentUserProfile && (
         <>
+          {showCompleteProfileDialog && currentUser && (
+             <CompleteProfileDialog 
+                user={currentUserProfile}
+                onProfileUpdate={handleProfileUpdate}
+             />
+          )}
           <ProfileSettingsDialog
             isOpen={isProfileDialogOpen}
             onOpenChange={setProfileDialogOpen}
@@ -311,16 +300,12 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    const earnedBadges: BadgeType[] = [];
    if(user.isCreator) earnedBadges.push('creator');
    if(user.isVIP) earnedBadges.push('vip');
-   // A Creator should not also show the Verified badge, as Creator implies verification.
-   // But a regular verified user should see it.
    if(user.isVerified && !user.isCreator) earnedBadges.push('verified');
    if(user.isDevTeam) earnedBadges.push('dev');
    if(user.isBot) earnedBadges.push('bot');
    if(user.isMemeCreator) earnedBadges.push('meme_creator');
    if(user.isBetaTester) earnedBadges.push('beta_tester');
 
-   // Use the user's preferred order, but filter to only include badges they've actually earned.
-   // Fallback to a default order if the user has no preference set.
    const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
    const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
@@ -423,7 +408,3 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
      </DropdownMenu>
    );
 }
-
-    
-
-    
