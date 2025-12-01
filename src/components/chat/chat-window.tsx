@@ -200,11 +200,12 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
      setLoadingMessages(true);
      setErrorMessages(null);
-     console.log(`ChatWindow: Fetching messages for chat ${chatId}`);
+     console.log(`ChatWindow: Subscribing to messages for chat ${chatId}`);
      
      const unsubscribe = getChatMessages(
        chatId,
        (fetchedMessages) => {
+         setLoadingMessages(false); // Stop loading as soon as we get a response (even an empty one)
          console.log(`ChatWindow: Received messages for chat ${chatId}`, fetchedMessages.length);
          const processedMessages = fetchedMessages.map((msg) => ({
            ...msg,
@@ -228,8 +229,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
             scrollToBottom('auto');
          }
 
-         setLoadingMessages(false);
-
          // Mark messages as seen
          if (currentUser?.uid) {
             markMessagesAsSeen(chatId, currentUser.uid);
@@ -247,7 +246,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
        }
      );
      return unsubscribe;
-   }, [chatId, currentUser?.uid, playSound, scrollToBottom]);
+   }, [chatId, currentUser?.uid, playSound, scrollToBottom, loadingMessages]);
 
    useEffect(() => {
      const unsubscribe = fetchAndSetMessages();
@@ -304,7 +303,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
       messageInputRef.current?.clearAttachmentPreview(); 
 
       // Bot interaction logic
-      if (chatPartnerId === BOT_UID) {
+      if (isChattingWithBot) {
         setIsBotTyping(true);
 
         const historyForFlow = messages
@@ -345,7 +344,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
     } catch (error: any) {
       console.error("ChatWindow: Error sending message or getting AI response:", error);
       toast({ title: "Send Failed", description: error.message || "Could not send message.", variant: "destructive" });
-      if (chatPartnerId === BOT_UID) setIsBotTyping(false);
+      if (isChattingWithBot) setIsBotTyping(false);
     } finally {
         setIsSending(false);
     }
@@ -661,7 +660,7 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
         </ScrollArea>
       </div>
 
-      {chatPartnerId === BOT_UID && isBotTyping && (
+      {isChattingWithBot && isBotTyping && (
         <div className="px-3 md:px-4 pb-1 pt-1 text-left flex items-center gap-2 shrink-0">
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           <p className="text-xs text-muted-foreground italic">{chatName} is typing...</p>
@@ -765,7 +764,3 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
     </>
   );
 }
-
-    
-
-    

@@ -141,7 +141,18 @@ export function ChatItem(props: ChatItemProps) {
         );
     }
     
-    if (iconIdentifier === 'dev-team-svg') { 
+    // Check for a real avatar URL first, even for Dev Team members.
+    // Fallback to the icon only if there is no avatarUrl.
+    if (avatarUrl && avatarUrl !== 'dev-team-svg-placeholder') {
+        return (
+          <Avatar className={avatarBaseClasses}>
+            <AvatarImage src={avatarUrl} alt={name} data-ai-hint={dataAiHint} />
+            <AvatarFallback>{fallbackInitials}</AvatarFallback>
+          </Avatar>
+        );
+    }
+    
+    if (isDevTeam || iconIdentifier === 'dev-team-svg') { 
       return (
          <div className={cn(iconWrapperClasses, "bg-muted text-muted-foreground")}>
            <DevTeamIcon />

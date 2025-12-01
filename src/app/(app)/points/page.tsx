@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Loader2, Gift, Coins, ChevronRight } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
-import { getNormalUsers, type UserProfile, giftPoints } from '@/services/firestore';
+import { getAllGiftableUsers, type UserProfile, giftPoints } from '@/services/firestore';
 import { UserMultiSelect } from '@/components/poll/multi-select-users';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +26,7 @@ function GiftPointsCard() {
     useEffect(() => {
         if (!userProfile) return;
         setIsLoadingUsers(true);
-        getNormalUsers()
+        getAllGiftableUsers()
             .then(users => {
                 setAllUsers(users.filter(u => u.uid !== userProfile?.uid));
             })

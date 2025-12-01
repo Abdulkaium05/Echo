@@ -76,15 +76,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
         if (!firebaseFirestore) {
             console.error("Firestore not initialized, cannot process login.");
-            setIsUserProfileLoading(false);
             return;
         }
 
         const profile = await getUserProfile(firebaseUser.uid);
         if (!profile) {
             console.error('User profile missing for UID:', firebaseUser.uid);
-            setUserProfile(null); // Explicitly set to null
-            setIsUserProfileLoading(false);
+            setUserProfile(null);
             return;
         }
 
@@ -156,7 +154,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const unsubscribe = onAuthStateChanged(firebaseAuth, async firebaseUser => {
-      setLoading(true);
       if (firebaseUser) {
         setUser(firebaseUser);
         await processLogin(firebaseUser);
@@ -176,15 +173,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // -------------------------------
   const login = async (email: string, pass: string) => {
     if (!firebaseAuth) return { success: false, message: 'Auth unavailable' };
-
-    setIsUserProfileLoading(true); // Set loading before attempting sign-in
+    setLoading(true);
+    setIsUserProfileLoading(true);
     try {
       await signInWithEmailAndPassword(firebaseAuth, email, pass);
-      // onAuthStateChanged will handle the rest, including setting loading to false
+      // onAuthStateChanged will handle the rest
       return { success: true, message: 'Login successful!' };
     } catch (err: any) {
-      setIsUserProfileLoading(false); // Ensure loading is false on failure
       setLoading(false);
+      setIsUserProfileLoading(false);
       return { success: false, message: err.message || 'Login failed' };
     }
   };
@@ -194,6 +191,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // -------------------------------
   const signup = async (email: string, pass: string): Promise<{ success: boolean; message: string, user: User | null, userProfile: UserProfile | null }> => {
     if (!firebaseAuth || !firebaseFirestore) return { success: false, message: "Authentication service is not available.", user: null, userProfile: null };
+    setLoading(true);
     setIsUserProfileLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, pass);
@@ -251,11 +249,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // -------------------------------
   const logout = async () => {
     if (!firebaseAuth || !user) return;
-
+    setLoading(true);
     await updateUserInFirestore(user.uid, { lastSeen: serverTimestamp() });
     await signOut(firebaseAuth);
     setUser(null);
     setUserProfile(null);
+    setLoading(false);
   };
 
   const value = {

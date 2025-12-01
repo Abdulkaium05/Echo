@@ -31,9 +31,6 @@ export interface UserProfile {
     [key in BadgeType]?: number; // Unix timestamp in ms
   };
 
-  // Chat Management
-  chatIds?: string[]; // List of chat IDs the user is a participant in.
-
   // Chat Customization
   chatColorPreferences?: { [chatId: string]: string | null };
 

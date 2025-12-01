@@ -69,15 +69,15 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
 
     setIsProcessingChat(true);
     try {
-      let chatId = await findChatBetweenUsers(currentUser.uid, profile.uid);
-      if (!chatId) {
-        chatId = await createChat(currentUser.uid, profile.uid);
-        toast({ title: "Chat Created!", description: `Started a new chat with ${profile.name}.` });
-      } else {
+      const existingChatId = await findChatBetweenUsers(currentUser.uid, profile.uid);
+      if (existingChatId) {
         toast({ title: "Chat Found", description: `Opening existing chat with ${profile.name}.` });
+      } else {
+        await createChat(currentUser.uid, profile.uid);
+        toast({ title: "Chat Created!", description: `Started a new chat with ${profile.name}.` });
       }
       onOpenChange(false); // Close dialog
-      router.push(`/chat/${chatId}`);
+      router.push(`/chat/${profile.uid}`); // Always navigate using partner's UID
     } catch (error: any) {
       toast({ title: "Error", description: `Could not start/find chat: ${error.message}`, variant: "destructive" });
     } finally {

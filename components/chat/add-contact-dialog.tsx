@@ -91,16 +91,16 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
       if (existingChatId) {
          toast({ title: "Chat Exists", description: `You already have a chat with ${targetUser.name || 'this user'}. Redirecting...`, variant: "default" });
          onOpenChange(false);
-         router.push(`/chat/${existingChatId}`);
+         router.push(`/chat/${targetUser.uid}`); // Navigate to chat using partner's UID
       } else {
-         const newChatId = await createChat(currentUserId, targetUser.uid);
+         await createChat(currentUserId, targetUser.uid);
          toast({
            title: "Chat Created!",
-           description: `Started a chat with ${targetUser.name || 'this user'}. Redirecting...`,
+           description: `Started a chat with ${targetUser.name || 'this user'}. It will appear in your list shortly.`,
            action: <UserPlus className="h-5 w-5 text-green-500" />,
          });
          onOpenChange(false);
-         router.push(`/chat/${newChatId}`);
+         router.push(`/chat`); // Redirect to the main chat list to allow it to update
       }
       setContactEmail('');
     } catch (error: any) {

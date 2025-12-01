@@ -1,3 +1,4 @@
+
 // src/components/dev/gift-badge-dialog.tsx
 'use client';
 
@@ -15,7 +16,7 @@ import {
 import { Loader2, Gift, Crown, Bot, Wrench, SmilePlus, FlaskConical, Clock } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
-import { getNormalUsers, type UserProfile, getUserProfile } from '@/services/firestore';
+import { getAllGiftableUsers, type UserProfile, getUserProfile } from '@/services/firestore';
 import { UserMultiSelect } from '@/components/poll/multi-select-users';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -68,7 +69,7 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
       setSelectedBadge(null);
       setGiftDuration('lifetime');
 
-      getNormalUsers()
+      getAllGiftableUsers()
         .then(users => {
             setAllUsers(users.filter(u => u.uid !== currentUser?.uid));
         })

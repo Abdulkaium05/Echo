@@ -77,36 +77,16 @@ export function AllowNormalUsersDialog({ isOpen, onOpenChange }: AllowNormalUser
     setIsSaving(true);
     
     try {
-      // First, update the user's profile with the new list of allowed contacts.
-      updateMockUserProfile(user.uid, { 
+      await updateMockUserProfile(user.uid, { 
           allowedNormalContacts: selectedUsers,
       });
       
-      // Close the dialog immediately for a better user experience.
       onOpenChange(false);
       
       toast({
         title: "Allow List Updated",
         description: "Your list of allowed users has been saved."
       });
-
-      // In the background, process newly added users
-      const newlySelectedUsers = selectedUsers.filter(uid => !initialSelection.includes(uid));
-      if (newlySelectedUsers.length > 0) {
-          console.log(`[AllowUsersDialog] Processing chats for ${newlySelectedUsers.length} new users.`);
-          
-          for (const uid of newlySelectedUsers) {
-              let chatId = await findChatBetweenUsers(user.uid, uid);
-              if (!chatId) {
-                  console.log(`[AllowUsersDialog] Creating new chat with user ${uid}.`);
-                  chatId = await createChat(user.uid, uid);
-                  console.log(`[AllowUsersDialog] Created new chat ${chatId} and sending initial message.`);
-                  await sendMessage(chatId, user.uid, "You can now message me.");
-              } else {
-                  console.log(`[AllowUsersDialog] Chat with user ${uid} already exists (${chatId}). No new message sent.`);
-              }
-          }
-      }
 
     } catch (error: any) {
       toast({
@@ -115,7 +95,7 @@ export function AllowNormalUsersDialog({ isOpen, onOpenChange }: AllowNormalUser
         variant: "destructive"
       });
     } finally {
-      setIsSaving(false);
+        setIsSaving(false);
     }
   };
 

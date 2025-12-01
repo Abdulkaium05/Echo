@@ -1,4 +1,3 @@
-
 // src/components/chat/chat-list.tsx
 'use client';
 
@@ -105,12 +104,13 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     console.log("ChatList: Subscribing to chats for user:", currentUserId);
     
     // The subscription function that will handle updates
-    const handleChatUpdates = (fetchedChats: Chat[]) => {
+    const handleChatUpdates = async (fetchedChats: Chat[]) => {
         console.log(`ChatList: Received ${fetchedChats.length} chats for user ${currentUserId}`);
-        const chatItems = fetchedChats.map(chat => mapChatToChatItem(
+        const chatItemsPromises = fetchedChats.map(chat => mapChatToChatItem(
             chat, 
             currentUserId,
         ));
+        const chatItems = await Promise.all(chatItemsPromises);
         setChats(chatItems);
         setLoading(false);
     };
@@ -125,7 +125,6 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     // Establish the subscription
     const unsubscribe = getUserChats(
         currentUserId,
-        userProfile, 
         handleChatUpdates,
         handleSubscriptionError
     );
@@ -250,7 +249,7 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
                 <ChatItem 
                     key={itemProps.id} 
                     {...itemProps} 
-                    isActive={itemProps.id === currentChatId}
+                    isActive={itemProps.contactUserId === currentChatId}
                     isBlocked={isUserBlocked(itemProps.contactUserId)}
                     onBlockUser={handleBlockUser}
                     onUnblockUser={handleUnblockUser}
