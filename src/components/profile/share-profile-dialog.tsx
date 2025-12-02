@@ -1,4 +1,3 @@
-
 // src/components/profile/share-profile-dialog.tsx
 'use client';
 

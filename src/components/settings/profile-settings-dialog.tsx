@@ -1,4 +1,3 @@
-
 // src/components/settings/profile-settings-dialog.tsx
 'use client';
 
@@ -16,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Check, Upload, Loader2, Badge, Camera, Mail, User as UserIcon } from "lucide-react";
+import { Check, Upload, Loader2, Badge, Camera, Mail, User as UserIcon, Link2 } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, type UserProfile } from '@/context/auth-context';
 import { uploadAvatar as mockUploadAvatar } from '@/services/storage';
@@ -24,6 +23,15 @@ import { Separator } from '../ui/separator';
 import { SelectBadgesDialog } from './select-badges-dialog';
 import type { BadgeType } from '@/app/(app)/layout';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogFooter,
+} from "@/components/ui/alert-dialog";
 
 
 interface ProfileSettingsDialogProps {
@@ -36,29 +44,34 @@ interface ProfileSettingsDialogProps {
 
 export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpdate }: ProfileSettingsDialogProps) {
   const { toast } = useToast();
-  const { user: authContextUser } = useAuth();
+  const { auth, storage } = useAuth();
   const [currentUserName, setCurrentUserName] = useState(user?.name || '');
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(user?.avatarUrl);
-  const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
+  const [newAvatarFile, setNewAvatarFile] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isBadgeDialogOpen, setIsBadgeDialogOpen] = useState(false);
   
   const [tempBadgeOrder, setTempBadgeOrder] = useState<BadgeType[]>(user?.badgeOrder || []);
 
+  const [isChangeAvatarDialogOpen, setIsChangeAvatarDialogOpen] = useState(false);
+  const [avatarUrlInput, setAvatarUrlInput] = useState('');
+
+
   useEffect(() => {
     if (isOpen && user) {
       setCurrentUserName(user.name || '');
       setAvatarPreview(user.avatarUrl);
       setNewAvatarFile(null);
+      setAvatarUrlInput('');
       setTempBadgeOrder(user.badgeOrder || []);
       setIsLoading(false);
     }
   }, [isOpen, user]);
 
   const handleSave = async () => {
-    if (!authContextUser || !user) {
-      toast({ title: "Error", description: "User not found.", variant: "destructive" });
+    if (!auth || !user || !storage) {
+      toast({ title: "Error", description: "User not found or services unavailable.", variant: "destructive" });
       return;
     }
     if (!currentUserName.trim()) {
@@ -70,9 +83,13 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
     let finalAvatarUrl = avatarPreview;
 
     try {
-      if (newAvatarFile) {
-        finalAvatarUrl = await mockUploadAvatar(authContextUser.uid, newAvatarFile, newAvatarFile.type);
+      if (newAvatarFile) { // This means a file was uploaded
+        finalAvatarUrl = await mockUploadAvatar(storage, user.uid, newAvatarFile);
         toast({ title: "Avatar Processed", description: "Your new avatar has been processed." });
+      }
+      // If newAvatarFile is null but avatarPreview is different from user.avatarUrl, it means a URL was pasted
+      else if (avatarPreview !== user.avatarUrl) {
+         finalAvatarUrl = avatarPreview;
       }
 
       await onProfileUpdate({
@@ -96,7 +113,6 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
     }
   };
 
-  const handleChangeAvatarClick = () => fileInputRef.current?.click();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -105,12 +121,11 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
         toast({ variant: 'destructive', title: 'Invalid File', description: 'Please select an image smaller than 2MB.' });
         return;
       }
-      setNewAvatarFile(file);
-      
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
         setAvatarPreview(result);
+        setNewAvatarFile(result); // result is the full data URI
         toast({ title: "Avatar Preview Updated", description: "Click 'Save changes' to apply." });
       };
       reader.onerror = () => toast({ variant: 'destructive', title: 'Error Reading File' });
@@ -124,10 +139,27 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
     setIsBadgeDialogOpen(false);
   };
 
+  const handleApplyUrl = () => {
+    if (!avatarUrlInput.trim()) {
+        toast({ title: "URL is empty", variant: "destructive"});
+        return;
+    }
+    // Simple validation for URL format
+    try {
+        new URL(avatarUrlInput);
+        setAvatarPreview(avatarUrlInput);
+        setNewAvatarFile(null); // Ensure we don't try to upload this as a file
+        setIsChangeAvatarDialogOpen(false);
+        toast({ title: "Avatar Preview Updated", description: "Click 'Save changes' to apply." });
+    } catch (_) {
+        toast({ title: "Invalid URL", description: "Please enter a valid image URL.", variant: "destructive" });
+    }
+  };
+
   const fallbackInitials = currentUserName.substring(0, 2).toUpperCase() || user?.name?.substring(0, 2).toUpperCase() || '??';
 
   const isSaveDisabled = isLoading || (
-    !newAvatarFile &&
+    avatarPreview === user?.avatarUrl &&
     currentUserName.trim() === (user?.name || '') &&
     JSON.stringify(tempBadgeOrder) === JSON.stringify(user?.badgeOrder || [])
   );
@@ -150,7 +182,7 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
 
                 <div className="absolute top-12 left-1/2 -translate-x-1/2">
                     <Avatar className="h-24 w-24 border-4 border-background shadow-md">
-                        <AvatarImage src={avatarPreview} alt={currentUserName || user?.name} data-ai-hint="user avatar"/>
+                        <AvatarImage src={avatarPreview} alt={currentUserName || user?.name} />
                         <AvatarFallback className="text-3xl">{fallbackInitials}</AvatarFallback>
                     </Avatar>
                      <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" disabled={isLoading} />
@@ -158,7 +190,7 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
                         variant="default"
                         size="icon"
                         className="absolute bottom-0 right-0 h-8 w-8 rounded-full"
-                        onClick={handleChangeAvatarClick}
+                        onClick={() => setIsChangeAvatarDialogOpen(true)}
                         disabled={isLoading}
                         aria-label="Change avatar"
                      >
@@ -201,6 +233,32 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={isChangeAvatarDialogOpen} onOpenChange={setIsChangeAvatarDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Change Avatar</AlertDialogTitle>
+            </AlertDialogHeader>
+            <div className="grid gap-4 py-4">
+                <Button variant="outline" className="w-full justify-start" onClick={() => { setIsChangeAvatarDialogOpen(false); fileInputRef.current?.click(); }}>
+                    <Upload className="mr-2 h-4 w-4" /> Upload from Device
+                </Button>
+                <div className="space-y-2">
+                    <Label htmlFor="avatar-url-input">Or use image URL</Label>
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
+                            <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input id="avatar-url-input" placeholder="https://example.com/image.png" className="pl-9" value={avatarUrlInput} onChange={(e) => setAvatarUrlInput(e.target.value)} />
+                        </div>
+                        <Button onClick={handleApplyUrl}>Apply</Button>
+                    </div>
+                </div>
+            </div>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {user && (
         <SelectBadgesDialog

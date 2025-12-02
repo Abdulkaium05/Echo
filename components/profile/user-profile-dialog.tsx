@@ -1,4 +1,3 @@
-
 // src/components/profile/user-profile-dialog.tsx
 'use client';
 
@@ -69,15 +68,15 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
 
     setIsProcessingChat(true);
     try {
-      let chatId = await findChatBetweenUsers(currentUser.uid, profile.uid);
-      if (!chatId) {
-        chatId = await createChat(currentUser.uid, profile.uid);
-        toast({ title: "Chat Created!", description: `Started a new chat with ${profile.name}.` });
-      } else {
+      const existingChatId = await findChatBetweenUsers(currentUser.uid, profile.uid);
+      if (existingChatId) {
         toast({ title: "Chat Found", description: `Opening existing chat with ${profile.name}.` });
+      } else {
+        await createChat(currentUser.uid, profile.uid);
+        toast({ title: "Chat Created!", description: `Started a new chat with ${profile.name}.` });
       }
       onOpenChange(false); // Close dialog
-      router.push(`/chat/${chatId}`);
+      router.push(`/chat/${profile.uid}`); // Always navigate using partner's UID
     } catch (error: any) {
       toast({ title: "Error", description: `Could not start/find chat: ${error.message}`, variant: "destructive" });
     } finally {
@@ -87,7 +86,7 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
 
   const getProfileStatus = () => {
     if (profile.isBot) return "Automated Assistant";
-    if (profile.isDevTeam) return "Echo Message Development Team";
+    if (profile.isDevTeam) return "Developer";
     if (profile.isCreator && profile.isVIP) return "VIP Creator";
     if (profile.isCreator) return "Content Creator";
     if (profile.isVIP && profile.isVerified) return "VIP & Verified User";
@@ -118,7 +117,7 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
          <div className="relative">
              <div className={cn(
                 "h-24 bg-gradient-to-br rounded-t-lg",
-                profile.isCreator ? "from-purple-400/80 to-purple-300/60" : (profile.isVIP ? "from-primary/30 to-primary/20" : "from-secondary to-muted")
+                profile.isDevTeam ? "from-indigo-400/80 to-blue-300/60" : (profile.isCreator ? "from-purple-400/80 to-purple-300/60" : (profile.isVIP ? "from-primary/30 to-primary/20" : "from-secondary to-muted"))
               )}>
               {/* Header background */}
             </div>
@@ -152,7 +151,7 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
             </DialogHeader>
 
             <div className="space-y-3">
-                 {profile.displayUid && !profile.isBot && !profile.isDevTeam && (
+                 {profile.displayUid && !profile.isBot && (
                     <div className="flex items-center text-sm p-3 rounded-md border bg-secondary/50">
                         <UserCircle2 className="h-5 w-5 text-muted-foreground mr-3" />
                         <span className="text-muted-foreground font-mono tracking-wider">{profile.displayUid}</span>
@@ -162,12 +161,6 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
                     <Coins className="h-5 w-5 text-muted-foreground mr-3" />
                     <span className="text-muted-foreground font-semibold">{profile.points || 0} Points</span>
                  </div>
-                 {profile.email && (
-                    <div className="flex items-center text-sm p-3 rounded-md border bg-secondary/50">
-                        <Mail className="h-5 w-5 text-muted-foreground mr-3" />
-                        <span className="text-muted-foreground">{profile.email}</span>
-                    </div>
-                 )}
                  {profile.createdAt && (
                     <div className="flex items-center text-sm p-3 rounded-md border bg-secondary/50">
                         <Cake className="h-5 w-5 text-muted-foreground mr-3" />

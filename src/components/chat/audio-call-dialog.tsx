@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { PhoneOff, MicOff, Volume2, Mic } from "lucide-react";
-import type { UserProfile } from "@/context/auth-context";
+import type { UserProfile } from "@/types/user";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useSound } from '@/context/sound-context';
@@ -23,23 +23,47 @@ interface AudioCallDialogProps {
   calleeProfile: UserProfile | null;
 }
 
+const formatCallTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+};
+
+
 export function AudioCallDialog({ isOpen, onOpenChange, calleeProfile }: AudioCallDialogProps) {
     const { toast } = useToast();
     const { playSound } = useSound();
     const [callStatus, setCallStatus] = useState<'connecting' | 'ringing' | 'connected' | 'ended'>('connecting');
     const [isMuted, setIsMuted] = useState(false);
     const [hasMicPermission, setHasMicPermission] = useState<boolean | null>(null);
+    const [callDuration, setCallDuration] = useState(0);
     const streamRef = useRef<MediaStream | null>(null);
     
     // Add a ref to track if permission request is in progress
     const permissionRequestInProgress = useRef(false);
+    const callTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const connectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Cleanup logic
+    const cleanup = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        if (callTimerRef.current) clearInterval(callTimerRef.current);
+        if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
+        playSound(null); // Stop any playing sound
+        permissionRequestInProgress.current = false;
+        setCallDuration(0);
+    };
 
     useEffect(() => {
-        if (isOpen && !streamRef.current && !permissionRequestInProgress.current) {
+        if (isOpen) {
             permissionRequestInProgress.current = true;
             setCallStatus('connecting');
             setIsMuted(false);
             setHasMicPermission(null);
+            setCallDuration(0);
 
             const getMicPermission = async () => {
                 try {
@@ -48,6 +72,13 @@ export function AudioCallDialog({ isOpen, onOpenChange, calleeProfile }: AudioCa
                     setHasMicPermission(true);
                     setCallStatus('ringing');
                     playSound('/sounds/ringing.mp3', true);
+                    
+                    // Simulate the other user answering after a delay
+                    connectTimeoutRef.current = setTimeout(() => {
+                        setCallStatus('connected');
+                        playSound(null); // Stop ringing sound
+                    }, 5000); // 5 seconds to answer
+
                 } catch (error) {
                     console.error('Error accessing microphone:', error);
                     setHasMicPermission(false);
@@ -57,7 +88,6 @@ export function AudioCallDialog({ isOpen, onOpenChange, calleeProfile }: AudioCa
                         description: 'Please enable microphone permissions in your browser settings to make calls.',
                         duration: 7000,
                     });
-                    // Close dialog after a delay if permission is denied
                     setTimeout(() => onOpenChange(false), 4000);
                 } finally {
                     permissionRequestInProgress.current = false;
@@ -65,24 +95,34 @@ export function AudioCallDialog({ isOpen, onOpenChange, calleeProfile }: AudioCa
             };
 
             getMicPermission();
-
-        } else if (!isOpen) {
-            // Cleanup on close
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-                streamRef.current = null;
-            }
-            playSound(null); // Stop any playing sound
-            permissionRequestInProgress.current = false;
+        } else {
+            cleanup();
         }
-    }, [isOpen, onOpenChange, playSound, toast]);
+        
+        return () => cleanup();
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (callStatus === 'connected') {
+            callTimerRef.current = setInterval(() => {
+                setCallDuration(prev => prev + 1);
+            }, 1000);
+        } else {
+            if (callTimerRef.current) {
+                clearInterval(callTimerRef.current);
+            }
+        }
+        return () => {
+            if (callTimerRef.current) clearInterval(callTimerRef.current);
+        };
+    }, [callStatus]);
 
     const handleEndCall = () => {
         setCallStatus('ended');
         onOpenChange(false);
         toast({
             title: "Call Ended",
-            description: `Your call with ${calleeProfile?.name} has ended.`,
+            description: `Your call with ${calleeProfile?.name} has ended. Duration: ${formatCallTime(callDuration)}.`,
         });
     };
     
@@ -96,12 +136,12 @@ export function AudioCallDialog({ isOpen, onOpenChange, calleeProfile }: AudioCa
     const statusText = {
         connecting: 'Connecting...',
         ringing: 'Ringing...',
-        connected: 'Connected',
+        connected: formatCallTime(callDuration),
         ended: 'Call Ended'
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <Dialog open={isOpen} onOpenChange={(open) => { if(!open) handleEndCall() }}>
             <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-background/80 backdrop-blur-sm border-0 shadow-2xl flex flex-col h-[70vh] max-h-[500px]">
                 <DialogHeader className="sr-only">
                     <DialogTitle>Audio Call with {calleeProfile.name}</DialogTitle>
@@ -110,7 +150,8 @@ export function AudioCallDialog({ isOpen, onOpenChange, calleeProfile }: AudioCa
                     <div className="relative">
                         <Avatar className={cn(
                             "h-32 w-32 border-4 shadow-lg",
-                            callStatus === 'ringing' && "border-green-500/50 animate-pulse"
+                            callStatus === 'ringing' && "border-green-500/50 animate-pulse",
+                            callStatus === 'connected' && "border-green-500"
                         )}>
                             <AvatarImage src={calleeProfile.avatarUrl} alt={calleeProfile.name} data-ai-hint="user avatar" />
                             <AvatarFallback className="text-4xl">{fallbackInitials}</AvatarFallback>
@@ -119,7 +160,10 @@ export function AudioCallDialog({ isOpen, onOpenChange, calleeProfile }: AudioCa
                     
                     <div className="space-y-1">
                         <h2 className="text-2xl font-bold text-foreground">{calleeProfile.name}</h2>
-                        <p className="text-lg text-muted-foreground animate-pulse">
+                        <p className={cn(
+                            "text-lg text-muted-foreground",
+                            callStatus === 'ringing' && "animate-pulse"
+                        )}>
                             {statusText[callStatus]}
                         </p>
                     </div>

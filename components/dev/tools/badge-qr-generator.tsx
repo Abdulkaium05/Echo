@@ -138,15 +138,15 @@ export function BadgeQrGeneratorTab() {
             </div>
             <div className="space-y-2">
                 <Label htmlFor="badge-duration">Badge Duration (Days)</Label>
-                <Input id="badge-duration" type="number" value={badgeGiftDuration} onChange={(e) => setBadgeGiftDuration(Math.max(1, parseInt(e.target.value) || 1))} />
+                <Input id="badge-duration" type="number" value={badgeGiftDuration} onChange={(e) => setBadgeGiftDuration(parseInt(e.target.value) || 1)} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="badge-total-uses">Total Uses</Label>
-                <Input id="badge-total-uses" type="number" value={badgeTotalUses} onChange={(e) => setBadgeTotalUses(Math.max(1, parseInt(e.target.value) || 1))} />
+                <Input id="badge-total-uses" type="number" value={badgeTotalUses} onChange={(e) => setBadgeTotalUses(parseInt(e.target.value) || 1)} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="badge-uses-per-user">Uses Per User</Label>
-                <Input id="badge-uses-per-user" type="number" value={badgeUsesPerUser} onChange={(e) => setBadgeUsesPerUser(Math.max(1, parseInt(e.target.value) || 1))} />
+                <Input id="badge-uses-per-user" type="number" value={badgeUsesPerUser} onChange={(e) => setBadgeUsesPerUser(parseInt(e.target.value) || 1)} />
             </div>
         </CardContent>
         <CardFooter className="flex-col items-start gap-4">

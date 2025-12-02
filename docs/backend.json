@@ -8,15 +8,15 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the User entity."
+          "description": "Unique identifier for the user entity."
         },
         "username": {
           "type": "string",
-          "description": "The user's username."
+          "description": "User's display name."
         },
         "email": {
           "type": "string",
-          "description": "The user's email address.",
+          "description": "User's email address.",
           "format": "email"
         },
         "profilePictureUrl": {
@@ -26,17 +26,50 @@
         },
         "isVerified": {
           "type": "boolean",
-          "description": "Indicates if the user is a verified user (e.g., famous user)."
-        },
-        "vipSubscriptionId": {
-          "type": "string",
-          "description": "Reference to the VIPSubscription. (Relationship: User 1:1 VIPSubscription)"
+          "description": "Indicates if the user is a verified user."
         }
       },
       "required": [
         "id",
         "username",
         "email"
+      ]
+    },
+    "Subscription": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Subscription",
+      "type": "object",
+      "description": "Represents a user's VIP subscription.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the subscription entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User. (Relationship: User 1:N Subscription)"
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Start date of the subscription.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "End date of the subscription.",
+          "format": "date-time"
+        },
+        "price": {
+          "type": "number",
+          "description": "The price for this subscription."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "startDate",
+        "endDate",
+        "price"
       ]
     },
     "Message": {
@@ -47,74 +80,32 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Message entity."
+          "description": "Unique identifier for the message entity."
         },
         "senderId": {
           "type": "string",
-          "description": "Reference to the User who sent the message. (Relationship: User 1:N Message)"
+          "description": "Reference to the User who sent the message. (Relationship: User 1:N Message as Sender)"
         },
-        "recipientId": {
+        "receiverId": {
           "type": "string",
-          "description": "Reference to the User who is the recipient of the message. (Relationship: User 1:N Message)"
+          "description": "Reference to the User who received the message. (Relationship: User 1:N Message as Receiver)"
         },
         "content": {
           "type": "string",
-          "description": "The content of the message."
+          "description": "Content of the message."
         },
         "timestamp": {
           "type": "string",
-          "description": "The timestamp of when the message was sent.",
+          "description": "Timestamp of when the message was sent.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
         "senderId",
-        "recipientId",
+        "receiverId",
         "content",
         "timestamp"
-      ]
-    },
-    "VIPSubscription": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "VIPSubscription",
-      "type": "object",
-      "description": "Represents a VIP subscription for a user.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the VIP Subscription."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User who owns this subscription. (Relationship: User 1:1 VIPSubscription)"
-        },
-        "startDate": {
-          "type": "string",
-          "description": "The start date of the subscription.",
-          "format": "date-time"
-        },
-        "endDate": {
-          "type": "string",
-          "description": "The end date of the subscription.",
-          "format": "date-time"
-        },
-        "subscriptionType": {
-          "type": "string",
-          "description": "The type of subscription (e.g., 5-day premium)."
-        },
-        "price": {
-          "type": "number",
-          "description": "The price of the subscription."
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "startDate",
-        "endDate",
-        "subscriptionType",
-        "price"
       ]
     }
   },
@@ -133,68 +124,68 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profiles. Only the authenticated user can read/write their data.  `userId` must match `request.auth.uid`.",
+          "description": "Stores user profiles. Access is restricted to the user themselves.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique ID of the user."
+              "description": "The unique identifier of the user."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/messages/{messageId}",
+        "path": "/users/{userId}/subscriptions/{subscriptionId}",
+        "definition": {
+          "entityName": "Subscription",
+          "schema": {
+            "$ref": "#/backend/entities/Subscription"
+          },
+          "description": "Stores subscriptions for a user. Access is restricted to the user themselves.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "subscriptionId",
+              "description": "The unique identifier of the subscription."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/messages/{messageId}",
         "definition": {
           "entityName": "Message",
           "schema": {
             "$ref": "#/backend/entities/Message"
           },
-          "description": "Stores messages for each user. `senderId` and `recipientId` inside each message document are used directly in the security rules. The `userId` in the path must match either `message.senderId` or `message.recipientId` for write access. The `userId` in the path must match either `message.senderId` or `message.recipientId` for read access.",
+          "description": "Stores messages between users. Access is granted to the sender and receiver, based on the `senderId` and `receiverId` fields.",
           "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
             {
               "name": "messageId",
-              "description": "The unique ID of the message."
+              "description": "The unique identifier of the message."
             }
           ]
         }
       },
       {
-        "path": "/vip_subscriptions/{vipSubscriptionId}",
-        "definition": {
-          "entityName": "VIPSubscription",
-          "schema": {
-            "$ref": "#/backend/entities/VIPSubscription"
-          },
-          "description": "Stores details about VIP subscriptions. The `userId` field establishes a relationship with the user.",
-          "params": [
-            {
-              "name": "vipSubscriptionId",
-              "description": "The unique ID of the VIP subscription."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_verified/{userId}",
+        "path": "/verified_users/{userId}",
         "definition": {
           "entityName": "User",
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Collection to mark users as verified. Existence of document indicates verified status.",
+          "description": "Stores IDs of verified users. The existence of a document indicates the user is verified. Access is restricted to admins.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique ID of the verified user."
+              "description": "The unique identifier of the verified user."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support a messaging application with VIP subscription features, focusing on security, scalability, and maintainability, with an emphasis on authorization independence.\n\n*   **Authorization Independence:** Achieved through denormalization. For instance, access to messages within a user's message threads does not require fetching the user's document to check ownership. Instead, the `senderId` and `recipientId` within each message document are used directly in the security rules.\n*   **QAPs Support:** Secure `list` operations are supported by segregating data based on ownership. Path-based ownership `/users/{userId}/messages/{messageId}` ensures that only the user (or someone with appropriate admin privileges) can list messages under their own user ID. The VIP subscription status does not affect the message structure, preventing filter-based rules.\n*   **User Data (`/users/{userId}`):** Stores user profiles. The structure supports secure access rules where only the authenticated user can read/write their data.\n*   **Messages (`/users/{userId}/messages/{messageId}`):** Stores messages for each user. The path-based structure enables easy querying of messages associated with a specific user and simplifies security rules for message access.\n*   **VIP Subscriptions (`/vip_subscriptions/{vipSubscriptionId}`):**  Stores details about VIP subscriptions.  This collection allows admins to manage the subscriptions. The `userId` field establishes a relationship with the user.\n*   **Verified Users (`/roles_verified/{userId}`):** A dedicated collection stores the IDs of verified users. The existence of a document in this collection grants verified user status, enabling simplified security rules (existence check instead of complex data checks).\n\nThis design facilitates a clear and secure permission model using Firestore security rules, avoiding complex `get()` calls and ensuring data integrity."
+    "reasoning": "This Firestore structure prioritizes authorization independence and clarity for the ConnectVIP application, focusing on secure messaging and subscription management. It leverages path-based ownership for user data and denormalization for collaborative data access.\n\n*   **Users (Private Data):** User profiles are stored under `/users/{userId}`. This structure provides a clear ownership model. No denormalization is needed because access is based solely on `request.auth.uid == userId`.\n*   **Subscriptions (User-Owned Data):** Subscriptions are stored as subcollections under `/users/{userId}/subscriptions/{subscriptionId}`. This continues the path-based ownership, ensuring that only the user can manage their subscriptions.  No denormalization is needed because access is based solely on `request.auth.uid == userId`.\n*   **Messages (Collaborative Data):** Messages are stored in a `/messages` collection.  Each message includes `senderId` and `receiverId`. Security rules will enforce that only the sender or receiver can read the message. While it might be tempting to create subcollections under users, flattening into a single `messages` collection avoids complex fan-out writes when a user has a large number of messages and simplifies queries.\n*   **Verified Users (Global Roles):**  A dedicated collection `/verified_users/{userId}` stores IDs of verified users. The *existence* of a document in this collection grants verified status.  This is much better than storing a `verified` boolean in the user document since it allows admins to easily manage the status without modifying the user document itself. Security rules will check for the existence of this document to grant access to VIP features.\n\n**Authorization Independence (CRITICAL):**  All authorization checks rely on `request.auth.uid` and data within the document being accessed.  There are NO `get()` calls to parent documents to determine access.  The membership map pattern in messages ensures users can only read messages they are a part of without needing to check user roles.\n\n**QAPs Support:**\n*   Secure List operations are enabled because collections are segregated based on access needs.  Listing users, for example, does not require filtering based on roles.\n*   The existence check pattern used for `/verified_users` allows for secure `list` operations. Admins can list verified users, and the rules will ensure that only admins have read access to this collection."
   }
 }

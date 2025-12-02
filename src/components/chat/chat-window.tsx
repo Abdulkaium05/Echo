@@ -29,7 +29,7 @@ import {
     toggleReaction as toggleReactionOnService,
     type Message,
     formatTimestamp,
-    findUserByUid as fetchChatPartnerProfile,
+    getUserProfile as fetchChatPartnerProfile,
     type UserProfile,
     BOT_UID,
     formatLastSeen,
@@ -57,10 +57,12 @@ interface ChatWindowProps {
   chatIconIdentifier?: 'dev-team-svg';
   isVerified?: boolean; // General verified status
   isVIP?: boolean;
-  isCreator?: boolean; // Added isCreator for badge display
+  isCreator?: boolean;
+  isDevTeam?: boolean;
 }
 
-export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, chatAvatarUrl, chatIconIdentifier, isVerified, isVIP, isCreator }: ChatWindowProps) {
+
+export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, chatAvatarUrl, chatIconIdentifier, isVerified, isVIP, isCreator, isDevTeam }: ChatWindowProps) {
   const { user: currentUser, userProfile, updateMockUserProfile } = useAuth();
   const { hasVipAccess } = useVIP();
   const { toast } = useToast();
@@ -102,6 +104,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
 
   useEffect(() => {
+    // This effect ensures the component re-renders when transparent mode or theme is toggled globally.
     if (typeof window === 'undefined') return;
 
     const checkGlobalClasses = () => {
@@ -123,6 +126,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
     observer.observe(document.documentElement, { attributes: true });
 
+    // Also listen for storage changes from other tabs
     const handleStorageChange = (event: StorageEvent) => {
         if (event.key === 'theme_color' || event.key === 'transparent_mode') {
             checkGlobalClasses();
@@ -187,10 +191,13 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
      setLoadingMessages(true);
      setErrorMessages(null);
+     console.log(`ChatWindow: Subscribing to messages for chat ${chatId}`);
      
      const unsubscribe = getChatMessages(
        chatId,
        (fetchedMessages) => {
+         setLoadingMessages(false); // Stop loading as soon as we get a response (even an empty one)
+         console.log(`ChatWindow: Received messages for chat ${chatId}`, fetchedMessages.length);
          const processedMessages = fetchedMessages.map((msg) => ({
            ...msg,
            isSentByCurrentUser: msg.senderId === currentUser.uid,
@@ -199,6 +206,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
          const newMessagesCount = fetchedMessages.length;
          const previousMessagesCount = previousMessagesCountRef.current;
 
+         // Play sound for new messages from other users
          if (newMessagesCount > previousMessagesCount) {
             const lastNewMessage = fetchedMessages[fetchedMessages.length - 1];
             if (lastNewMessage.senderId !== currentUser.uid) {
@@ -208,12 +216,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
          
          setMessages(processedMessages);
          
-         if(loadingMessages) {
-            scrollToBottom('auto');
-         }
-
-         setLoadingMessages(false);
-
+         // Mark messages as seen
          if (currentUser?.uid) {
             markMessagesAsSeen(chatId, currentUser.uid);
          }
@@ -230,23 +233,24 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
        }
      );
      return unsubscribe;
-   }, [chatId, currentUser?.uid, playSound, scrollToBottom, loadingMessages]);
+   }, [chatId, currentUser?.uid, playSound]);
 
    useEffect(() => {
      const unsubscribe = fetchAndSetMessages();
-     return () => unsubscribe();
-   }, [fetchAndSetMessages]);
+     return () => { if (unsubscribe) unsubscribe()};
+   }, [fetchAndSetMessages, chatId]);
 
    useEffect(() => {
     const hasNewMessages = messages.length > previousMessagesCountRef.current;
 
-    if (hasNewMessages) {
+    if (hasNewMessages || loadingMessages) { // Scroll on new messages or on initial load
         scrollToBottom('smooth');
     }
     
+    // Update the ref *after* the check
     previousMessagesCountRef.current = messages.length;
 
-   }, [messages, scrollToBottom]);
+   }, [messages, scrollToBottom, loadingMessages]);
 
 
   const handleSendMessage = async (
@@ -260,6 +264,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
      if (isSending || (!newMessageText.trim() && !attachmentData)) return;
 
     setIsSending(true);
+    console.log(`ChatWindow: Sending message to chat ${chatId}. Attachment: ${attachmentData?.name}, Reply: ${!!replyingToMessage}`);
     
     const textToSend = newMessageText.trim();
 
@@ -284,7 +289,8 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
       setReplyingToMessage(null); 
       messageInputRef.current?.clearAttachmentPreview(); 
 
-      if (chatPartnerId === BOT_UID) {
+      // Bot interaction logic
+      if (isChattingWithBot) {
         setIsBotTyping(true);
 
         const historyForFlow = messages
@@ -310,7 +316,9 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
           savedSongs: savedSongs as SavedSong[],
         };
 
+        console.log("[ChatWindow] Calling Genkit flow with input:", aiInput);
         const aiResponse: BlueBirdAssistantOutput = await blueBirdAssistant(aiInput);
+        console.log("[ChatWindow] Received Genkit response:", aiResponse);
 
         if (aiResponse.songToPlay?.url) {
           setMusicUrl(aiResponse.songToPlay.url);
@@ -323,7 +331,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
     } catch (error: any) {
       console.error("ChatWindow: Error sending message or getting AI response:", error);
       toast({ title: "Send Failed", description: error.message || "Could not send message.", variant: "destructive" });
-      if (chatPartnerId === BOT_UID) setIsBotTyping(false);
+      if (isChattingWithBot) setIsBotTyping(false);
     } finally {
         setIsSending(false);
     }
@@ -331,6 +339,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!chatId) return;
+    console.log(`ChatWindow: Deleting message ${messageId} from chat ${chatId}`);
     try {
         await deleteMessageFromService(chatId, messageId);
         toast({ title: "Message Deleted", description: "The message has been successfully deleted." });
@@ -354,6 +363,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
         toast({ title: "Error", description: "Cannot react. User or chat not identified.", variant: "destructive" });
         return;
     }
+    console.log(`ChatWindow: User ${currentUser.uid} toggled reaction ${emoji} for message ${messageId}`);
     try {
         await toggleReactionOnService(chatId, messageId, emoji, currentUser.uid);
     } catch (error: any) {
@@ -466,7 +476,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
 const handleAudioCall = () => {
     if (chatPartnerId === BOT_UID) {
-        toast({ title: "Dude Are you dumb.", description: "Why you are trying to call a chatbot"});
+        toast({ title: "Cannot Call AI", description: "Audio and video calls are not available for AI assistants."});
         return;
     }
     setIsAudioCallDialogOpen(true);
@@ -501,6 +511,7 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
                 currentTheme === 'theme-light-green' ? <Leaf className="h-4 w-4 text-green-500" /> : <SquareBotBadgeIcon />
             ) : (
                 <>
+                  {isDevTeam && <Wrench className="h-4 w-4 text-blue-600 shrink-0" />}
                   {isCreator && <CreatorLetterCBBadgeIcon className="h-4 w-4" />}
                   {isVIP && <Crown className="h-4 w-4 text-yellow-500 shrink-0" />}
                   {isVerified && !isCreator && <VerifiedBadge className={cn("shrink-0", (isVIP || isCreator) && "ml-0.5")}/>}
@@ -609,7 +620,7 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
              return (
                 <MessageBubble
                   key={msg.id || `msg-${msg.senderId}-${msg.timestamp?.seconds}-${msg.timestamp?.nanoseconds}`}
-                  message={msg}
+                  message={{...msg, isSentByCurrentUser: msg.senderId === currentUser?.uid}}
                   currentUserId={currentUser?.uid}
                   isSeen={!!isSeen}
                   onDeleteMessage={handleDeleteMessage}
@@ -624,7 +635,7 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
         </ScrollArea>
       </div>
 
-      {chatPartnerId === BOT_UID && isBotTyping && (
+      {isChattingWithBot && isBotTyping && (
         <div className="px-3 md:px-4 pb-1 pt-1 text-left flex items-center gap-2 shrink-0">
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           <p className="text-xs text-muted-foreground italic">{chatName} is typing...</p>

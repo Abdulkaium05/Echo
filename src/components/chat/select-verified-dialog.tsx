@@ -1,4 +1,3 @@
-
 // src/components/chat/select-verified-dialog.tsx
 'use client';
 
@@ -122,6 +121,7 @@ export function SelectVerifiedDialog({ isOpen, onOpenChange, limit }: SelectVeri
       // Then, handle the slower chat creation in the background.
       const newSelections = selectedUsers.filter(uid => !initialSelection.includes(uid));
       if (newSelections.length > 0) {
+        console.log(`[SelectVerifiedDialog] Creating chats for ${newSelections.length} new users.`);
         // No need to await this promise chain, let it run in the background
         Promise.all(newSelections.map(async (uid) => {
           const chatExists = await findChatBetweenUsers(user.uid, uid);

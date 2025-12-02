@@ -1,38 +1,39 @@
+
 // src/app/(app)/chat/[chatId]/page.tsx
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChatWindow } from '@/components/chat/chat-window';
-import { findUserByUid, findChatBetweenUsers, type Chat as ChatType } from '@/services/firestore';
+import { getUserProfile, findChatBetweenUsers, createChat } from '@/services/firestore';
 import { useAuth } from '@/context/auth-context';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { UserProfile } from '@/context/auth-context';
 
 interface ChatPartnerDetails {
     id: string; 
     partnerActualId: string; 
     name: string;
     avatarUrl?: string;
+    iconIdentifier?: 'dev-team-svg'; 
     isVerified?: boolean;
     isVIP?: boolean; 
     isCreator?: boolean;
+    isDevTeam?: boolean;
 }
 
 export default function IndividualChatPage() {
   const params = useParams();
   const router = useRouter();
-  const { user: currentUser, loading: authLoading, userProfile: currentUserProfile, isUserProfileLoading } = useAuth();
-  const chatId = params?.chatId as string;
+  const { user: currentUser, loading: authLoading, isUserProfileLoading } = useAuth();
+  const partnerIdFromUrl = params?.chatId as string;
 
   const [chatPartnerDetails, setChatPartnerDetails] = useState<ChatPartnerDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchChatPartner = useCallback(async () => {
-    if (!chatId || !currentUser?.uid) {
-      setError("Chat ID or User information is missing.");
+  const fetchChatDetails = useCallback(async () => {
+    if (!partnerIdFromUrl || !currentUser?.uid) {
       setLoading(false);
       return;
     }
@@ -40,40 +41,33 @@ export default function IndividualChatPage() {
     setError(null);
 
     try {
-      let partnerId: string | undefined = undefined;
-      // This is a simplification. In a real app you'd fetch the chat doc.
-      // For this demo, we infer the partner from the URL if it's not a known chat id format
-      if (chatId.startsWith('chat-')) {
-          // This logic is flawed for a real DB. We can't know the participants just from the chat ID.
-          // This is a placeholder for a proper fetch. For now, we assume the partner is the other ID.
-          // A real implementation would fetch the chat document from firestore.
-          // For now, let's just find the user from the URL if it's not a standard chat ID.
-          setError("Cannot determine chat partner from chat ID.");
-          setLoading(false);
-          return;
-      } else {
-         partnerId = chatId;
-      }
-
-      if (!partnerId) {
-        throw new Error("Could not identify the chat partner for this chat.");
-      }
-
-      const partnerProfile = await findUserByUid(partnerId);
+      console.log(`IndividualChatPage: Fetching details for partner ${partnerIdFromUrl}, user ${currentUser.uid}`);
+      
+      const partnerProfile = await getUserProfile(partnerIdFromUrl);
 
       if (!partnerProfile) {
-        throw new Error(`Profile not found for partner ID: ${partnerId}`);
-      } else {
-        setChatPartnerDetails({
-          id: await findChatBetweenUsers(currentUser.uid, partnerProfile.uid) || `new-${partnerProfile.uid}`,
+        throw new Error("Could not find the user you're trying to chat with.");
+      }
+      
+      let existingChatId = await findChatBetweenUsers(currentUser.uid, partnerProfile.uid);
+      
+      if (!existingChatId) {
+        console.warn(`No existing chat found between ${currentUser.uid} and ${partnerProfile.uid}. Creating one now.`);
+        existingChatId = await createChat(currentUser.uid, partnerProfile.uid);
+      }
+
+      setChatPartnerDetails({
+          id: existingChatId,
           partnerActualId: partnerProfile.uid,
           name: partnerProfile.name || 'User',
           avatarUrl: partnerProfile.avatarUrl, 
+          iconIdentifier: partnerProfile.avatarUrl === 'dev-team-svg-placeholder' ? 'dev-team-svg' : undefined,
           isVerified: partnerProfile.isVerified,
           isVIP: partnerProfile.isVIP, 
           isCreator: partnerProfile.isCreator,
-        });
-      }
+          isDevTeam: partnerProfile.isDevTeam,
+      });
+
     } catch (err: any) {
       console.error("IndividualChatPage: Error fetching chat details:", err);
       setError(err.message || "Failed to load chat details.");
@@ -81,11 +75,12 @@ export default function IndividualChatPage() {
     } finally {
       setLoading(false);
     }
-  }, [chatId, currentUser?.uid]);
+  }, [partnerIdFromUrl, currentUser?.uid]);
 
 
   useEffect(() => {
     if (!authLoading && !isUserProfileLoading && !currentUser) {
+        console.warn("IndividualChatPage: No authenticated user. Redirecting to login.");
         router.push('/login');
         return;
     }
@@ -93,8 +88,8 @@ export default function IndividualChatPage() {
         setLoading(true);
         return;
     }
-    fetchChatPartner();
-  }, [chatId, currentUser, authLoading, isUserProfileLoading, router, fetchChatPartner]);
+    fetchChatDetails();
+  }, [currentUser, authLoading, isUserProfileLoading, router, fetchChatDetails]);
 
 
   if (loading || authLoading || isUserProfileLoading) {
@@ -147,9 +142,11 @@ export default function IndividualChatPage() {
        chatPartnerId={chatPartnerDetails.partnerActualId}
        chatName={chatPartnerDetails.name}
        chatAvatarUrl={chatPartnerDetails.avatarUrl} 
-       isVerified={chatPartnerDetails.isVerified}
+       chatIconIdentifier={chatPartnerDetails.iconIdentifier} 
+       isVerified={chatPartnerDetails.isVerified} // General verified status for other logic
        isVIP={chatPartnerDetails.isVIP} 
-       isCreator={chatPartnerDetails.isCreator}
+       isCreator={chatPartnerDetails.isCreator} // Pass creator status for badge display
+       isDevTeam={chatPartnerDetails.isDevTeam}
      />
     </div>
   );

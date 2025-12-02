@@ -1,4 +1,3 @@
-
 // src/components/chat/add-contact-dialog.tsx
 'use client';
 
@@ -18,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Loader2, ShieldAlert, QrCode } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
-import { findUserByDisplayId, findChatBetweenUsers, createChat } from '@/services/firestore';
+import { findUserByDisplayUid, findChatBetweenUsers, createChat } from '@/services/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useVIP } from '@/context/vip-context';
 import { ScanQrDialog } from './scan-qr-dialog'; // Import the new component
@@ -35,12 +34,12 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
   const router = useRouter();
   const { userProfile: currentUserProfile } = useAuth();
   const { hasVipAccess } = useVIP();
-  const [contactId, setContactId] = useState('');
+  const [contactUid, setContactUid] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isScanQrOpen, setIsScanQrOpen] = useState(false); // State for ScanQrDialog
 
   const handleAddContact = async () => {
-    if (!contactId.trim()) {
+    if (!contactUid.trim()) {
       toast({ title: "Invalid User ID", description: "Please enter a valid User ID.", variant: "destructive" });
       return;
     }
@@ -50,13 +49,13 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
     }
 
     setIsLoading(true);
-    console.log(`AddContactDialog: Adding contact with User ID ${contactId} for user ${currentUserId}.`);
+    console.log(`AddContactDialog: Adding contact with User ID ${contactUid} for user ${currentUserId}.`);
 
     try {
-      const targetUser = await findUserByDisplayId(contactId);
+      const targetUser = await findUserByDisplayUid(contactUid.trim());
 
       if (!targetUser) {
-        toast({ title: "User Not Found", description: `No user found with ID "${contactId}".`, variant: "destructive" });
+        toast({ title: "User Not Found", description: `No user found with User ID ${contactUid}.`, variant: "destructive" });
         setIsLoading(false);
         return;
       }
@@ -67,7 +66,7 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
           return;
       }
       
-      const isTargetUserVerifiedOrDev = (targetUser.isVerified || targetUser.isDevTeam) && !targetUser.isBot;
+      const isTargetUserVerifiedOrDev = (targetUser.isVerified) && !targetUser.isBot;
 
       if (isTargetUserVerifiedOrDev) {
           const isCurrentUserAllowedByTarget = targetUser.allowedNormalContacts?.includes(currentUserId);
@@ -86,23 +85,27 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
       }
 
 
-      const existingChatId = await findChatBetweenUsers(currentUserId, targetUser.uid);
+      let chatId = await findChatBetweenUsers(currentUserId, targetUser.uid);
 
-      if (existingChatId) {
-         toast({ title: "Chat Exists", description: `You already have a chat with ${targetUser.name || 'this user'}. Redirecting...`, variant: "default" });
+      if (chatId) {
+         toast({ title: "Chat Exists", description: `You already have a chat with ${targetUser.name || 'this user'}.` });
          onOpenChange(false);
-         router.push(`/chat/${existingChatId}`);
+         setContactUid('');
+         router.push(`/chat/${targetUser.uid}`);
+         return; 
       } else {
-         const newChatId = await createChat(currentUserId, targetUser.uid);
+         chatId = await createChat(currentUserId, targetUser.uid);
          toast({
            title: "Chat Created!",
-           description: `Started a chat with ${targetUser.name || 'this user'}. Redirecting...`,
+           description: `Started a chat with ${targetUser.name || 'this user'}. It will appear in your list shortly.`,
            action: <UserPlus className="h-5 w-5 text-green-500" />,
          });
-         onOpenChange(false);
-         router.push(`/chat/${newChatId}`);
       }
-      setContactId('');
+      
+      onOpenChange(false);
+      setContactUid('');
+      router.push(`/chat/${targetUser.uid}`); // Navigate to chat using partner's UID
+
     } catch (error: any) {
       console.error("AddContactDialog: Error adding contact:", error);
       toast({
@@ -116,7 +119,7 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
   };
 
   const handleCancel = () => {
-     setContactId('');
+     setContactUid('');
      onOpenChange(false);
   };
 
@@ -134,41 +137,43 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
               <UserPlus className="h-5 w-5" /> Add New Contact
             </DialogTitle>
             <DialogDescription>
-              Add a new person to your chat list by their User ID or by scanning their QR code.
+              Scan a QR code or enter a User ID to start a new chat.
             </DialogDescription>
           </DialogHeader>
           
-          <Button variant="outline" className="w-full" onClick={handleOpenScanner}>
-            <QrCode className="mr-2 h-4 w-4" />
-            Scan QR Code
-          </Button>
-          
-          <div className="flex items-center my-2">
-            <Separator className="flex-1" />
-            <span className="px-2 text-xs text-muted-foreground">OR</span>
-            <Separator className="flex-1" />
-          </div>
+          <div className="py-4 space-y-4">
+            <Button variant="outline" className="w-full h-12" onClick={handleOpenScanner}>
+                <QrCode className="mr-2 h-5 w-5" />
+                Scan QR Code
+            </Button>
+            
+            <div className="flex items-center">
+                <Separator className="flex-1" />
+                <span className="px-4 text-xs text-muted-foreground">OR</span>
+                <Separator className="flex-1" />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="contact-id-dialog">User ID</Label>
-            <Input
-              id="contact-id-dialog"
-              type="text"
-              placeholder="e.g, abdul.kaium.05"
-              value={contactId}
-              onChange={(e) => setContactId(e.target.value)}
-              className="mt-1"
-              disabled={isLoading}
-            />
+            <div className="space-y-2">
+                <Label htmlFor="contact-uid-dialog" className="text-muted-foreground">Enter User ID</Label>
+                <Input
+                id="contact-uid-dialog"
+                type="text"
+                placeholder="e.g, john.doe.123"
+                value={contactUid}
+                onChange={(e) => setContactUid(e.target.value)}
+                className="mt-1"
+                disabled={isLoading}
+                />
+            </div>
           </div>
           
-          <DialogFooter className="mt-4">
+          <DialogFooter className="mt-2">
             <DialogClose asChild>
-                <Button type="button" variant="secondary" onClick={handleCancel} disabled={isLoading}>
+                <Button type="button" variant="ghost" onClick={handleCancel} disabled={isLoading}>
                     Cancel
                 </Button>
             </DialogClose>
-            <Button type="button" onClick={handleAddContact} disabled={isLoading || !contactId.trim()}>
+            <Button type="button" onClick={handleAddContact} disabled={isLoading || !contactUid.trim()}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isLoading ? 'Adding...' : 'Add Contact'}
               </Button>

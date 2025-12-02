@@ -10,13 +10,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
+  DialogClose,
 } from "@/components/ui/dialog";
-import { Moon, Sun, Droplets } from "lucide-react";
+import { Check, Moon, Sun, Droplets, Palette } from "lucide-react";
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
-import { Switch } from '../ui/switch';
-import { Card } from '../ui/card';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface AppearanceSettingsDialogProps {
   isOpen: boolean;
@@ -26,7 +28,120 @@ interface AppearanceSettingsDialogProps {
 type Mode = 'light' | 'dark';
 type Theme = 'theme-sky-blue' | 'theme-light-green';
 
+const themes: { name: Theme, label: string, color: string }[] = [
+    { name: 'theme-sky-blue', label: 'Sky Blue', color: 'bg-sky-500' },
+    { name: 'theme-light-green', label: 'Light Green', color: 'bg-green-500' },
+];
+
+const ModeCard = ({
+    mode,
+    label,
+    icon,
+    selectedMode,
+    onClick,
+    theme
+}: {
+    mode: Mode;
+    label: string;
+    icon: React.ReactNode;
+    selectedMode: Mode;
+    onClick: () => void;
+    theme: Theme;
+}) => {
+    const isSelected = selectedMode === mode;
+    const isGreenTheme = theme === 'theme-light-green';
+    
+    const sentBubbleColor = isGreenTheme ? 'bg-green-500' : 'bg-sky-500';
+    const receivedBubbleColor = mode === 'light' ? 'bg-gray-200' : 'bg-gray-700';
+
+    return (
+        <div onClick={onClick} className={cn(
+            'rounded-lg border-2 p-3 cursor-pointer transition-all duration-300 relative group',
+            isSelected ? 'border-primary' : 'border-muted hover:border-muted-foreground/50'
+        )}>
+            <div className="flex items-center justify-between mb-2">
+                <Label className="flex items-center gap-2 font-semibold cursor-pointer">{icon} {label}</Label>
+                <div className={cn(
+                  "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-300",
+                  isSelected ? "bg-primary border-primary scale-100" : "border-muted-foreground group-hover:border-primary scale-90"
+                )}>
+                   {isSelected && <Check className="h-3 w-3 text-primary-foreground transition-transform duration-300 scale-100"/>}
+                </div>
+            </div>
+            <div className={cn(
+                "p-2 rounded-md transition-colors",
+                mode === 'light' ? 'bg-white' : 'bg-zinc-800'
+            )}>
+                <div className="space-y-1.5">
+                    <div className={cn("w-3/5 h-3 rounded-md", receivedBubbleColor)}></div>
+                    <div className="flex justify-end">
+                       <div className={cn("w-4/5 h-3 rounded-md", sentBubbleColor)}></div>
+                    </div>
+                     <div className={cn("w-1/2 h-3 rounded-md", receivedBubbleColor)}></div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+const TransparentModeCard = ({
+    mode,
+    theme,
+    isEnabled,
+    onClick,
+}: {
+    mode: Mode;
+    theme: Theme;
+    isEnabled: boolean;
+    onClick: () => void;
+}) => {
+    const themeBubbleColor = theme === 'theme-light-green' ? 'bg-green-500' : 'bg-sky-500';
+    
+    return (
+        <div 
+           onClick={onClick}
+           className={cn(
+                "rounded-lg border-2 p-3 cursor-pointer transition-all duration-300 relative group overflow-hidden",
+                "bg-gradient-to-br from-primary/10 to-accent/20",
+                isEnabled ? 'border-primary' : 'border-muted hover:border-muted-foreground/50'
+           )}
+        >
+            {isEnabled && (
+                <div className="absolute inset-0 bg-primary/10 animate-pulse-slow backdrop-blur-sm"></div>
+            )}
+           <div className="flex items-center justify-between mb-2 relative">
+                <Label className="flex items-center gap-2 font-semibold cursor-pointer"><Droplets/>Transparent Mode</Label>
+                <div className={cn(
+                  "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-300",
+                  isEnabled ? "bg-primary border-primary scale-100" : "border-muted-foreground group-hover:border-primary scale-90"
+                )}>
+                   {isEnabled && <Check className="h-3 w-3 text-primary-foreground transition-transform duration-300 scale-100"/>}
+                </div>
+           </div>
+           <div className={cn("p-2 rounded-md transition-colors relative", mode === 'light' ? 'bg-white/80' : 'bg-zinc-800/80')}>
+                <div className="space-y-1.5">
+                    <div className={cn(
+                       "w-3/5 h-3 rounded-md transition-all duration-300",
+                       isEnabled ? "bg-gray-500/20 border border-gray-400/30" : (mode === 'light' ? "bg-gray-200" : "bg-gray-700")
+                    )}></div>
+                    <div className="flex justify-end">
+                       <div className={cn(
+                         "w-4/5 h-3 rounded-md transition-all duration-300",
+                          isEnabled ? `${themeBubbleColor}/20 border ${theme === 'theme-light-green' ? 'border-green-500/50' : 'border-sky-500/50'}` : themeBubbleColor
+                       )}></div>
+                    </div>
+                     <div className={cn(
+                       "w-1/2 h-3 rounded-md transition-all duration-300",
+                       isEnabled ? "bg-gray-500/20 border border-gray-400/30" : (mode === 'light' ? "bg-gray-200" : "bg-gray-700")
+                     )}></div>
+                </div>
+           </div>
+        </div>
+    )
+}
+
 export function AppearanceSettingsDialog({ isOpen, onOpenChange }: AppearanceSettingsDialogProps) {
+  const { toast } = useToast();
   const [mode, setMode] = useState<Mode>('light');
   const [theme, setTheme] = useState<Theme>('theme-sky-blue');
   const [transparentMode, setTransparentMode] = useState(false);
@@ -38,13 +153,17 @@ export function AppearanceSettingsDialog({ isOpen, onOpenChange }: AppearanceSet
     const savedTheme = localStorage.getItem('theme_color') as Theme | null;
     const savedTransparentMode = localStorage.getItem('transparent_mode') === 'true';
 
-    setMode(savedMode || 'light');
-    setTheme(savedTheme || 'theme-sky-blue');
+    const initialMode = savedMode || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const initialTheme = savedTheme || 'theme-sky-blue';
+    
+    setMode(initialMode);
+    setTheme(initialTheme);
     setTransparentMode(savedTransparentMode);
   }, []);
 
   useEffect(() => {
     if (!isClient) return;
+    
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(mode);
@@ -53,134 +172,114 @@ export function AppearanceSettingsDialog({ isOpen, onOpenChange }: AppearanceSet
 
   useEffect(() => {
     if (!isClient) return;
+
     const root = window.document.documentElement;
-    root.classList.remove('theme-sky-blue', 'theme-light-green');
+    themes.forEach(t => root.classList.remove(t.name));
     root.classList.add(theme);
     localStorage.setItem('theme_color', theme);
   }, [theme, isClient]);
   
   useEffect(() => {
     if (!isClient) return;
+    
     const root = window.document.documentElement;
-    root.classList.toggle('transparent-mode', transparentMode);
+    if (transparentMode) {
+        root.classList.add('transparent-mode');
+    } else {
+        root.classList.remove('transparent-mode');
+    }
     localStorage.setItem('transparent_mode', String(transparentMode));
   }, [transparentMode, isClient]);
 
-  const handleModeChange = (newMode: Mode) => {
-    if (mode !== newMode) {
-      setMode(newMode);
-    }
-  };
 
-  const handleThemeChange = (newTheme: Theme) => {
-    if (theme !== newTheme) {
-      setTheme(newTheme);
-    }
+  const handleTransparentModeChange = (enabled: boolean) => {
+    setTransparentMode(enabled);
+    toast({
+        title: `Transparent Mode ${enabled ? 'Enabled' : 'Disabled'}`,
+        description: `Chat bubbles will now appear ${enabled ? 'glassy' : 'solid'}.`,
+        action: <Droplets className="h-5 w-5 text-primary" />,
+    });
   };
-
-  const themeColorClass = theme === 'theme-sky-blue' ? 'bg-[hsl(200,100%,50%)]' : 'bg-[hsl(130,65%,55%)]';
+  
+  const dialogBgClass = mode === 'light' ? 'bg-background' : 'bg-background';
+  const dialogFgClass = mode === 'light' ? 'text-foreground' : 'text-foreground';
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader className="border-b pb-4">
-          <DialogTitle>Appearance</DialogTitle>
-          <DialogDescription>
-            Customize the look and feel of the app.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-                <Card 
-                    className={cn(
-                        "p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all",
-                        mode === 'light' ? "border-primary ring-2 ring-primary" : "hover:border-primary/50"
-                    )}
-                    onClick={() => handleModeChange('light')}
-                >
-                     <div className="w-full h-16 rounded-md bg-white border flex flex-col gap-1 p-2">
-                        <div className="w-3/5 h-3 rounded-md bg-muted self-start"></div>
-                        <div className={cn("w-4/5 h-4 rounded-md self-end", themeColorClass)}></div>
-                        <div className="w-3/5 h-3 rounded-md bg-muted self-start"></div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Sun className="h-4 w-4"/>
-                        <span className="text-sm font-medium">Light</span>
-                    </div>
-                </Card>
-                 <Card 
-                    className={cn(
-                        "p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all",
-                        mode === 'dark' ? "border-primary ring-2 ring-primary" : "hover:border-primary/50"
-                    )}
-                    onClick={() => handleModeChange('dark')}
-                >
-                     <div className="w-full h-16 rounded-md bg-gray-900 border border-gray-700 flex flex-col gap-1 p-2">
-                        <div className="w-3/5 h-3 rounded-md bg-gray-700 self-start"></div>
-                        <div className={cn("w-4/5 h-4 rounded-md self-end", themeColorClass)}></div>
-                        <div className="w-3/5 h-3 rounded-md bg-gray-700 self-start"></div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Moon className="h-4 w-4"/>
-                        <span className="text-sm font-medium">Dark</span>
-                    </div>
-                </Card>
-            </div>
-            
-            <Separator />
-            
-            <div className="space-y-2">
-                <Label>Color Theme</Label>
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleThemeChange('theme-sky-blue')}>
-                        <div className={cn("h-8 w-8 rounded-full border-2 transition-all", theme === 'theme-sky-blue' ? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background' : 'border-muted')}>
-                            <div className="w-full h-full rounded-full bg-[hsl(200,100%,50%)]"></div>
+        <DialogContent className={cn("sm:max-w-md p-0", dialogBgClass, dialogFgClass)}>
+            <DialogHeader className={cn("p-6 pb-4 border-b transition-colors", dialogBgClass)}>
+                <DialogTitle className="flex items-center gap-2 text-xl"><Palette/> Appearance</DialogTitle>
+                <DialogDescription>
+                    Customize the look and feel of the app.
+                </DialogDescription>
+            </DialogHeader>
+
+            <TooltipProvider>
+                <div className="p-6 grid gap-4">
+                    <div className="space-y-2">
+                        <Label>Mode</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                           <ModeCard 
+                                mode="light"
+                                label="Light"
+                                icon={<Sun/>}
+                                selectedMode={mode}
+                                onClick={() => setMode('light')}
+                                theme={theme}
+                           />
+                           <ModeCard 
+                                mode="dark"
+                                label="Dark"
+                                icon={<Moon/>}
+                                selectedMode={mode}
+                                onClick={() => setMode('dark')}
+                                theme={theme}
+                           />
                         </div>
-                        <span className="text-sm font-medium">Sky Blue</span>
                     </div>
-                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleThemeChange('theme-light-green')}>
-                        <div className={cn("h-8 w-8 rounded-full border-2 transition-all", theme === 'theme-light-green' ? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background' : 'border-muted')}>
-                            <div className="w-full h-full rounded-full bg-[hsl(130,65%,55%)]"></div>
+
+                    <div className="space-y-2">
+                        <Label>Color Theme</Label>
+                         <div className="flex items-center gap-3">
+                            {themes.map((t) => (
+                                <Tooltip key={t.name}>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            onClick={() => setTheme(t.name)}
+                                            className={cn(
+                                                "h-10 w-10 rounded-full flex items-center justify-center ring-2 ring-offset-2 ring-offset-background transition-all duration-300",
+                                                theme === t.name ? 'ring-primary' : 'ring-transparent hover:ring-primary/50'
+                                            )}
+                                        >
+                                            <div className={cn("h-8 w-8 rounded-full", t.color)} />
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{t.label}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            ))}
                         </div>
-                        <span className="text-sm font-medium">Light Green</span>
-                    </div>
-                </div>
-            </div>
-            
-            <Separator />
-            
-            <div className="space-y-3">
-                <Label>Effects</Label>
-                 <Card 
-                    className={cn(
-                        "p-4 flex items-start gap-4 cursor-pointer transition-all relative overflow-hidden",
-                        transparentMode ? "border-primary ring-2 ring-primary" : "hover:border-primary/50"
-                    )}
-                    onClick={() => setTransparentMode(!transparentMode)}
-                >
-                    <div className={cn(
-                        "absolute top-2 right-2 w-16 h-10 rounded-lg flex items-center justify-center transition-all",
-                        transparentMode ? "bg-primary/10" : "bg-muted"
-                    )}>
-                        <div className={cn(
-                            "w-10 h-6 rounded-2xl border transition-all",
-                            transparentMode
-                                ? "bg-primary/20 border-primary/50 backdrop-blur-sm shadow-inner"
-                                : "bg-background border-border"
-                        )}>
-                        </div>
-                         {transparentMode && <div className="absolute w-10 h-6 rounded-2xl bg-primary/20 animate-pulse"></div>}
                     </div>
                     
-                    <Droplets className="h-5 w-5 text-primary mt-1 shrink-0"/>
-                    <div className="flex-1 pr-16">
-                        <Label className="font-semibold cursor-pointer">Transparent Mode</Label>
-                        <p className="text-xs text-muted-foreground">Enable a glassy, blurred effect on chat bubbles.</p>
+                    <div className="space-y-2">
+                        <Label>Effects</Label>
+                        <TransparentModeCard
+                            mode={mode}
+                            theme={theme}
+                            isEnabled={transparentMode}
+                            onClick={() => handleTransparentModeChange(!transparentMode)}
+                        />
                     </div>
-                </Card>
-            </div>
-        </div>
-      </DialogContent>
+                </div>
+            </TooltipProvider>
+
+            <DialogFooter className="p-6 pt-2">
+                <DialogClose asChild>
+                    <Button type="button" className="w-full">Done</Button>
+                </DialogClose>
+            </DialogFooter>
+        </DialogContent>
     </Dialog>
   );
 }

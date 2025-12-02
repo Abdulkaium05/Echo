@@ -90,15 +90,15 @@ export function VipCodeGeneratorTab() {
         <CardContent className="space-y-6">
             <div className="space-y-2">
                 <Label htmlFor="vip-duration">VIP Duration (Days)</Label>
-                <Input id="vip-duration" type="number" value={duration} onChange={(e) => setDuration(Math.max(1, parseInt(e.target.value) || 1))} />
+                <Input id="vip-duration" type="number" value={duration} onChange={(e) => setDuration(parseInt(e.target.value) || 1)} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="vip-total-uses">Total Uses</Label>
-                <Input id="vip-total-uses" type="number" value={totalUses} onChange={(e) => setTotalUses(Math.max(1, parseInt(e.target.value) || 1))} />
+                <Input id="vip-total-uses" type="number" value={totalUses} onChange={(e) => setTotalUses(parseInt(e.target.value) || 1)} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="vip-uses-per-user">Uses Per User</Label>
-                <Input id="vip-uses-per-user" type="number" value={usesPerUser} onChange={(e) => setUsesPerUser(Math.max(1, parseInt(e.target.value) || 1))} />
+                <Input id="vip-uses-per-user" type="number" value={usesPerUser} onChange={(e) => setUsesPerUser(parseInt(e.target.value) || 1)} />
             </div>
         </CardContent>
         <CardFooter className="flex-col items-start gap-4">

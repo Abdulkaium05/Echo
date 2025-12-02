@@ -1,4 +1,3 @@
-
 // src/components/dev/tools/points-code-generator.tsx
 'use client';
 
@@ -90,11 +89,11 @@ export function PointsCodeGeneratorTab() {
         <CardContent className="space-y-6">
             <div className="space-y-2">
                 <Label htmlFor="points-amount">Points Amount</Label>
-                <Input id="points-amount" type="number" value={amount} onChange={(e) => setAmount(Math.max(1, parseInt(e.target.value) || 1))} />
+                <Input id="points-amount" type="number" value={amount} onChange={(e) => setAmount(parseInt(e.target.value) || 1)} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="points-total-uses">Total Uses</Label>
-                <Input id="points-total-uses" type="number" value={totalUses} onChange={(e) => setTotalUses(Math.max(1, parseInt(e.target.value) || 1))} />
+                <Input id="points-total-uses" type="number" value={totalUses} onChange={(e) => setTotalUses(parseInt(e.target.value) || 1)} />
             </div>
         </CardContent>
         <CardFooter className="flex-col items-start gap-4">

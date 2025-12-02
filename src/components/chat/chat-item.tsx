@@ -141,10 +141,21 @@ export function ChatItem(props: ChatItemProps) {
         );
     }
     
-    if (iconIdentifier === 'dev-team-svg') { 
+    // Check for a real avatar URL first, even for Dev Team members.
+    // Fallback to the icon only if there is no avatarUrl.
+    if (avatarUrl && avatarUrl !== 'dev-team-svg-placeholder') {
+        return (
+          <Avatar className={avatarBaseClasses}>
+            <AvatarImage src={avatarUrl} alt={name} data-ai-hint={dataAiHint} />
+            <AvatarFallback>{fallbackInitials}</AvatarFallback>
+          </Avatar>
+        );
+    }
+    
+    if (isDevTeam || iconIdentifier === 'dev-team-svg') { 
       return (
          <div className={cn(iconWrapperClasses, "bg-muted text-muted-foreground")}>
-           <DevTeamIcon />
+           <Wrench />
          </div>
       );
     } 
@@ -182,7 +193,7 @@ export function ChatItem(props: ChatItemProps) {
               {name}
             </p>
             <div className="flex items-center shrink-0 gap-1">
-              {isBot ? <SquareBotBadgeIcon style={{color: 'hsl(var(--bot-accent-color))'}} /> : orderedBadges.map(badgeKey => {
+              {orderedBadges.map(badgeKey => {
                   const BadgeComponent = BadgeComponents[badgeKey];
                   const style = (badgeKey === 'verified' && verifiedBadgeColor) ? { color: `hsl(var(--badge-${verifiedBadgeColor}))` } : {};
                   return BadgeComponent ? <BadgeComponent key={badgeKey} className="shrink-0" style={style} /> : null;

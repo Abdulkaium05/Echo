@@ -16,17 +16,20 @@ import { CodeHistoryTab } from '@/components/dev/tools/code-history';
 export default function DevToolsPage() {
   const { userProfile, loading } = useAuth();
 
+  // Re-enable the check for the dev team user.
+  const isDevTeamUser = userProfile?.isDevTeam === true;
+
   if (loading) {
     return null; // Or a loading spinner
   }
 
-  if (!userProfile?.isDevTeam) {
+  if (!isDevTeamUser) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-4 bg-background">
         <Code className="h-16 w-16 text-destructive mb-4" />
         <h2 className="text-xl font-semibold text-foreground mb-2">Access Denied</h2>
         <p className="text-muted-foreground max-w-md">
-          This feature is only available to members of the Dev Team.
+          This feature is for administrative purposes and is not available.
         </p>
         <Button asChild variant="outline" className="mt-6">
           <Link href="/chat">

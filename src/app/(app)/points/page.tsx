@@ -2,54 +2,58 @@
 // src/app/(app)/points/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Gift, Coins, UserSearch, AlertCircle, CheckCircle } from "lucide-react";
+import { Loader2, Gift, Coins, User as UserIcon, Search, AlertCircle, UserCheck } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
-import { giftPoints, findUserByDisplayId, type UserProfile } from '@/services/firestore';
+import { type UserProfile, giftPoints, findUserByDisplayUid } from '@/services/firestore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
 function GiftPointsCard() {
-    const { userProfile, updateMockUserProfile } = useAuth();
+    const { user: currentUser, userProfile, updateMockUserProfile } = useAuth();
     const { toast } = useToast();
     
-    const [recipientId, setRecipientId] = useState('');
+    const [recipientUid, setRecipientUid] = useState('');
     const [foundUser, setFoundUser] = useState<UserProfile | null>(null);
-    const [amount, setAmount] = useState(1);
     const [isFindingUser, setIsFindingUser] = useState(false);
+    const [amount, setAmount] = useState(1);
     const [isGifting, setIsGifting] = useState(false);
     
     const handleFindUser = async () => {
-        if (!recipientId.trim()) {
-            toast({ title: "User ID Required", description: "Please enter a User ID to find a recipient.", variant: "destructive" });
+        const uidToFind = String(recipientUid).trim();
+        if (!uidToFind) {
+            toast({ title: 'User ID required', description: 'Please enter a user ID.', variant: 'destructive' });
             return;
         }
+        if (uidToFind === userProfile?.displayUid) {
+             toast({ title: 'Cannot Gift Self', description: 'You cannot gift points to yourself.', variant: 'destructive' });
+            return;
+        }
+
         setIsFindingUser(true);
         setFoundUser(null);
         try {
-            const user = await findUserByDisplayId(recipientId);
-            if (user && user.uid !== userProfile?.uid) {
+            const user = await findUserByDisplayUid(uidToFind);
+            if (user) {
                 setFoundUser(user);
-                toast({ title: "User Found", description: `You are about to gift points to ${user.name}.`, action: <CheckCircle className="text-green-500" /> });
-            } else if (user && user.uid === userProfile?.uid) {
-                toast({ title: "Cannot Gift Yourself", description: "You cannot send points to your own account.", variant: "destructive" });
+                 toast({ title: 'User Found', description: `Found user: ${user.name}` });
             } else {
-                toast({ title: "User Not Found", description: `No user found with the ID "${recipientId}".`, variant: "destructive" });
+                toast({ title: 'User Not Found', description: 'No user found with that ID.', variant: 'destructive' });
             }
         } catch (error: any) {
-            toast({ title: "Error", description: error.message, variant: "destructive" });
+            toast({ title: 'Error Finding User', description: error.message, variant: 'destructive' });
         } finally {
             setIsFindingUser(false);
         }
     };
-
+    
     const handleGiftPoints = async () => {
-        if (!userProfile || !foundUser || !amount || amount <= 0) {
+        if (!userProfile || !foundUser || amount <= 0) {
             toast({ title: "Invalid Input", description: "Please find a user and enter a valid amount.", variant: "destructive" });
             return;
         }
@@ -69,9 +73,9 @@ function GiftPointsCard() {
                 title: 'Points Gifted!',
                 description: `You have successfully gifted ${amount} points to ${foundUser.name}.`,
             });
-
+            
             setFoundUser(null);
-            setRecipientId('');
+            setRecipientUid('');
             setAmount(1);
 
         } catch (error: any) {
@@ -81,7 +85,7 @@ function GiftPointsCard() {
         }
     };
     
-    const isGiftButtonDisabled = isGifting || isFindingUser || !foundUser || amount <= 0;
+    const isSubmitDisabled = isGifting || !foundUser || amount <= 0;
 
     return (
         <Card>
@@ -91,39 +95,41 @@ function GiftPointsCard() {
                     Gift Points
                 </CardTitle>
                 <CardDescription>
-                    Send some of your points to another user by their User ID.
+                    Send some of your points to another user via their User ID.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="space-y-2">
-                    <Label htmlFor="recipient-id">Recipient's User ID</Label>
+                 <div className="space-y-2">
+                    <Label htmlFor="recipient-uid">Recipient User ID</Label>
                     <div className="flex gap-2">
                         <Input 
-                            id="recipient-id"
-                            value={recipientId}
-                            onChange={(e) => {
-                                setRecipientId(e.target.value);
-                                if (foundUser) setFoundUser(null); // Reset if ID changes
-                            }}
-                            placeholder="e.g., abdul.kaium.05"
-                            disabled={isFindingUser || isGifting}
+                            id="recipient-uid" 
+                            type="text" 
+                            placeholder="e.g, john.doe.123 or 12345678"
+                            value={recipientUid}
+                            onChange={(e) => setRecipientUid(e.target.value)}
+                            disabled={isFindingUser}
                         />
-                        <Button onClick={handleFindUser} disabled={isFindingUser || isGifting || !recipientId.trim()}>
-                            {isFindingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserSearch className="h-4 w-4" />}
+                        <Button onClick={handleFindUser} disabled={isFindingUser || !recipientUid.trim()}>
+                            {isFindingUser ? <Loader2 className="h-4 w-4 animate-spin"/> : <Search className="h-4 w-4" />}
+                            <span className="sr-only">Find User</span>
                         </Button>
                     </div>
                 </div>
 
                 {foundUser && (
-                    <div className="p-3 rounded-md border bg-accent/50 flex items-center gap-3">
-                        <Avatar>
-                            <AvatarImage src={foundUser.avatarUrl} alt={foundUser.name} />
-                            <AvatarFallback>{foundUser.name.substring(0,2)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                            <span className="font-semibold text-sm">{foundUser.name}</span>
-                            <span className="text-xs text-muted-foreground">Recipient Verified</span>
-                        </div>
+                    <div className="p-3 bg-secondary rounded-lg border flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                                <AvatarImage src={foundUser.avatarUrl} alt={foundUser.name} />
+                                <AvatarFallback>{foundUser.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="font-semibold">{foundUser.name}</p>
+                                <p className="text-xs text-muted-foreground">{foundUser.displayUid}</p>
+                            </div>
+                       </div>
+                        <UserCheck className="h-5 w-5 text-green-500" />
                     </div>
                 )}
                 
@@ -133,15 +139,15 @@ function GiftPointsCard() {
                         id="points-amount" 
                         type="number" 
                         value={amount}
-                        onChange={(e) => setAmount(Math.max(1, parseInt(e.target.value) || 1))} 
+                        onChange={(e) => setAmount(e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
                         min="1"
                         max={userProfile?.points}
-                        disabled={!foundUser || isGifting}
+                        disabled={!foundUser}
                     />
                 </div>
             </CardContent>
             <CardFooter>
-                <Button onClick={handleGiftPoints} disabled={isGiftButtonDisabled} className="w-full">
+                <Button onClick={handleGiftPoints} disabled={isSubmitDisabled} className="w-full">
                     {isGifting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Coins className="mr-2 h-4 w-4" />}
                     {isGifting ? 'Gifting...' : `Gift ${amount} Points`}
                 </Button>
@@ -156,17 +162,15 @@ export default function PointsDashboardPage() {
     return (
         <div className="container mx-auto py-8 px-4 md:px-6 lg:px-8 h-full">
             <div className="space-y-8">
-                <Card className={cn("overflow-hidden", "gradient-background")}>
+                <Card className="bg-gradient-to-r from-primary/10 to-accent/20">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-3 text-lg text-foreground">
-                            <Coins className="h-6 w-6" />
+                        <CardTitle className="flex items-center gap-3">
+                            <Coins className="h-6 w-6 text-yellow-500" />
                             Your Points Balance
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="text-center pb-8">
-                        <p className="text-6xl font-bold tracking-tight text-foreground">
-                            {userProfile?.points || 0}
-                        </p>
+                    <CardContent>
+                        <p className="text-4xl font-bold">{userProfile?.points || 0}</p>
                     </CardContent>
                 </Card>
 

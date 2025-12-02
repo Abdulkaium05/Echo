@@ -1,4 +1,3 @@
-
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Coins } from "lucide-react";
@@ -13,7 +12,6 @@ interface SubscriptionCardProps {
   isPopular?: boolean;
   paymentMethod: 'money' | 'points';
   onSubscribe: () => void;
-  disabled?: boolean;
 }
 
 export function SubscriptionCard({
@@ -25,14 +23,12 @@ export function SubscriptionCard({
   isPopular = false,
   paymentMethod,
   onSubscribe,
-  disabled = false,
 }: SubscriptionCardProps) {
   return (
     <Card className={cn(
-        "flex flex-col",
+        "flex flex-col bg-premium-gradient",
         "transition-all hover:scale-105 hover:shadow-xl",
-        isPopular ? "border-primary border-2 shadow-lg" : "",
-        disabled ? "opacity-60 grayscale cursor-not-allowed" : ""
+        isPopular ? "border-primary border-2 shadow-lg" : ""
     )}>
       {isPopular && (
         <div className="bg-primary text-primary-foreground text-center py-1 text-xs sm:text-sm font-medium rounded-t-md -mt-px -mx-px">
@@ -45,15 +41,11 @@ export function SubscriptionCard({
       </CardHeader>
       <CardContent className="flex-1 px-4 sm:px-6 pb-4">
         <div className="mb-4">
-            {paymentMethod === 'money' ? (
-                <span className="text-3xl sm:text-4xl font-bold">${price}</span>
-            ) : (
-                <div className="flex items-center gap-2">
-                    <span className="text-3xl sm:text-4xl font-bold">{points}</span>
-                    <Coins className="h-7 w-7 text-yellow-500" />
-                </div>
-            )}
-          {durationDays !== Infinity && paymentMethod === 'money' && <span className="text-muted-foreground text-xs sm:text-sm"> / {durationDays} days</span>}
+            <div className="flex items-center gap-2">
+                <span className="text-3xl sm:text-4xl font-bold">{points}</span>
+                <Coins className="h-7 w-7 text-yellow-500" />
+            </div>
+          {durationDays !== Infinity && <span className="text-muted-foreground text-xs sm:text-sm"> / {durationDays} days</span>}
         </div>
         <ul className="space-y-1.5 sm:space-y-2">
           {features.map((feature, index) => (
@@ -65,8 +57,8 @@ export function SubscriptionCard({
         </ul>
       </CardContent>
       <CardFooter className="px-4 pb-4 sm:px-6 sm:pb-6 pt-0">
-        <Button className="w-full" onClick={onSubscribe} disabled={disabled}>
-          Subscribe Now
+        <Button className="w-full" onClick={onSubscribe}>
+          Buy with Points
         </Button>
       </CardFooter>
     </Card>

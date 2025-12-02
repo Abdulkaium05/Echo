@@ -1,49 +1,38 @@
-
 // src/services/storage.ts
+import { ref, uploadString, getDownloadURL, type FirebaseStorage } from 'firebase/storage';
 
 /**
- * Simulates uploading an avatar file (File object or base64 string).
+ * Uploads a base64 encoded image string to Firebase Storage.
  *
+ * @param storage - The Firebase Storage instance.
  * @param userId - The UID of the user uploading the avatar.
- * @param fileOrBase64 - The image as a File object or a base64 data URI.
- * @param fileType - The MIME type of the file (e.g., 'image/png').
- * @returns Promise<string> - A base64 data URI for the uploaded image.
+ * @param dataUrl - The image encoded as a data URL (e.g., "data:image/png;base64,...").
+ * @returns Promise<string> - The downloadable URL of the uploaded image.
  */
-export const uploadAvatar = async (userId: string, fileOrBase64: File | string, fileType: string = 'image/png'): Promise<string> => {
-  console.log(`[uploadAvatar] Called for userId: ${userId}`);
-
-  // If it's already a base64 string, return it after a delay.
-  if (typeof fileOrBase64 === 'string' && fileOrBase64.startsWith('data:image')) {
-    console.log(`[uploadAvatar] Input is already a data URI. Simulating upload.`);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return fileOrBase64;
+export const uploadAvatar = async (storage: FirebaseStorage, userId: string, dataUrl: string): Promise<string> => {
+  if (!storage) {
+    console.error("Firebase Storage is not initialized. Using placeholder.");
+    // Return a placeholder but don't throw, to allow mock mode to function
+    return `https://picsum.photos/seed/${userId}/200`;
   }
-
-  // If it's a File object, convert it to a base64 data URI.
-  if (fileOrBase64 instanceof File) {
-    console.log(`[uploadAvatar] Input is a File object. Converting to data URI.`);
-    await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        if (result) {
-          console.log(`[uploadAvatar] Conversion successful.`);
-          resolve(result);
-        } else {
-          reject(new Error("Failed to read file as data URI."));
-        }
-      };
-      reader.onerror = (error) => {
-        console.error("[uploadAvatar] Error reading file:", error);
-        reject(new Error("Error reading file."));
-      };
-      reader.readAsDataURL(fileOrBase64);
-    });
+  
+  if (!dataUrl.startsWith('data:image')) {
+    console.error("[uploadAvatar] Invalid data URL format. It must include the data URI prefix.", dataUrl.substring(0, 30) + "...");
+    throw new Error("Invalid image format provided for upload.");
   }
+  
+  const fileType = dataUrl.substring(dataUrl.indexOf(':') + 1, dataUrl.indexOf(';'));
+  const extension = fileType.split('/')[1];
+  const storageRef = ref(storage, `avatars/${userId}/profile.${extension}`);
 
-  // Fallback for invalid input
-  console.error("[uploadAvatar] Invalid input provided. Expected a File object or a data URI string.");
-  throw new Error("Invalid file format for avatar upload.");
+  try {
+    // 'data_url' is the correct format string for Firebase v9+ when using uploadString with a Data URL.
+    const uploadResult = await uploadString(storageRef, dataUrl, 'data_url');
+    const downloadUrl = await getDownloadURL(uploadResult.ref);
+    console.log(`[uploadAvatar] Upload successful for ${userId}. URL: ${downloadUrl}`);
+    return downloadUrl;
+  } catch (error) {
+    console.error(`[uploadAvatar] Error uploading avatar for ${userId}:`, error);
+    throw new Error("Could not upload avatar. Please try again.");
+  }
 };
-

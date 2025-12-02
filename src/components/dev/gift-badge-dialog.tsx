@@ -1,8 +1,7 @@
-
 // src/components/dev/gift-badge-dialog.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,10 +12,10 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Loader2, Gift, Crown, Bot, Wrench, SmilePlus, FlaskConical, Clock, UserSearch } from "lucide-react";
+import { Loader2, Gift, Crown, Bot, Wrench, SmilePlus, FlaskConical, Clock, Search, User as UserIcon, UserCheck, AlertCircle } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
-import { getNormalUsers, type UserProfile, findUserByDisplayId } from '@/services/firestore';
+import { findUserByDisplayUid, type UserProfile, getUserProfile } from '@/services/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -55,48 +54,35 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
   const { user: currentUser, userProfile: currentUserProfile, updateMockUserProfile } = useAuth();
   const { toast } = useToast();
   
-  const [recipientId, setRecipientId] = useState('');
-  const [foundUser, setFoundUser] = useState<UserProfile | null>(null);
-  const [selectedBadge, setSelectedBadge] = useState<BadgeType | null>(null);
-  const [giftDuration, setGiftDuration] = useState<'trial' | 'lifetime'>('lifetime');
+  const [recipientUid, setRecipientUid] = useState('');
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isFindingUser, setIsFindingUser] = useState(false);
+  const [selectedBadge, setSelectedBadge] = useState<BadgeType | null>(null);
+  const [giftDuration, setGiftDuration] = useState<'lifetime' | 'trial'>('lifetime');
   const [isGifting, setIsGifting] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      // Reset state when dialog opens
-      setRecipientId('');
-      setFoundUser(null);
-      setSelectedBadge(null);
-      setGiftDuration('lifetime');
-    }
-  }, [isOpen]);
-
+  
   const handleFindUser = async () => {
-    if (!recipientId.trim()) {
-        toast({ title: "User ID Required", description: "Please enter a User ID.", variant: "destructive" });
-        return;
-    }
+    const uidToFind = String(recipientUid).trim();
+    if (!uidToFind) return;
     setIsFindingUser(true);
-    setFoundUser(null);
+    setSelectedUser(null);
     try {
-        const user = await findUserByDisplayId(String(recipientId).trim());
-        if (user && user.uid !== currentUser?.uid) {
-            setFoundUser(user);
-        } else if (user && user.uid === currentUser?.uid) {
-            toast({ title: "Invalid Recipient", description: "You cannot gift a badge to yourself.", variant: "destructive" });
+        const user = await findUserByDisplayUid(uidToFind);
+        if (user) {
+            setSelectedUser(user);
+            toast({ title: 'User Found', description: `Selected ${user.name}`});
         } else {
-            toast({ title: "User Not Found", description: `No user with ID "${recipientId}" found.`, variant: "destructive" });
+            toast({ title: 'User Not Found', variant: 'destructive'});
         }
-    } catch (error: any) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (e) {
+        toast({ title: 'Error Finding User', variant: 'destructive'});
     } finally {
         setIsFindingUser(false);
     }
   };
 
   const handleGiftBadge = async () => {
-    if (!currentUserProfile || !foundUser || !selectedBadge) {
+    if (!currentUserProfile || !selectedUser || !selectedBadge) {
       toast({ title: "Missing Information", description: "Please select a user, a badge, and a duration.", variant: "destructive" });
       return;
     }
@@ -106,24 +92,27 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
     try {
         const badgeKey = `is${selectedBadge.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('')}` as keyof UserProfile;
         
-        let expiryTimestamp: number | undefined = undefined;
+        let expiryTimestamp: number | null = null;
         if (giftDuration === 'trial') {
             expiryTimestamp = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days from now
         }
         
-        const recipientProfile = await findUserByDisplayId(String(recipientId).trim());
+        const recipientProfile = await getUserProfile(selectedUser.uid);
         if (!recipientProfile) {
             throw new Error("Could not find the recipient's profile to update.");
         }
 
-        // Update user profile with the new badge and potentially an expiry date
-        await updateMockUserProfile(foundUser.uid, { 
+        const newBadgeExpiry = { ...recipientProfile.badgeExpiry };
+        if (expiryTimestamp === null) {
+            // Use null for lifetime, ensuring no 'undefined' is passed
+            newBadgeExpiry[selectedBadge] = null;
+        } else {
+            newBadgeExpiry[selectedBadge] = expiryTimestamp;
+        }
+
+        await updateMockUserProfile(selectedUser.uid, { 
             [badgeKey]: true,
-            badgeExpiry: {
-                ...recipientProfile.badgeExpiry,
-                [selectedBadge]: expiryTimestamp, // Undefined for lifetime
-            },
-            // Transient properties for login notification
+            badgeExpiry: newBadgeExpiry,
             giftedByUid: currentUserProfile.uid,
             hasNewGift: true,
             lastGiftedBadge: selectedBadge,
@@ -131,13 +120,17 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
 
         toast({
             title: 'Badge Gifted!',
-            description: `You have gifted the ${giftableBadges.find(b => b.value === selectedBadge)?.label || 'new'} badge to ${foundUser.name} (${giftDuration}).`,
+            description: `You have gifted the ${giftableBadges.find(b => b.value === selectedBadge)?.label || 'new'} badge to ${selectedUser.name} (${giftDuration}).`,
             duration: 6000,
         });
 
         onOpenChange(false);
+        setRecipientUid('');
+        setSelectedUser(null);
+        setSelectedBadge(null);
 
     } catch (error: any) {
+      console.error("Error gifting badge:", error);
       toast({
         title: "Error Gifting Badge",
         description: error.message || "An unexpected error occurred.",
@@ -148,7 +141,7 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
     }
   };
 
-  const isSubmitDisabled = isGifting || isFindingUser || !foundUser || !selectedBadge;
+  const isSubmitDisabled = isGifting || isFindingUser || !selectedUser || !selectedBadge;
 
   const renderBadgeSelectItem = (badge: { value: BadgeType, label: string }) => {
     const BadgeIcon = badgeComponentMap[badge.value];
@@ -175,38 +168,41 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
 
         <div className="space-y-4 py-4">
             <div className="space-y-2">
-                <Label>Recipient's User ID</Label>
+                <Label htmlFor="recipient-uid-gift">Select User</Label>
                 <div className="flex gap-2">
-                     <Input 
-                        value={recipientId}
-                        onChange={(e) => {
-                            setRecipientId(e.target.value);
-                            if (foundUser) setFoundUser(null);
-                        }}
-                        placeholder="e.g., test.user.01"
-                        disabled={isFindingUser || isGifting}
+                    <Input 
+                        id="recipient-uid-gift"
+                        type="text"
+                        placeholder="Enter user ID..."
+                        value={recipientUid}
+                        onChange={e => setRecipientUid(e.target.value)}
+                        disabled={isFindingUser}
                     />
-                    <Button onClick={handleFindUser} disabled={isFindingUser || isGifting || !recipientId.trim()}>
-                        {isFindingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserSearch className="h-4 w-4" />}
+                    <Button onClick={handleFindUser} disabled={isFindingUser || !recipientUid.trim()} size="icon">
+                        {isFindingUser ? <Loader2 className="h-4 w-4 animate-spin"/> : <Search className="h-4 w-4" />}
                     </Button>
                 </div>
             </div>
-            {foundUser && (
-                <div className="p-3 rounded-md border bg-accent/50 flex items-center gap-3">
-                    <Avatar>
-                        <AvatarImage src={foundUser.avatarUrl} alt={foundUser.name} />
-                        <AvatarFallback>{foundUser.name.substring(0,2)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col">
-                        <span className="font-semibold text-sm">{foundUser.name}</span>
-                        <span className="text-xs text-muted-foreground">Recipient Verified</span>
+            
+            {selectedUser && (
+                <div className="p-3 bg-secondary rounded-lg border flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                            <AvatarImage src={selectedUser.avatarUrl} alt={selectedUser.name} />
+                            <AvatarFallback>{selectedUser.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-semibold">{selectedUser.name}</p>
+                            <p className="text-xs text-muted-foreground">{selectedUser.displayUid}</p>
+                        </div>
                     </div>
+                    <UserCheck className="h-5 w-5 text-green-500" />
                 </div>
             )}
 
             <div className="space-y-2">
                 <Label>Select Badge</Label>
-                <Select onValueChange={(value) => setSelectedBadge(value as BadgeType)} value={selectedBadge || ''} disabled={isGifting || !foundUser}>
+                <Select onValueChange={(value) => setSelectedBadge(value as BadgeType)} value={selectedBadge || ''} disabled={isGifting}>
                     <SelectTrigger>
                         <SelectValue placeholder="Choose a badge to gift..." />
                     </SelectTrigger>
@@ -226,14 +222,14 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
                 <Label>Gift Duration</Label>
                  <RadioGroup defaultValue="lifetime" value={giftDuration} onValueChange={(value) => setGiftDuration(value as 'trial' | 'lifetime')} className="flex gap-4 pt-1" disabled={isGifting}>
                     <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="lifetime" id="lifetime" />
-                        <Label htmlFor="lifetime" className="flex items-center gap-1.5 cursor-pointer">
+                        <RadioGroupItem value="lifetime" id="lifetime-gift" />
+                        <Label htmlFor="lifetime-gift" className="flex items-center gap-1.5 cursor-pointer">
                             <Gift className="h-4 w-4"/> Lifetime
                         </Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="trial" id="trial" />
-                        <Label htmlFor="trial" className="flex items-center gap-1.5 cursor-pointer">
+                        <RadioGroupItem value="trial" id="trial-gift" />
+                        <Label htmlFor="trial-gift" className="flex items-center gap-1.5 cursor-pointer">
                             <Clock className="h-4 w-4" /> Trial (7 Days)
                         </Label>
                     </div>

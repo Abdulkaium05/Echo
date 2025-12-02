@@ -1,4 +1,3 @@
-
 // src/components/chat/scan-qr-dialog.tsx
 'use client';
 
@@ -15,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Loader2, ShieldAlert, CheckCircle, QrCode, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { findUserByUid, findChatBetweenUsers, createChat, redeemBadgeGiftCode } from '@/services/firestore';
+import { getUserProfile, findChatBetweenUsers, createChat, redeemBadgeGiftCode } from '@/services/firestore';
 import { useAuth } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -86,7 +85,7 @@ export function ScanQrDialog({ isOpen, onOpenChange }: ScanQrDialogProps) {
             return;
         }
 
-        const profile = await findUserByUid(profileUid);
+        const profile = await getUserProfile(profileUid);
         if (!profile) throw new Error("User profile from QR code not found.");
 
         toast({ title: "User Found!", description: `Found ${profile.name}. Creating chat...`, action: <CheckCircle className="h-5 w-5 text-green-500" /> });
@@ -96,7 +95,7 @@ export function ScanQrDialog({ isOpen, onOpenChange }: ScanQrDialogProps) {
             chatId = await createChat(currentUser!.uid, profile.uid);
         }
         onOpenChange(false);
-        router.push(`/chat/${chatId}`);
+        router.push(`/chat/${profile.uid}`);
     };
 
     const processBadgeGiftCode = async (code: string) => {
@@ -192,6 +191,7 @@ export function ScanQrDialog({ isOpen, onOpenChange }: ScanQrDialogProps) {
             stopCamera();
         }
         return () => stopCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]);
 
     return (
@@ -252,7 +252,5 @@ export function ScanQrDialog({ isOpen, onOpenChange }: ScanQrDialogProps) {
         </Dialog>
     );
 }
-
-    
 
     
