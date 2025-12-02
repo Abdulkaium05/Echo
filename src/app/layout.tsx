@@ -1,4 +1,3 @@
-
 import type {Metadata, Viewport} from 'next';
 import {GeistSans} from 'geist/font/sans';
 import {GeistMono} from 'geist/font/mono';
@@ -7,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
-  title: 'echo', // Updated app title
+  title: 'Echo',
   description: 'Exclusive Messaging App',
   appleWebApp: {
     capable: true,

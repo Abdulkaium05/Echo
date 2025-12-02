@@ -227,6 +227,26 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  .gradient-background {
+    @apply bg-gradient-to-br from-primary/10 via-background to-background;
+  }
+  .dark .gradient-background {
+      background-image: linear-gradient(to bottom right, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.05) 20%, hsl(var(--background)) 50%);
+  }
+
+  /* Style for inner content of gradient cards */
+  .gradient-background > [data-slot="card-content"],
+  .gradient-background > [data-slot="card-header"],
+  .gradient-background > [data-slot="card-footer"] {
+    @apply bg-background/60;
+  }
+  
+  .dark .gradient-background > [data-slot="card-content"],
+  .dark .gradient-background > [data-slot="card-header"],
+  .dark .gradient-background > [data-slot="card-footer"] {
+     @apply bg-background/30;
+  }
+  
 }
 
 @layer components {

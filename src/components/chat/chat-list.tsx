@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { AddContactDialog } from './add-contact-dialog';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getUserChats, mapChatToChatItem, type Chat, getVerifiedContactLimit, DEV_UID, getUserProfile, type UserProfile, BOT_UID } from '@/services/firestore';
+import { getUserChats, mapChatToChatItem, type Chat, getVerifiedContactLimit, findUserByUid, type UserProfile, BOT_UID } from '@/services/firestore';
 import { useAuth } from '@/context/auth-context';
 import { SelectVerifiedDialog } from './select-verified-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -63,7 +63,6 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
   const [currentTheme, setCurrentTheme] = useState('theme-sky-blue');
 
   useEffect(() => {
-    // This effect ensures the component re-renders when the theme is toggled globally.
     if (typeof window === 'undefined') return;
 
     const checkGlobalTheme = () => {
@@ -71,70 +70,51 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
         setCurrentTheme(savedTheme);
     };
     checkGlobalTheme();
-
-    // Also listen for storage changes from other tabs
     const handleStorageChange = (event: StorageEvent) => {
         if (event.key === 'theme_color') {
             checkGlobalTheme();
         }
     };
     window.addEventListener('storage', handleStorageChange);
-
-
     return () => {
         window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
-  const hasVIPAccess = userProfile?.isVIP || userProfile?.isVerified || userProfile?.isCreator || userProfile?.isDevTeam;
+  const hasVIPAccess = userProfile?.isVIP || userProfile?.isVerified || userProfile?.isCreator;
   
   const vipLimit = (userProfile?.isVerified || userProfile?.isCreator) 
     ? Number.MAX_SAFE_INTEGER 
     : getVerifiedContactLimit(userProfile?.vipPack);
   
   useEffect(() => {
-    if (!currentUserId || isUserProfileLoading || !userProfile) {
-        setLoading(true); // Keep showing loading until profile and user ID are ready
+    if (!currentUserId) {
+        setLoading(false);
         return;
     }
 
     setLoading(true);
     setError(null);
     
-    console.log("ChatList: Subscribing to chats for user:", currentUserId);
-    
-    // The subscription function that will handle updates
-    const handleChatUpdates = async (fetchedChats: Chat[]) => {
-        console.log(`ChatList: Received ${fetchedChats.length} chats for user ${currentUserId}`);
-        const chatItemsPromises = fetchedChats.map(chat => mapChatToChatItem(
-            chat, 
-            currentUserId,
-        ));
-        const chatItems = await Promise.all(chatItemsPromises);
-        setChats(chatItems);
-        setLoading(false);
-    };
-
-    // The error handler for the subscription
-    const handleSubscriptionError = (err: Error) => {
-        console.error("ChatList: Error fetching chats:", err);
-        setError(err.message || "Failed to load chats.");
-        setLoading(false);
-    };
-
-    // Establish the subscription
     const unsubscribe = getUserChats(
         currentUserId,
-        handleChatUpdates,
-        handleSubscriptionError
+        (fetchedChats: Chat[]) => {
+            const chatItems = fetchedChats.map(chat => mapChatToChatItem(
+                chat, 
+                currentUserId,
+            ));
+            setChats(chatItems);
+            setLoading(false);
+        },
+        (err: Error) => {
+            console.error("ChatList: Error fetching chats:", err);
+            setError(err.message || "Failed to load chats.");
+            setLoading(false);
+        }
     );
 
-    // Cleanup function to unsubscribe when the component unmounts or dependencies change
-    return () => {
-        console.log("ChatList: Unsubscribing from chats for user:", currentUserId);
-        unsubscribe();
-    };
-  }, [currentUserId, userProfile, isUserProfileLoading]);
+    return () => unsubscribe();
+  }, [currentUserId]);
 
 
   const handleBlockUser = (userId: string, userName: string) => {
@@ -150,7 +130,7 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
   };
   
   const handleViewProfile = async (userId: string) => {
-    const profile = await getUserProfile(userId);
+    const profile = await findUserByUid(userId);
     if (profile) {
       setProfileDialogState({ isOpen: true, profile });
     } else {
@@ -197,13 +177,7 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     chat.name.toLowerCase().includes(searchTerm.toLowerCase()) && !isChatTrashed(chat.id)
   );
 
-  // Sort chats by timestamp, but keep Dev Team chat at the bottom
   const sortedChats = allMatchingChats.sort((a, b) => b.lastMessageTimestampValue - a.lastMessageTimestampValue);
-  const devTeamChatIndex = sortedChats.findIndex(chat => chat.contactUserId === DEV_UID);
-  if (devTeamChatIndex > -1) {
-    const [devTeamChat] = sortedChats.splice(devTeamChatIndex, 1);
-    sortedChats.push(devTeamChat);
-  }
   
     if (loading) {
         return (
@@ -249,7 +223,7 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
                 <ChatItem 
                     key={itemProps.id} 
                     {...itemProps} 
-                    isActive={itemProps.contactUserId === currentChatId}
+                    isActive={itemProps.id === currentChatId}
                     isBlocked={isUserBlocked(itemProps.contactUserId)}
                     onBlockUser={handleBlockUser}
                     onUnblockUser={handleUnblockUser}
@@ -283,12 +257,12 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
                     className="shrink-0"
                     onClick={() => setIsAddContactOpen(true)}
                     disabled={!currentUserId}
-                    aria-label="Add Contact by Email"
+                    aria-label="Add Contact"
                   >
                     <UserPlus className="h-5 w-5" />
                   </Button>
               </TooltipTrigger>
-              <TooltipContent><p>Add Contact by Email</p></TooltipContent>
+              <TooltipContent><p>Add Contact</p></TooltipContent>
             </Tooltip>
            {hasVIPAccess && (
              <Tooltip>

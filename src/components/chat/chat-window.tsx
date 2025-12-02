@@ -1,4 +1,3 @@
-
 // src/components/chat/chat-window.tsx
 'use client';
 
@@ -30,10 +29,9 @@ import {
     toggleReaction as toggleReactionOnService,
     type Message,
     formatTimestamp,
-    getUserProfile as fetchChatPartnerProfile,
+    findUserByUid as fetchChatPartnerProfile,
     type UserProfile,
     BOT_UID,
-    DEV_UID,
     formatLastSeen,
     markMessagesAsSeen,
 } from '@/services/firestore';
@@ -61,15 +59,6 @@ interface ChatWindowProps {
   isVIP?: boolean;
   isCreator?: boolean; // Added isCreator for badge display
 }
-
-
-const DevTeamAvatarIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="16 18 22 12 16 6"></polyline>
-    <polyline points="8 6 2 12 8 18"></polyline>
-  </svg>
-);
-
 
 export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, chatAvatarUrl, chatIconIdentifier, isVerified, isVIP, isCreator }: ChatWindowProps) {
   const { user: currentUser, userProfile, updateMockUserProfile } = useAuth();
@@ -113,7 +102,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
 
   useEffect(() => {
-    // This effect ensures the component re-renders when transparent mode or theme is toggled globally.
     if (typeof window === 'undefined') return;
 
     const checkGlobalClasses = () => {
@@ -135,7 +123,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
     observer.observe(document.documentElement, { attributes: true });
 
-    // Also listen for storage changes from other tabs
     const handleStorageChange = (event: StorageEvent) => {
         if (event.key === 'theme_color' || event.key === 'transparent_mode') {
             checkGlobalClasses();
@@ -200,13 +187,10 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
      setLoadingMessages(true);
      setErrorMessages(null);
-     console.log(`ChatWindow: Subscribing to messages for chat ${chatId}`);
      
      const unsubscribe = getChatMessages(
        chatId,
        (fetchedMessages) => {
-         setLoadingMessages(false); // Stop loading as soon as we get a response (even an empty one)
-         console.log(`ChatWindow: Received messages for chat ${chatId}`, fetchedMessages.length);
          const processedMessages = fetchedMessages.map((msg) => ({
            ...msg,
            isSentByCurrentUser: msg.senderId === currentUser.uid,
@@ -215,7 +199,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
          const newMessagesCount = fetchedMessages.length;
          const previousMessagesCount = previousMessagesCountRef.current;
 
-         // Play sound for new messages from other users
          if (newMessagesCount > previousMessagesCount) {
             const lastNewMessage = fetchedMessages[fetchedMessages.length - 1];
             if (lastNewMessage.senderId !== currentUser.uid) {
@@ -225,11 +208,12 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
          
          setMessages(processedMessages);
          
-         if(loadingMessages) { // Only on initial load
+         if(loadingMessages) {
             scrollToBottom('auto');
          }
 
-         // Mark messages as seen
+         setLoadingMessages(false);
+
          if (currentUser?.uid) {
             markMessagesAsSeen(chatId, currentUser.uid);
          }
@@ -260,7 +244,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
         scrollToBottom('smooth');
     }
     
-    // Update the ref *after* the check
     previousMessagesCountRef.current = messages.length;
 
    }, [messages, scrollToBottom]);
@@ -277,7 +260,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
      if (isSending || (!newMessageText.trim() && !attachmentData)) return;
 
     setIsSending(true);
-    console.log(`ChatWindow: Sending message to chat ${chatId}. Attachment: ${attachmentData?.name}, Reply: ${!!replyingToMessage}`);
     
     const textToSend = newMessageText.trim();
 
@@ -302,8 +284,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
       setReplyingToMessage(null); 
       messageInputRef.current?.clearAttachmentPreview(); 
 
-      // Bot interaction logic
-      if (isChattingWithBot) {
+      if (chatPartnerId === BOT_UID) {
         setIsBotTyping(true);
 
         const historyForFlow = messages
@@ -329,9 +310,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
           savedSongs: savedSongs as SavedSong[],
         };
 
-        console.log("[ChatWindow] Calling Genkit flow with input:", aiInput);
         const aiResponse: BlueBirdAssistantOutput = await blueBirdAssistant(aiInput);
-        console.log("[ChatWindow] Received Genkit response:", aiResponse);
 
         if (aiResponse.songToPlay?.url) {
           setMusicUrl(aiResponse.songToPlay.url);
@@ -344,7 +323,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
     } catch (error: any) {
       console.error("ChatWindow: Error sending message or getting AI response:", error);
       toast({ title: "Send Failed", description: error.message || "Could not send message.", variant: "destructive" });
-      if (isChattingWithBot) setIsBotTyping(false);
+      if (chatPartnerId === BOT_UID) setIsBotTyping(false);
     } finally {
         setIsSending(false);
     }
@@ -352,7 +331,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!chatId) return;
-    console.log(`ChatWindow: Deleting message ${messageId} from chat ${chatId}`);
     try {
         await deleteMessageFromService(chatId, messageId);
         toast({ title: "Message Deleted", description: "The message has been successfully deleted." });
@@ -376,7 +354,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
         toast({ title: "Error", description: "Cannot react. User or chat not identified.", variant: "destructive" });
         return;
     }
-    console.log(`ChatWindow: User ${currentUser.uid} toggled reaction ${emoji} for message ${messageId}`);
     try {
         await toggleReactionOnService(chatId, messageId, emoji, currentUser.uid);
     } catch (error: any) {
@@ -389,7 +366,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
   const fallbackInitials = chatName.substring(0, 2).toUpperCase();
 
   const handleHeaderAvatarClick = async () => {
-    if (chatPartnerId === BOT_UID || chatAvatarUrl === 'outline-bird-avatar' || chatPartnerId === DEV_UID || chatIconIdentifier === 'dev-team-svg') {
+    if (chatPartnerId === BOT_UID || chatAvatarUrl === 'outline-bird-avatar') {
         return;
     }
     if(partnerProfileDetails){
@@ -401,7 +378,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
   };
 
   const handleBlockUser = () => {
-    if (chatPartnerId === BOT_UID || chatPartnerId === DEV_UID) {
+    if (chatPartnerId === BOT_UID) {
       toast({ title: "Action Not Allowed", description: "This contact cannot be blocked." });
       return;
     }
@@ -444,9 +421,8 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
  const renderChatHeaderAvatar = () => {
     const isBot = chatPartnerId === BOT_UID;
     const isGreenTheme = currentTheme === 'theme-light-green';
-    const isDev = chatIconIdentifier === 'dev-team-svg';
     const avatarBaseClasses = "h-8 w-8 md:h-9 md:w-9 mr-2 md:mr-3 shrink-0";
-    const dataAiHint = isBot ? "green leaf" : (isDev ? "team avatar" : (isCreator ? "creator avatar" : "user avatar"));
+    const dataAiHint = isBot ? "green leaf" : (isCreator ? "creator avatar" : "user avatar");
 
 
     if (isBot) {
@@ -466,12 +442,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
             </AvatarFallback>
           </Avatar>
         );
-    } else if (isDev) {
-       return (
-         <div className={cn(avatarBaseClasses, "flex items-center justify-center rounded-full bg-muted text-muted-foreground")}>
-           <DevTeamAvatarIcon />
-         </div>
-       );
     } else if (chatAvatarUrl) {
        return (
          <Avatar className={cn(avatarBaseClasses, "cursor-pointer")} onClick={handleHeaderAvatarClick}>
@@ -497,10 +467,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 const handleAudioCall = () => {
     if (chatPartnerId === BOT_UID) {
         toast({ title: "Dude Are you dumb.", description: "Why you are trying to call a chatbot"});
-        return;
-    }
-    if (chatPartnerId === DEV_UID) {
-        toast({ title: "Call Not Supported", description: `Audio calls are not available for this contact.`});
         return;
     }
     setIsAudioCallDialogOpen(true);
@@ -533,8 +499,6 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
              <p className="text-sm font-medium text-foreground truncate whitespace-nowrap">{chatName}</p>
             {chatPartnerId === BOT_UID ? (
                 currentTheme === 'theme-light-green' ? <Leaf className="h-4 w-4 text-green-500" /> : <SquareBotBadgeIcon />
-            ) : chatIconIdentifier === 'dev-team-svg' ? (
-                <Wrench className="h-4 w-4 text-blue-600 shrink-0" />
             ) : (
                 <>
                   {isCreator && <CreatorLetterCBBadgeIcon className="h-4 w-4" />}
@@ -543,7 +507,7 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
                 </>
             )}
           </div>
-          {chatPartnerId !== BOT_UID && chatPartnerId !== DEV_UID && (
+          {chatPartnerId !== BOT_UID && (
             <p className={cn(
                 "text-xs text-muted-foreground truncate",
                 partnerOnlineStatus === "Online" && "text-green-600 font-medium"
@@ -660,7 +624,7 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
         </ScrollArea>
       </div>
 
-      {isChattingWithBot && isBotTyping && (
+      {chatPartnerId === BOT_UID && isBotTyping && (
         <div className="px-3 md:px-4 pb-1 pt-1 text-left flex items-center gap-2 shrink-0">
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           <p className="text-xs text-muted-foreground italic">{chatName} is typing...</p>

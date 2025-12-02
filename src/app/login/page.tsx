@@ -1,4 +1,3 @@
-
 // src/app/login/page.tsx
 'use client';
 
@@ -13,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import { cn } from '@/lib/utils';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,7 +24,6 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user && !authLoadingState) {
-      console.log("LoginPage: User detected, redirecting to /chat.");
       router.push('/chat');
     }
   }, [user, authLoadingState, router]);
@@ -35,40 +34,21 @@ export default function LoginPage() {
     setIsLoading(true);
 
     if (!email || !password) {
-       toast({
-         title: "Missing Information",
-         description: "Please enter both email and password.",
-         variant: "destructive",
-       });
+       toast({ title: "Missing Information", description: "Please enter both email and password.", variant: "destructive" });
        setIsLoading(false);
        return;
     }
 
     try {
-      console.log("LoginPage: Attempting login for email:", email);
       const { success, message: loginMessage } = await login(email, password);
-
       if (success) {
-        toast({
-          title: "Login Successful",
-          description: "Welcome back!",
-        });
-        console.log("LoginPage: Redirecting to /chat after successful login action...");
+        toast({ title: "Login Successful", description: "Welcome back!" });
         router.push('/chat');
       } else {
-        toast({
-          title: "Login Failed",
-          description: loginMessage,
-          variant: "destructive",
-        });
+        toast({ title: "Login Failed", description: loginMessage, variant: "destructive" });
       }
     } catch (error: any) {
-      console.error('LoginPage: Login failed. Raw error:', error);
-      toast({
-        title: "Login Failed",
-        description: error.message || "An unexpected error occurred.",
-        variant: "destructive",
-      });
+      toast({ title: "Login Failed", description: error.message || "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsLoading(false);
     }
@@ -76,32 +56,25 @@ export default function LoginPage() {
 
    const handlePasswordReset = async () => {
       if (!email) {
-          toast({
-              title: "Email Required",
-              description: "Please enter your email address to reset password.",
-              variant: "destructive",
-          });
+          toast({ title: "Email Required", description: "Please enter your email address to reset password.", variant: "destructive" });
           return;
       }
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      toast({
-          title: "Password Reset Email Sent",
-          description: `If an account for ${email} exists, a reset link has been sent.`,
-      });
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast({ title: "Password Reset Email Sent", description: `If an account for ${email} exists, a reset link has been sent.` });
       setIsLoading(false);
   };
 
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-secondary p-4">
-      <Card className="w-full max-w-md shadow-lg">
+      <Card className={cn("w-full max-w-md shadow-lg", "gradient-background")}>
         <CardHeader className="text-center space-y-4">
            <div className="flex justify-center">
              <Logo className="h-10 text-primary" />
            </div>
           <CardTitle className="text-2xl font-bold">Welcome Back!</CardTitle>
-          <CardDescription>Log in to your Echo Message account.</CardDescription>
+          <CardDescription>Log in to your Echo account.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">

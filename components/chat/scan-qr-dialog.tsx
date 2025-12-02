@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Loader2, ShieldAlert, CheckCircle, QrCode, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getUserProfile, findChatBetweenUsers, createChat, redeemBadgeGiftCode } from '@/services/firestore';
+import { findUserByUid, findChatBetweenUsers, createChat, redeemBadgeGiftCode } from '@/services/firestore';
 import { useAuth } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -86,7 +86,7 @@ export function ScanQrDialog({ isOpen, onOpenChange }: ScanQrDialogProps) {
             return;
         }
 
-        const profile = await getUserProfile(profileUid);
+        const profile = await findUserByUid(profileUid);
         if (!profile) throw new Error("User profile from QR code not found.");
 
         toast({ title: "User Found!", description: `Found ${profile.name}. Creating chat...`, action: <CheckCircle className="h-5 w-5 text-green-500" /> });
@@ -252,5 +252,7 @@ export function ScanQrDialog({ isOpen, onOpenChange }: ScanQrDialogProps) {
         </Dialog>
     );
 }
+
+    
 
     

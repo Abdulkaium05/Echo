@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SubscriptionCard } from '@/components/subscribe/subscription-card';
 import { useToast } from '@/hooks/use-toast';
-import { Crown, Check, PartyPopper, Ban, Loader2, Clock, Ticket, Coins } from 'lucide-react';
+import { Crown, Check, PartyPopper, Ban, Loader2, Clock, Ticket, Coins, Info } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +31,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const subscriptionPlans = [
     { planName: 'Micro VIP', price: 1, points: 100, durationDays: 1, features: ['VIP Badge', 'Select 3 Verified Users', 'Exclusive Chat Access'] },
@@ -71,7 +72,7 @@ export default function SubscribePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [remainingTime, setRemainingTime] = useState<string | null>(null);
   const [redeemCodeInput, setRedeemCodeInput] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'money' | 'points'>('money');
+  const [paymentMethod, setPaymentMethod] = useState<'money' | 'points'>('points');
 
 
   const formatRemainingTime = (ms: number): string => {
@@ -140,6 +141,17 @@ export default function SubscribePage() {
        router.push('/login');
        return;
     }
+
+    if (paymentMethod === 'money') {
+        toast({
+            title: "Payment Method Unavailable",
+            description: "Purchasing with real money is currently disabled. Please use points to subscribe.",
+            variant: "destructive",
+            duration: 6000,
+        });
+        return;
+    }
+
     setIsProcessing(true);
     setSubscribedPlan({ name: plan.planName, features: plan.features });
     
@@ -188,7 +200,7 @@ export default function SubscribePage() {
       
       toast({
           title: `VIP Activated: ${plan.planName}`,
-          description: `Congratulations! Your VIP benefits are now active. Paid with ${paymentMethod}.`,
+          description: `Congratulations! Your VIP benefits are now active.`,
       });
 
     } catch (error) {
@@ -259,7 +271,7 @@ export default function SubscribePage() {
     const code = redeemCodeInput.trim().toUpperCase();
 
     try {
-        if (code.startsWith('VIP-')) {
+        if (code.startsWith('VIP-') || code.startsWith('SAVE-')) {
             const result = await redeemVipPromoCode(user.uid, code);
             const planName = `VIP (${result.durationDays} days)`;
             
@@ -311,36 +323,35 @@ export default function SubscribePage() {
 
   const renderManageSubscription = () => (
     <div className="flex flex-col items-center">
-      <Card className="w-full max-w-md mb-8">
+      <Card className={cn("w-full max-w-md mb-8 shadow-lg", "gradient-background")}>
         <CardHeader className="text-center">
-          <Crown className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-primary" />
+          <Crown className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-foreground" />
           <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             Manage Your VIP Membership
           </CardTitle>
-          <CardDescription className="mt-3 md:mt-4 text-base md:text-lg text-muted-foreground">
+          <CardDescription className="mt-3 md:mt-4 text-base md:text-lg text-foreground/80">
              You have the {userProfile?.vipPack || 'VIP'} badge!
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center">
           {isDevTeamUser ? (
-            <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/50 rounded-md">
-              <span className="text-sm font-semibold text-green-800 dark:text-green-300">
+            <div className="mb-4 p-3 bg-background/20 rounded-md">
+              <span className="text-sm font-semibold text-foreground">
                 You have lifetime VIP access as a Dev Team member.
               </span>
             </div>
           ) : remainingTime ? (
-            <div className="mb-4 p-3 bg-accent/50 rounded-md">
+            <div className="mb-4 p-3 bg-background/20 rounded-md">
               <span className="text-sm font-medium text-foreground flex items-center justify-center gap-2">
                 <Clock className="h-4 w-4"/> Time Remaining:
               </span>
-              <span className="text-lg font-semibold text-primary">{remainingTime}</span>
+              <span className="text-lg font-semibold text-foreground">{remainingTime}</span>
             </div>
           ) : (
-            <div className="mb-4 p-3 bg-accent/50 rounded-md">
-                 <span className="text-lg font-semibold text-primary">You have Lifetime VIP!</span>
+            <div className="mb-4 p-3 bg-background/20 rounded-md">
+                 <span className="text-lg font-semibold text-foreground">You have Lifetime VIP!</span>
             </div>
           )}
-          <span className="mb-4 text-muted-foreground">Want to change something? Contact support or cancel below.</span>
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row justify-center gap-4">
           <Button variant="outline" disabled={isProcessing} onClick={() => toast({title: "Support Contacted", description:"Our team will get back to you shortly."})}>Contact Support</Button>
@@ -371,12 +382,36 @@ export default function SubscribePage() {
       </div>
 
         <div className="flex justify-center items-center gap-4 my-8">
-            <Button variant={paymentMethod === 'money' ? 'default' : 'outline'} onClick={() => setPaymentMethod('money')}>Pay with Money</Button>
-            <Button variant={paymentMethod === 'points' ? 'default' : 'outline'} onClick={() => setPaymentMethod('points')}>
-                Pay with Points ({userProfile?.points || 0})
+            <Button variant={paymentMethod === 'money' ? 'secondary' : 'outline'} onClick={() => setPaymentMethod('money')}>Pay with Money</Button>
+            <Button variant={paymentMethod === 'points' ? 'secondary' : 'outline'} onClick={() => setPaymentMethod('points')}>
+                Pay with Echoes
                 <Coins className="ml-2 h-4 w-4" />
             </Button>
         </div>
+
+        {paymentMethod === 'money' && (
+            <Alert variant="default" className="mb-8 max-w-2xl mx-auto">
+                <Info className="h-4 w-4" />
+                <AlertTitle>Payment Method Unavailable</AlertTitle>
+                <AlertDescription>
+                    Purchasing with real money is currently disabled for this demo. Please select "Pay with Echoes" to subscribe using your in-app points.
+                </AlertDescription>
+            </Alert>
+        )}
+
+        {paymentMethod === 'points' && (
+             <Card className={cn("w-full max-w-md mx-auto mb-8 text-center shadow-lg", "gradient-background")}>
+                <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center justify-center gap-2">
+                        <Coins className="h-5 w-5" /> Your Balance
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-4xl font-bold text-foreground">{userProfile?.points || 0} Echoes</p>
+                </CardContent>
+            </Card>
+        )}
+
 
        {isEligibleForLifetime && (
         <div className="mb-12 flex justify-center">
@@ -384,6 +419,7 @@ export default function SubscribePage() {
                 {...lifetimePlan}
                 paymentMethod={paymentMethod}
                 onSubscribe={() => handleSubscribe(lifetimePlan)}
+                disabled={isProcessing || paymentMethod === 'money'}
             />
         </div>
        )}
@@ -401,6 +437,7 @@ export default function SubscribePage() {
             {...plan}
             paymentMethod={paymentMethod}
             onSubscribe={() => handleSubscribe(plan)}
+            disabled={isProcessing || paymentMethod === 'money'}
           />
         ))}
       </div>

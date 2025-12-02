@@ -4,44 +4,33 @@ import type { BadgeType } from '@/app/(app)/layout';
 
 export interface UserProfile {
   uid: string;
-  displayUid?: string; // The new 8-digit user ID
+  displayUid?: string;
   name: string;
   email: string | null;
   avatarUrl?: string; 
-  points?: number; // User's points balance
+  points?: number;
   isVIP?: boolean;
   vipPack?: string;
-  vipExpiryTimestamp?: number; // Unix timestamp in milliseconds for VIP expiry
+  vipExpiryTimestamp?: number;
   createdAt?: Timestamp;
   isBot?: boolean;
   isVerified?: boolean;
-  isDevTeam?: boolean;
   isCreator?: boolean; 
-  isMemeCreator?: boolean; // New badge property
-  isBetaTester?: boolean;  // New badge property
+  isMemeCreator?: boolean;
+  isBetaTester?: boolean;
   lastSeen?: Timestamp; 
   selectedVerifiedContacts?: string[]; 
-  allowedNormalContacts?: string[]; // List of normal user UIDs this verified user allows to message them.
+  allowedNormalContacts?: string[];
   hasMadeVipSelection?: boolean;
-  blockedUsers?: string[]; // List of UIDs this user has blocked
-  
-  // Badge Management
+  blockedUsers?: string[];
   badgeOrder?: BadgeType[];
-  badgeExpiry?: { // New property to store expiry dates for gifted badges
-    [key in BadgeType]?: number; // Unix timestamp in ms
+  badgeExpiry?: {
+    [key in BadgeType]?: number;
   };
-
-  // Chat Customization
   chatColorPreferences?: { [chatId: string]: string | null };
-
-  // Onboarding
-  hasCompletedOnboarding?: boolean;
-
-  // Transient property for notifications
   giftedByUid?: string;
   hasNewGift?: boolean;
   lastGiftedBadge?: BadgeType;
-  
   pointsGifterUid?: string;
   hasNewPointsGift?: boolean;
   lastGiftedPointsAmount?: number;

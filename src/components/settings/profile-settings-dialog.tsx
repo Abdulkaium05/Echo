@@ -39,7 +39,7 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
   const { user: authContextUser } = useAuth();
   const [currentUserName, setCurrentUserName] = useState(user?.name || '');
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(user?.avatarUrl);
-  const [newAvatarFile, setNewAvatarFile] = useState<string | null>(null);
+  const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isBadgeDialogOpen, setIsBadgeDialogOpen] = useState(false);
@@ -71,7 +71,7 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
 
     try {
       if (newAvatarFile) {
-        finalAvatarUrl = await mockUploadAvatar(authContextUser.uid, newAvatarFile, 'image/png');
+        finalAvatarUrl = await mockUploadAvatar(authContextUser.uid, newAvatarFile, newAvatarFile.type);
         toast({ title: "Avatar Processed", description: "Your new avatar has been processed." });
       }
 
@@ -105,11 +105,12 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
         toast({ variant: 'destructive', title: 'Invalid File', description: 'Please select an image smaller than 2MB.' });
         return;
       }
+      setNewAvatarFile(file);
+      
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
         setAvatarPreview(result);
-        setNewAvatarFile(result);
         toast({ title: "Avatar Preview Updated", description: "Click 'Save changes' to apply." });
       };
       reader.onerror = () => toast({ variant: 'destructive', title: 'Error Reading File' });

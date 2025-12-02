@@ -1,712 +1,463 @@
-
 // src/services/firestore.ts
 import { 
-    doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp,
-    orderBy, limit, arrayUnion, arrayRemove, writeBatch, deleteDoc,
-    type DocumentData, type Timestamp, type Firestore, type Unsubscribe
+    getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, 
+    deleteDoc, query, where, onSnapshot, serverTimestamp, writeBatch, orderBy, limit, startAfter, Timestamp 
 } from 'firebase/firestore';
-import { firestore } from '@/lib/firebase/config';
-import { produce } from 'immer';
-import type { UserProfile } from '@/types/user';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
+import { initializeFirebase, useFirestore as useFirestoreHook } from '@/firebase';
 import type { ChatItemProps } from '@/components/chat/chat-item';
-import { addNotification } from './notificationService';
+import type { UserProfile } from '@/types/user';
 import type { BadgeType } from '@/app/(app)/layout';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-// =================================================================
-// MOCK DATA (used when Firebase is not configured)
-// =================================================================
 
-export const DEV_UID = 'dev_team_uid';
-export const BOT_UID = 'blue_bird_ai_uid';
+export const BOT_UID = 'blue-bird-bot';
+export type { UserProfile };
 
-const MOCK_CURRENT_USER_ID = 'user1'; // Let's assume user1 is our logged-in user
+const db = initializeFirebase().firestore;
 
-const createMockTimestamp = (date: string): Timestamp => {
-    const d = new Date(date);
-    return {
-        seconds: Math.floor(d.getTime() / 1000),
-        nanoseconds: 0,
-        toDate: () => d,
-    } as Timestamp;
+// --- User Management ---
+
+export const findUserByUid = async (userId: string): Promise<UserProfile | null> => {
+  if (!userId) return null;
+  const userDocRef = doc(db, 'users', userId);
+  const userDoc = await getDoc(userDocRef);
+  return userDoc.exists() ? userDoc.data() as UserProfile : null;
 };
 
-let mockUserProfiles: UserProfile[] = [
-    { uid: MOCK_CURRENT_USER_ID, name: 'You', email: 'you@test.com', avatarUrl: 'https://picsum.photos/seed/user1/200', points: 1250, isVIP: true, vipPack: 'Gold', vipExpiryTimestamp: Date.now() + 86400000 * 30, createdAt: createMockTimestamp('2024-07-01T10:00:00Z'), isVerified: true, isCreator: false, hasCompletedOnboarding: true, lastSeen: serverTimestamp() as Timestamp, displayUid: '12345678', blockedUsers: [], selectedVerifiedContacts: ['user3'], hasMadeVipSelection: true, badgeOrder: ['verified', 'vip'], chatColorPreferences: { 'chat2': 'red' } },
-    { uid: 'user2', name: 'Alice', email: 'alice@test.com', avatarUrl: 'https://picsum.photos/seed/user2/200', points: 500, createdAt: createMockTimestamp('2024-07-02T11:00:00Z'), isVerified: false, hasCompletedOnboarding: true, lastSeen: createMockTimestamp('2024-07-30T10:00:00Z'), displayUid: '87654321', blockedUsers: [], selectedVerifiedContacts: [], hasMadeVipSelection: false },
-    { uid: 'user3', name: 'Bob (Verified)', email: 'bob@test.com', avatarUrl: 'https://picsum.photos/seed/user3/200', points: 2000, isVerified: true, isCreator: false, createdAt: createMockTimestamp('2024-06-15T09:00:00Z'), hasCompletedOnboarding: true, lastSeen: serverTimestamp() as Timestamp, displayUid: '11223344', blockedUsers: [], selectedVerifiedContacts: [], hasMadeVipSelection: false },
-    { uid: 'user4', name: 'Charlie (Creator)', email: 'charlie@test.com', avatarUrl: 'https://picsum.photos/seed/user4/200', points: 10000, isCreator: true, isVerified: true, createdAt: createMockTimestamp('2024-05-20T14:00:00Z'), hasCompletedOnboarding: true, lastSeen: createMockTimestamp('2024-07-29T18:30:00Z'), displayUid: '55667788', blockedUsers: [], selectedVerifiedContacts: [], hasMadeVipSelection: false },
-    { uid: BOT_UID, name: 'Blue Bird (AI Assistant)', isBot: true, email: 'bot@echo.app', avatarUrl: 'outline-bird-avatar', lastSeen: serverTimestamp() as Timestamp },
-    { uid: DEV_UID, name: 'Dev Team', isDevTeam: true, email: 'dev@echo.app', avatarUrl: 'dev-team-svg-placeholder', lastSeen: serverTimestamp() as Timestamp },
-    { uid: 'user5', name: 'David', email: 'david@test.com', avatarUrl: 'https://picsum.photos/seed/user5/200', points: 100, createdAt: createMockTimestamp('2024-07-25T12:00:00Z'), isVerified: false, hasCompletedOnboarding: true, lastSeen: createMockTimestamp('2024-07-28T15:00:00Z'), displayUid: '99887766', blockedUsers: [], selectedVerifiedContacts: [], hasMadeVipSelection: false },
-];
-
-export interface Chat {
-    id: string;
-    participants: string[];
-    lastMessage: string;
-    lastMessageTimestamp: Timestamp;
-    lastMessageSenderId?: string;
-    seenBy?: string[];
-}
-
-export let mockChats: Chat[] = [
-    { id: 'chat1', participants: [MOCK_CURRENT_USER_ID, 'user2'], lastMessage: 'See you tomorrow!', lastMessageTimestamp: createMockTimestamp('2024-07-30T10:05:00Z'), lastMessageSenderId: MOCK_CURRENT_USER_ID, seenBy: [MOCK_CURRENT_USER_ID] },
-    { id: 'chat2', participants: [MOCK_CURRENT_USER_ID, 'user3'], lastMessage: 'Thanks for the info!', lastMessageTimestamp: createMockTimestamp('2024-07-30T09:40:00Z'), lastMessageSenderId: 'user3', seenBy: [] },
-    { id: 'chat3', participants: [MOCK_CURRENT_USER_ID, 'user4'], lastMessage: 'That project sounds exciting!', lastMessageTimestamp: createMockTimestamp('2024-07-29T18:35:00Z'), lastMessageSenderId: 'user4', seenBy: [MOCK_CURRENT_USER_ID] },
-    { id: 'chat_bot', participants: [MOCK_CURRENT_USER_ID, BOT_UID], lastMessage: 'How can I help you explore the app?', lastMessageTimestamp: createMockTimestamp('2024-07-30T11:00:00Z'), lastMessageSenderId: BOT_UID, seenBy: [MOCK_CURRENT_USER_ID] },
-    { id: 'chat_dev', participants: [MOCK_CURRENT_USER_ID, DEV_UID], lastMessage: 'Thank you for your feedback.', lastMessageTimestamp: createMockTimestamp('2024-07-28T16:00:00Z'), lastMessageSenderId: DEV_UID, seenBy: [MOCK_CURRENT_USER_ID] },
-];
-
-export interface Message {
-  id?: string;
-  senderId: string;
-  senderName: string;
-  text: string;
-  timestamp: Timestamp;
-  isSentByCurrentUser?: boolean;
-  seenBy?: string[];
-  reactions?: { [emoji: string]: { count: number; uids: string[] } };
-  attachmentUrl?: string;
-  attachmentName?: string;
-  attachmentType?: 'image' | 'video' | 'document' | 'audio' | 'other';
-  audioDuration?: number;
-  replyingTo?: {
-      id: string;
-      senderName: string;
-      textSnippet: string;
-      wasAttachment: boolean;
-      attachmentType?: string;
-      attachmentName?: string;
-      wasImage: boolean;
-  } | null;
-  isDeleted?: boolean;
-}
-
-let mockMessages: { [chatId: string]: Message[] } = {
-    'chat1': [
-        { id: 'msg1-1', senderId: 'user2', senderName: 'Alice', text: 'Hey, how are you?', timestamp: createMockTimestamp('2024-07-30T10:00:00Z'), seenBy: [MOCK_CURRENT_USER_ID]},
-        { id: 'msg1-2', senderId: MOCK_CURRENT_USER_ID, senderName: 'You', text: 'I\'m good, thanks! How about you?', timestamp: createMockTimestamp('2024-07-30T10:01:00Z'), seenBy: [] },
-        { id: 'msg1-3', senderId: 'user2', senderName: 'Alice', text: 'Doing well. Are we still on for lunch tomorrow?', timestamp: createMockTimestamp('2024-07-30T10:02:00Z'), seenBy: [] },
-        { id: 'msg1-4', senderId: MOCK_CURRENT_USER_ID, senderName: 'You', text: 'Absolutely! 12:30 at The Corner Cafe.', timestamp: createMockTimestamp('2024-07-30T10:03:00Z'), seenBy: [] },
-        { id: 'msg1-5', senderId: 'user2', senderName: 'Alice', text: 'Perfect!', timestamp: createMockTimestamp('2024-07-30T10:04:00Z'), seenBy: [] },
-        { id: 'msg1-6', senderId: MOCK_CURRENT_USER_ID, senderName: 'You', text: 'See you tomorrow!', timestamp: createMockTimestamp('2024-07-30T10:05:00Z'), reactions: {'👍': {count: 1, uids:['user2']}}, seenBy: [] },
-    ],
-    'chat_bot': [
-        { id: 'msg_bot_1', senderId: BOT_UID, senderName: 'Blue Bird', text: 'Welcome to Echo Message! I\'m your personal AI assistant. Feel free to ask me anything about the app\'s features, your account, or just chat. How can I help you today?', timestamp: createMockTimestamp('2024-07-30T11:00:00Z'), seenBy: [MOCK_CURRENT_USER_ID]},
-    ],
-    'chat_dev': [
-        { id: 'msg_dev_1', senderId: DEV_UID, senderName: 'Dev Team', text: 'Welcome to the developer feedback channel. Please report any bugs or suggest new features here. Your input is valuable to us.', timestamp: createMockTimestamp('2024-07-28T15:59:00Z'), seenBy: [MOCK_CURRENT_USER_ID]},
-         { id: 'msg_dev_2', senderId: DEV_UID, senderName: 'Dev Team', text: 'Thank you for your feedback.', timestamp: createMockTimestamp('2024-07-28T16:00:00Z'), seenBy: [MOCK_CURRENT_USER_ID]},
-    ]
-};
-
-// =================================================================
-// HELPER FUNCTIONS
-// =================================================================
-
-const isFirebaseEnabled = () => !!firestore;
-
-export const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
-    if (!timestamp) return '';
-    const date = timestamp.toDate();
-    const now = new Date();
-    const diffSeconds = (now.getTime() - date.getTime()) / 1000;
-
-    if (diffSeconds < 60) return 'Just now';
-    if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)}m ago`;
-    if (diffSeconds < 86400) return `${Math.floor(diffSeconds / 3600)}h ago`;
-    if (diffSeconds < 604800) return date.toLocaleDateString(undefined, { weekday: 'short' });
-
-    return date.toLocaleDateString();
-};
-
-
-export const formatLastSeen = (timestamp: Timestamp | undefined): string => {
-    if (!timestamp) return 'Offline';
-    const date = timestamp.toDate();
-    const now = new Date();
-    const diffMillis = now.getTime() - date.getTime();
-    const diffSeconds = diffMillis / 1000;
-    const diffMinutes = diffSeconds / 60;
-    
-    if (diffMinutes < 5) return 'Online';
-    if (diffMinutes < 60) return `Last seen ${Math.floor(diffMinutes)}m ago`;
-    if (diffMinutes < 1440) return `Last seen ${Math.floor(diffMinutes / 60)}h ago`;
-    if (diffMinutes < 2880) return 'Last seen yesterday';
-    
-    return `Last seen ${date.toLocaleDateString()}`;
-};
-
-
-// =================================================================
-// USER PROFILE FUNCTIONS
-// =================================================================
-
-export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
-  if (!isFirebaseEnabled()) {
-    console.log(`[Mock] getUserProfile for uid: ${uid}`);
-    return mockUserProfiles.find(p => p.uid === uid) || null;
+export const findUserByDisplayId = async (displayId: string): Promise<UserProfile | null> => {
+  const usersRef = collection(db, 'users');
+  const q = query(usersRef, where("displayUid", "==", displayId.trim().toLowerCase()), limit(1));
+  const querySnapshot = await getDocs(q);
+  if (!querySnapshot.empty) {
+    return querySnapshot.docs[0].data() as UserProfile;
   }
-  try {
-    const userDocRef = doc(firestore, 'users', uid);
-    const userDoc = await getDoc(userDocRef);
-    if (userDoc.exists()) {
-      return userDoc.data() as UserProfile;
-    }
-    return null;
-  } catch (error) {
-    console.error(`Error fetching user profile for ${uid}:`, error);
-    throw error;
-  }
+  return null;
 };
-
-export const findUserByEmail = async (email: string): Promise<UserProfile | null> => {
-    if (!isFirebaseEnabled()) {
-        console.log(`[Mock] findUserByEmail for email: ${email}`);
-        return mockUserProfiles.find(p => p.email === email) || null;
-    }
-    try {
-        const usersRef = collection(firestore, 'users');
-        const q = query(usersRef, where('email', '==', email), limit(1));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            return querySnapshot.docs[0].data() as UserProfile;
-        }
-        return null;
-    } catch (error) {
-        console.error(`Error finding user by email ${email}:`, error);
-        throw error;
-    }
-};
-
-export const getNormalUsers = async (): Promise<UserProfile[]> => {
-    if (!isFirebaseEnabled()) {
-        console.log("[Mock] getNormalUsers");
-        return mockUserProfiles.filter(u => 
-            !u.isBot && 
-            !u.isDevTeam && 
-            !u.isCreator && 
-            !u.isVerified
-        );
-    }
-    try {
-        const usersRef = collection(firestore, 'users');
-        const q = query(usersRef, 
-            where('isVerified', '==', false),
-            where('isCreator', '==', false),
-            where('isDevTeam', '==', false),
-            where('isBot', '==', false)
-        );
-        const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => doc.data() as UserProfile);
-    } catch (e) {
-        console.error("Error getting normal users: ", e);
-        return [];
-    }
-}
-
-export const getAllGiftableUsers = async (): Promise<UserProfile[]> => {
-    if (!isFirebaseEnabled()) {
-        console.log("[Mock] getAllGiftableUsers");
-        return mockUserProfiles.filter(u => !u.isBot && !u.isDevTeam);
-    }
-    try {
-        const usersRef = collection(firestore, 'users');
-        // Fetch users who are not part of the dev team and are not bots.
-        const q = query(usersRef, 
-            where('isDevTeam', '==', false),
-            where('isBot', '==', false)
-        );
-        const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => doc.data() as UserProfile);
-    } catch (e) {
-        console.error("Error getting all giftable users: ", e);
-        // Fallback to a broader query if the composite query fails without an index.
-        try {
-            const usersRef = collection(firestore, 'users');
-            const querySnapshot = await getDocs(usersRef);
-            return querySnapshot.docs
-                .map(doc => doc.data() as UserProfile)
-                .filter(u => !u.isDevTeam && !u.isBot);
-        } catch (fallbackError) {
-             console.error("Fallback query for users also failed: ", fallbackError);
-             return [];
-        }
-    }
-}
-
-
-export const getVerifiedUsers = async (): Promise<UserProfile[]> => {
-    if (!isFirebaseEnabled()) {
-        return mockUserProfiles.filter(u => u.isVerified || u.isCreator);
-    }
-    try {
-        const usersRef = collection(firestore, 'users');
-        const q = query(usersRef, where('isVerified', '==', true));
-        const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => doc.data() as UserProfile);
-    } catch (e) {
-        console.error("Error getting verified users: ", e);
-        return [];
-    }
-};
-
 
 export const updateUserProfile = async (uid: string, data: Partial<UserProfile>): Promise<void> => {
-    if (!isFirebaseEnabled()) {
-        mockUserProfiles = produce(mockUserProfiles, draft => {
-            const userIndex = draft.findIndex(p => p.uid === uid);
-            if (userIndex !== -1) {
-                draft[userIndex] = { ...draft[userIndex], ...data };
-            }
-        });
-        console.log(`[Mock] updateUserProfile for ${uid} with`, data);
-        return;
-    }
-    try {
-        const userDocRef = doc(firestore, 'users', uid);
-        await updateDoc(userDocRef, data);
-    } catch (error) {
-        console.error(`Error updating user profile for ${uid}:`, error);
-        throw error;
-    }
+  const userDocRef = doc(db, 'users', uid);
+  await setDocumentNonBlocking(userDocRef, data, { merge: true });
 };
 
-// =================================================================
-// CHAT FUNCTIONS
-// =================================================================
+// --- Authentication ---
 
-export const getUserChats = (userId: string, onUpdate: (chats: Chat[]) => void, onError: (error: Error) => void): Unsubscribe => {
-    if (!isFirebaseEnabled()) {
-        console.log(`[Mock] getUserChats for uid: ${userId}`);
-        const userChats = mockChats.filter(c => c.participants.includes(userId));
-        setTimeout(() => onUpdate(userChats), 100);
-        return () => console.log("[Mock] Unsubscribed from user chats.");
+export const initiateEmailSignUp = (auth: any, email: string, pass: string) => {
+    return createUserWithEmailAndPassword(auth, email, pass);
+}
+
+export const initiateEmailSignIn = (auth: any, email: string, pass: string) => {
+    return signInWithEmailAndPassword(auth, email, pass);
+}
+
+export const initiateAnonymousSignIn = (auth: any) => {
+    return signInWithEmailAndPassword(auth);
+}
+
+export const logout = (auth: any) => {
+    return signOut(auth);
+}
+
+// --- Chat Management ---
+
+export interface Chat {
+  id?: string;
+  participants: string[];
+  participantDetails?: { [uid: string]: Partial<UserProfile> };
+  lastMessage: string;
+  lastMessageSenderId?: string;
+  lastMessageTimestamp: Timestamp;
+  createdAt?: Timestamp;
+}
+
+export const getUserChats = (
+  userId: string,
+  onUpdate: (chats: Chat[]) => void,
+  onError: (error: Error) => void
+): (() => void) => {
+  const q = query(
+    collection(db, 'chats'),
+    where('participants', 'array-contains', userId),
+    orderBy('lastMessageTimestamp', 'desc')
+  );
+
+  return onSnapshot(q, async (querySnapshot) => {
+    const chats: Chat[] = [];
+    const participantPromises: Promise<void>[] = [];
+
+    for (const docSnapshot of querySnapshot.docs) {
+      const chatData = { id: docSnapshot.id, ...docSnapshot.data() } as Chat;
+      chatData.participantDetails = {};
+
+      const detailPromises = chatData.participants.map(async (pId) => {
+        const userProfile = await findUserByUid(pId);
+        if (userProfile) {
+          chatData.participantDetails![pId] = {
+            name: userProfile.name,
+            avatarUrl: userProfile.avatarUrl,
+            isBot: userProfile.isBot,
+            isVerified: userProfile.isVerified,
+            isCreator: userProfile.isCreator,
+            isVIP: userProfile.isVIP,
+            isDevTeam: userProfile.isDevTeam,
+            isMemeCreator: userProfile.isMemeCreator,
+            isBetaTester: userProfile.isBetaTester,
+            badgeOrder: userProfile.badgeOrder,
+            lastSeen: userProfile.lastSeen,
+          };
+        }
+      });
+      participantPromises.push(...detailPromises);
+      chats.push(chatData);
     }
     
-    try {
-        const chatsRef = collection(firestore, 'chats');
-        const q = query(chatsRef, where('participants', 'array-contains', userId), orderBy('lastMessageTimestamp', 'desc'));
-        
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const chats = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Chat));
-            onUpdate(chats);
-        }, (error) => {
-            console.error(`Error getting chats for user ${userId}:`, error);
-            onError(error);
-        });
+    await Promise.all(participantPromises);
+    onUpdate(chats);
 
-        return unsubscribe;
-
-    } catch (error) {
-        console.error(`Error setting up chat subscription for user ${userId}:`, error);
-        onError(error as Error);
-        return () => {}; // Return a no-op unsubscribe function on initial error
-    }
-};
-
-export const createChat = async (creatorId: string, partnerId: string): Promise<string> => {
-    if (!isFirebaseEnabled()) {
-        const newChatId = `chat_${Date.now()}`;
-        const newChat: Chat = {
-            id: newChatId,
-            participants: [creatorId, partnerId],
-            lastMessage: 'Chat created.',
-            lastMessageTimestamp: serverTimestamp() as Timestamp,
-            seenBy: [],
-        };
-        mockChats.push(newChat);
-        console.log(`[Mock] createChat between ${creatorId} and ${partnerId}. New chat ID: ${newChatId}`);
-        return newChatId;
-    }
-    try {
-        const newChatDoc = doc(collection(firestore, 'chats'));
-        const newChatId = newChatDoc.id;
-
-        await setDoc(newChatDoc, {
-            participants: [creatorId, partnerId],
-            createdAt: serverTimestamp(),
-            lastMessage: "Chat created",
-            lastMessageTimestamp: serverTimestamp(),
-            seenBy: [],
-        });
-        
-        return newChatId;
-    } catch (error) {
-        console.error(`Error creating chat between ${creatorId} and ${partnerId}:`, error);
-        throw error;
-    }
+  }, onError);
 };
 
 export const findChatBetweenUsers = async (userId1: string, userId2: string): Promise<string | null> => {
-    if (!isFirebaseEnabled()) {
-        console.log(`[Mock] findChatBetweenUsers for ${userId1} and ${userId2}`);
-        const chat = mockChats.find(c => c.participants.includes(userId1) && c.participants.includes(userId2));
-        return chat ? chat.id : null;
-    }
-
-    try {
-        const chatsRef = collection(firestore, "chats");
-        const q = query(chatsRef, 
-            where('participants', '==', [userId1, userId2].sort())
-        );
-
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            return querySnapshot.docs[0].id;
-        }
-
-        // Check the other permutation
-         const q2 = query(chatsRef, 
-            where('participants', '==', [userId2, userId1].sort())
-        );
-        const querySnapshot2 = await getDocs(q2);
-        if (!querySnapshot2.empty) {
-            return querySnapshot2.docs[0].id;
-        }
-
-        return null;
-
-    } catch (error) {
-        console.error(`Error finding chat between ${userId1} and ${userId2}:`, error);
-        throw error;
-    }
+    const sortedParticipants = [userId1, userId2].sort();
+    const q = query(
+        collection(db, 'chats'),
+        where('participants', '==', sortedParticipants),
+        limit(1)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.empty ? null : querySnapshot.docs[0].id;
 };
 
+export const createChat = async (userId1: string, userId2: string): Promise<string> => {
+    const existingChatId = await findChatBetweenUsers(userId1, userId2);
+    if (existingChatId) return existingChatId;
 
-export const mapChatToChatItem = async (chat: Chat, currentUserId: string): Promise<ChatItemProps> => {
-    const partnerId = chat.participants.find(p => p !== currentUserId) || '';
-    const partnerProfile = await getUserProfile(partnerId);
-    
-    return {
-        id: chat.id,
-        contactUserId: partnerId,
-        name: partnerProfile?.name || 'Unknown User',
-        avatarUrl: partnerProfile?.avatarUrl,
-        lastMessage: chat.lastMessage,
-        timestamp: formatTimestamp(chat.lastMessageTimestamp),
-        lastMessageTimestampValue: chat.lastMessageTimestamp?.seconds || 0,
-        isVerified: partnerProfile?.isVerified,
-        isContactVIP: partnerProfile?.isVIP,
-        isDevTeam: partnerProfile?.isDevTeam,
-        isBot: partnerProfile?.isBot,
-        isCreator: partnerProfile?.isCreator,
-        isMemeCreator: partnerProfile?.isMemeCreator,
-        isBetaTester: partnerProfile?.isBetaTester,
-        badgeOrder: partnerProfile?.badgeOrder,
-        iconIdentifier: partnerProfile?.isBot ? 'outline-bird-avatar' : (partnerProfile?.isDevTeam ? 'dev-team-svg' : undefined),
-        isLastMessageSentByCurrentUser: chat.lastMessageSenderId === currentUserId,
-        isOnline: partnerProfile?.lastSeen ? (partnerProfile.lastSeen.toDate().getTime() > Date.now() - 5 * 60 * 1000) : false,
-        href: `/chat/${partnerId}`, // Use partner ID for navigation
-        onBlockUser: () => {},
-        onUnblockUser: () => {},
-        onDeleteChat: () => {},
-        onViewProfile: () => {},
+    const sortedParticipants = [userId1, userId2].sort();
+    const newChatRef = doc(collection(db, 'chats'));
+    const newChat: Chat = {
+        id: newChatRef.id,
+        participants: sortedParticipants,
+        lastMessage: "Chat created",
+        lastMessageSenderId: "system",
+        lastMessageTimestamp: Timestamp.now(),
+        createdAt: Timestamp.now()
     };
+    await setDocumentNonBlocking(newChatRef, newChat, { merge: true });
+    return newChatRef.id;
 };
 
-export const sendWelcomeMessage = async (userId: string) => {
-    if (!isFirebaseEnabled()) {
-        const botChatId = `chat_bot`;
-        if (!mockMessages[botChatId]) mockMessages[botChatId] = [];
-        mockMessages[botChatId].push({
-            id: `msg_bot_welcome_${Date.now()}`,
-            senderId: BOT_UID,
-            senderName: 'Blue Bird',
-            text: 'Welcome to Echo Message! I\'m your personal AI assistant. Feel free to ask me anything about the app\'s features, your account, or just chat. How can I help you today?',
-            timestamp: serverTimestamp() as Timestamp,
-            seenBy: []
+export const ensureChatWithBotExists = async (userId: string) => {
+    const existingChatId = await findChatBetweenUsers(userId, BOT_UID);
+    if (!existingChatId) {
+        const chatId = await createChat(userId, BOT_UID);
+        await sendMessage(chatId, BOT_UID, "Welcome to Echo Message! 🎉 I'm Blue Bird, your AI Assistant. How can I assist you today?", undefined, undefined, true);
+    }
+};
+
+// --- Message Management ---
+
+export interface MessageReaction {
+    count: number;
+    users: string[]; 
+}
+
+export interface Message {
+    id?: string;
+    chatId: string;
+    senderId: string;
+    senderName?: string; 
+    text: string;
+    timestamp: Timestamp;
+    isSentByCurrentUser?: boolean;
+    isDeleted?: boolean;
+    seenBy?: string[];
+    replyingTo?: {
+        id: string;
+        senderName: string;
+        textSnippet: string;
+        wasImage?: boolean; 
+        wasAttachment?: boolean; 
+        attachmentType?: 'image' | 'video' | 'document' | 'audio' | 'other'; 
+        attachmentName?: string; 
+    } | null;
+    reactions?: {
+        [emoji: string]: MessageReaction;
+    };
+    attachmentUrl?: string;
+    attachmentName?: string;
+    attachmentType?: 'image' | 'video' | 'document' | 'audio' | 'other';
+    audioDuration?: number;
+    isWittyReactionResponse?: boolean; 
+    repliedToReactionOnMessageId?: string; 
+    repliedToReactionEmoji?: string; 
+}
+
+
+export const getChatMessages = (
+    chatId: string,
+    callback: (messages: Message[]) => void,
+    onError: (error: Error) => void
+): (() => void) => {
+    const messagesRef = collection(db, 'chats', chatId, 'messages');
+    const q = query(messagesRef, orderBy('timestamp', 'asc'));
+
+    return onSnapshot(q, (querySnapshot) => {
+        const messages: Message[] = [];
+        querySnapshot.forEach(doc => {
+            messages.push({ id: doc.id, ...doc.data() } as Message);
         });
-
-        const devChatId = `chat_dev`;
-         if (!mockMessages[devChatId]) mockMessages[devChatId] = [];
-        mockMessages[devChatId].push({
-             id: `msg_dev_welcome_${Date.now()}`,
-             senderId: DEV_UID,
-             senderName: 'Dev Team',
-             text: 'Welcome to the developer feedback channel. Please report any bugs or suggest new features here. Your input is valuable to us.',
-             timestamp: serverTimestamp() as Timestamp,
-             seenBy: [],
-        });
-        
-        return;
-    }
-
-    try {
-        // This function would be more robust on a server,
-        // but for client-side it ensures the user has these chats.
-        const botChatRef = doc(firestore, "chats", "chat_bot");
-        await updateDoc(botChatRef, { participants: arrayUnion(userId) });
-
-        const devChatRef = doc(firestore, "chats", "dev_team");
-        await updateDoc(devChatRef, { participants: arrayUnion(userId) });
-        
-        // Don't add messages here, as a server function would handle that
-        // to avoid race conditions and duplicated messages.
-
-    } catch (error) {
-        console.error("Error ensuring user is in welcome chats:", error);
-    }
+        callback(messages);
+    }, onError);
 };
-
-// =================================================================
-// MESSAGE FUNCTIONS
-// =================================================================
-
-export const getChatMessages = (chatId: string, onUpdate: (messages: Message[]) => void, onError: (error: Error) => void): Unsubscribe => {
-    if (!isFirebaseEnabled()) {
-        console.log(`[Mock] getChatMessages for chatId: ${chatId}`);
-        const messages = mockMessages[chatId] || [];
-        setTimeout(() => onUpdate(messages), 50);
-        return () => console.log("[Mock] Unsubscribed from chat messages.");
-    }
-
-    let unsubscribe: Unsubscribe = () => {};
-
-    const startListener = async () => {
-        try {
-            const chatDocRef = doc(firestore, 'chats', chatId);
-            const chatDoc = await getDoc(chatDocRef);
-
-            if (!chatDoc.exists()) {
-                console.warn(`Chat document ${chatId} does not exist yet. Not fetching messages.`);
-                onUpdate([]); 
-                return; // Stop here, no need to return an unsubscribe function
-            }
-
-            const messagesRef = collection(firestore, 'chats', chatId, 'messages');
-            const q = query(messagesRef, orderBy('timestamp', 'asc'));
-
-            unsubscribe = onSnapshot(q, (querySnapshot) => {
-                const messages = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-                onUpdate(messages);
-            }, (error) => {
-                console.error(`Error getting messages for chat ${chatId}:`, error);
-                onError(error);
-            });
-
-        } catch (error) {
-            console.error(`Error setting up message subscription for chat ${chatId}:`, error);
-            onError(error as Error);
-        }
-    };
-
-    startListener();
-
-    return () => {
-        if (unsubscribe) {
-            unsubscribe();
-        }
-    };
-};
-
 
 export const sendMessage = async (
-    chatId: string, 
-    senderId: string, 
-    text: string, 
+    chatId: string,
+    senderId: string,
+    text: string,
     attachmentData?: { dataUri: string; name: string; type: 'image' | 'video' | 'document' | 'audio' | 'other', duration?: number },
-    replyingTo?: Message['replyingTo'] | null,
+    replyingTo?: Message['replyingTo'],
     isBotMessage: boolean = false,
 ): Promise<void> => {
+    const newMessageRef = doc(collection(db, 'chats', chatId, 'messages'));
+    const chatRef = doc(db, 'chats', chatId);
+    const trimmedText = text.trim();
 
-    const senderProfile = await getUserProfile(senderId);
-    const senderName = senderProfile?.name || 'User';
-
-    const newMessage: Omit<Message, 'id' | 'timestamp'> & { timestamp: Timestamp } = {
+    const newMessage: Omit<Message, 'id'> = {
+        chatId,
         senderId,
-        senderName,
-        text,
-        timestamp: serverTimestamp() as Timestamp,
+        text: trimmedText,
+        timestamp: Timestamp.now(),
         replyingTo: replyingTo || null,
-        reactions: {},
+        attachmentUrl: attachmentData?.dataUri,
+        attachmentName: attachmentData?.name,
+        attachmentType: attachmentData?.type,
+        audioDuration: attachmentData?.duration,
         seenBy: [senderId],
     };
-    if (attachmentData) {
-        newMessage.attachmentUrl = attachmentData.dataUri;
-        newMessage.attachmentName = attachmentData.name;
-        newMessage.attachmentType = attachmentData.type;
-        newMessage.audioDuration = attachmentData.duration;
-    }
     
-    if (!isFirebaseEnabled()) {
-        const fullMessage: Message = {
-            ...newMessage,
-            id: `msg_${Date.now()}`,
-        };
-        if (!mockMessages[chatId]) mockMessages[chatId] = [];
-        mockMessages[chatId].push(fullMessage);
-        const chatIndex = mockChats.findIndex(c => c.id === chatId);
-        if (chatIndex > -1) {
-            mockChats[chatIndex].lastMessage = text || attachmentData?.name || 'Attachment';
-            mockChats[chatIndex].lastMessageTimestamp = fullMessage.timestamp;
-            mockChats[chatIndex].lastMessageSenderId = senderId;
-        }
-        console.log(`[Mock] sendMessage in chat ${chatId}: ${text}`);
-        return;
-    }
+    let lastMessageText = trimmedText;
+    if (attachmentData?.type === 'image') lastMessageText = "[Photo]";
+    if (attachmentData?.type === 'video') lastMessageText = "[Video]";
+    if (attachmentData?.type === 'audio') lastMessageText = "[Audio Message]";
+    if (attachmentData?.type === 'document') lastMessageText = `[Document] ${attachmentData.name}`;
 
-    try {
-        const chatRef = doc(firestore, 'chats', chatId);
-        const messagesRef = collection(firestore, 'chats', chatId, 'messages');
-        const batch = writeBatch(firestore);
+    const batch = writeBatch(db);
+    batch.set(newMessageRef, newMessage);
+    batch.update(chatRef, {
+        lastMessage: lastMessageText,
+        lastMessageSenderId: senderId,
+        lastMessageTimestamp: newMessage.timestamp
+    });
 
-        const chatDoc = await getDoc(chatRef);
-        if (!chatDoc.exists()) {
-             // This is the first message, so we create the chat document.
-             const partnerId = chatId.replace(senderId, '').replace('_', '');
-             batch.set(chatRef, {
-                 participants: [senderId, partnerId].sort(),
-                 createdAt: serverTimestamp(),
-             });
-        }
-        
-        batch.set(doc(messagesRef), newMessage);
-        
-        batch.update(chatRef, {
-            lastMessage: text || attachmentData?.name || 'Attachment',
-            lastMessageTimestamp: newMessage.timestamp,
-            lastMessageSenderId: senderId,
-            seenBy: [senderId]
-        });
-
-        await batch.commit();
-
-        if (!isBotMessage) {
-            const chatData = chatDoc.data();
-            if (chatData) {
-                const recipients = chatData.participants.filter((p: string) => p !== senderId);
-                recipients.forEach((recipientId: string) => {
-                    addNotification({
-                        type: 'new_message',
-                        title: `New message from ${senderName}`,
-                        message: text || `Sent an attachment.`,
-                        relatedData: { chatId, senderId }
-                    });
-                });
-            }
-        }
-
-
-    } catch (error) {
-        console.error(`Error sending message in chat ${chatId}:`, error);
-        throw error;
-    }
+    await batch.commit();
 };
 
 export const deleteMessage = async (chatId: string, messageId: string): Promise<void> => {
-    if (!isFirebaseEnabled()) {
-        const chatMessages = mockMessages[chatId];
-        if (chatMessages) {
-            const msgIndex = chatMessages.findIndex(m => m.id === messageId);
-            if (msgIndex !== -1) {
-                mockMessages[chatId][msgIndex] = { ...mockMessages[chatId][msgIndex], isDeleted: true, text: '' };
-            }
-        }
-        console.log(`[Mock] deleteMessage ${messageId} in chat ${chatId}`);
-        return;
-    }
-     try {
-        const messageRef = doc(firestore, 'chats', chatId, 'messages', messageId);
-        await updateDoc(messageRef, {
-            text: "",
-            attachmentUrl: null,
-            attachmentName: null,
-            attachmentType: null,
-            isDeleted: true,
-            reactions: {},
-            replyingTo: null,
-        });
-    } catch (error) {
-        console.error(`Error deleting message ${messageId} from chat ${chatId}:`, error);
-        throw error;
-    }
+    const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
+    await updateDocumentNonBlocking(messageRef, {
+        text: "This message was deleted.",
+        isDeleted: true,
+        attachmentUrl: null,
+        attachmentName: null,
+        attachmentType: null,
+        reactions: null,
+        replyingTo: null,
+    });
+};
+
+export const toggleReaction = async (chatId: string, messageId: string, emoji: string, userId: string): Promise<void> => {
+  const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
+  const messageDoc = await getDoc(messageRef);
+
+  if (!messageDoc.exists()) throw new Error("Message not found.");
+
+  const messageData = messageDoc.data() as Message;
+  const reactions = messageData.reactions || {};
+  
+  const reaction = reactions[emoji] || { count: 0, users: [] };
+  const userIndex = reaction.users.indexOf(userId);
+
+  if (userIndex > -1) {
+    reaction.count--;
+    reaction.users.splice(userIndex, 1);
+  } else {
+    reaction.count++;
+    reaction.users.push(userId);
+  }
+
+  if (reaction.count === 0) {
+    delete reactions[emoji];
+  } else {
+    reactions[emoji] = reaction;
+  }
+
+  await updateDocumentNonBlocking(messageRef, { reactions });
 };
 
 export const markMessagesAsSeen = async (chatId: string, userId: string): Promise<void> => {
-    if (!isFirebaseEnabled()) {
-        return;
-    }
-    try {
-        const chatRef = doc(firestore, 'chats', chatId);
-        await updateDoc(chatRef, {
-            seenBy: arrayUnion(userId)
-        });
-    } catch (error) {
-        console.error(`Error marking messages as seen for user ${userId} in chat ${chatId}:`, error);
-    }
-}
+    const messagesRef = collection(db, 'chats', chatId, 'messages');
+    const q = query(messagesRef, where('seenBy', 'not-in', [userId]));
 
-export const toggleReaction = async (chatId: string, messageId: string, emoji: string, userId: string): Promise<void> => {
-    if (!isFirebaseEnabled()) {
-        const msg = mockMessages[chatId]?.find(m => m.id === messageId);
-        if (msg) {
-            if (!msg.reactions) msg.reactions = {};
-            const reaction = msg.reactions[emoji];
-            if (reaction && reaction.uids.includes(userId)) {
-                reaction.count--;
-                reaction.uids = reaction.uids.filter(uid => uid !== userId);
-            } else {
-                if (!reaction) msg.reactions[emoji] = { count: 0, uids: [] };
-                msg.reactions[emoji].count++;
-                msg.reactions[emoji].uids.push(userId);
-            }
+    const snapshot = await getDocs(q);
+    const batch = writeBatch(db);
+    snapshot.forEach(doc => {
+        if (doc.data().senderId !== userId) {
+            const seenBy = doc.data().seenBy || [];
+            batch.update(doc.ref, { seenBy: [...seenBy, userId] });
         }
-        console.log(`[Mock] toggleReaction ${emoji} for message ${messageId} by ${userId}`);
-        return;
-    }
-
-    try {
-        const messageRef = doc(firestore, 'chats', chatId, 'messages', messageId);
-        const messageDoc = await getDoc(messageRef);
-        if (!messageDoc.exists()) return;
-
-        const messageData = messageDoc.data();
-        const reactions = messageData.reactions || {};
-        const reactionData = reactions[emoji] || { count: 0, uids: [] };
-
-        const userIndex = reactionData.uids.indexOf(userId);
-        
-        let newCount = reactionData.count;
-        let newUids = [...reactionData.uids];
-
-        if (userIndex > -1) { // User is removing their reaction
-            newCount--;
-            newUids.splice(userIndex, 1);
-        } else { // User is adding a reaction
-            newCount++;
-            newUids.push(userId);
-        }
-
-        const newReactions = {
-            ...reactions,
-            [emoji]: {
-                count: newCount,
-                uids: newUids,
-            },
-        };
-
-        if (newCount <= 0) {
-            delete newReactions[emoji];
-        }
-
-        await updateDoc(messageRef, { reactions: newReactions });
-
-    } catch (error) {
-        console.error(`Error toggling reaction for message ${messageId}:`, error);
-        throw error;
-    }
+    });
+    await batch.commit();
 };
 
-// =================================================================
-// VIP & PROMO CODE FUNCTIONS
-// =================================================================
+
+// --- Misc ---
+
+export const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
+  if (typeof window === 'undefined' || !timestamp || typeof timestamp.seconds !== 'number') {
+    return '';
+  }
+  try {
+    const date = new Date(timestamp.seconds * 1000);
+    const now = new Date();
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    } else {
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      if (date.toDateString() === yesterday.toDateString()) {
+        return 'Yesterday';
+      }
+      const oneWeekAgo = new Date(now);
+      oneWeekAgo.setDate(now.getDate() - 7);
+      if (date > oneWeekAgo) {
+         return date.toLocaleDateString([], { weekday: 'short' });
+      }
+      if (date.getFullYear() === now.getFullYear()) {
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      } else {
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' });
+      }
+    }
+  } catch (e) {
+    console.error("Error formatting timestamp:", e, "Original timestamp:", timestamp);
+    return 'Invalid Date';
+  }
+};
+
+export const formatLastSeen = (timestamp: Timestamp | null | undefined): string => {
+    if (typeof window === 'undefined' || !timestamp || typeof timestamp.seconds !== 'number') {
+        return '...';
+    }
+    const now = new Date();
+    const lastSeenDate = new Date(timestamp.seconds * 1000);
+    const diffSeconds = Math.floor((now.getTime() - lastSeenDate.getTime()) / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMinutes < 1) return 'Online';
+    if (diffMinutes < 5) return 'Online';
+    if (diffMinutes < 60) return `Active ${diffMinutes}m ago`;
+    if (diffHours < 24) return `Active ${diffHours}h ago`;
+    if (diffDays === 1) return `Active yesterday`;
+    return `Active ${diffDays}d ago`;
+};
+
+
+export const mapChatToChatItem = (
+    chat: Chat, 
+    currentUserId: string,
+): ChatItemProps => {
+  const otherParticipantId = chat.participants.find(p => p !== currentUserId);
+  
+  if (!otherParticipantId) {
+      return {
+        id: chat.id!,
+        name: 'Invalid Chat',
+        contactUserId: '',
+        lastMessage: 'Error: Could not load chat details.',
+        timestamp: '',
+        lastMessageTimestampValue: 0,
+        href: `/chat/${chat.id}`,
+      } as ChatItemProps;
+  }
+  
+  const otherDetails = chat.participantDetails?.[otherParticipantId];
+
+  const name = otherDetails?.name || 'Chat User';
+  const avatarUrl = otherDetails?.avatarUrl;
+  const isLastMessageSentByCurrentUser = chat.lastMessageSenderId === currentUserId;
+  const onlineStatus = formatLastSeen(otherDetails?.lastSeen);
+  const isOnline = onlineStatus === 'Online';
+  const iconIdentifier = otherDetails?.isBot ? 'outline-bird-avatar' : undefined;
+
+  return {
+    id: chat.id!,
+    name: name,
+    contactUserId: otherParticipantId || '',
+    avatarUrl: avatarUrl, 
+    lastMessage: chat.lastMessage,
+    timestamp: formatTimestamp(chat.lastMessageTimestamp),
+    lastMessageTimestampValue: chat.lastMessageTimestamp.seconds,
+    isVerified: !!otherDetails?.isVerified,
+    isContactVIP: !!otherDetails?.isVIP,
+    isDevTeam: !!otherDetails?.isDevTeam,
+    isBot: !!otherDetails?.isBot,
+    isCreator: !!otherDetails?.isCreator,
+    isMemeCreator: !!otherDetails?.isMemeCreator,
+    isBetaTester: !!otherDetails?.isBetaTester,
+    badgeOrder: otherDetails?.badgeOrder,
+    href: `/chat/${chat.id}`,
+    iconIdentifier: iconIdentifier, 
+    isLastMessageSentByCurrentUser: isLastMessageSentByCurrentUser,
+    isOnline: isOnline,
+    onlineStatus: onlineStatus,
+    onBlockUser: () => {},
+    onUnblockUser: () => {},
+    onDeleteChat: () => {},
+    onViewProfile: () => {},
+  };
+};
+
+export const getVerifiedUsers = async (): Promise<UserProfile[]> => {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('isVerified', '==', true));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => doc.data() as UserProfile);
+};
+
+export const getNormalUsers = async (): Promise<UserProfile[]> => {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('isVerified', '==', false), where('isBot', '==', false));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => doc.data() as UserProfile);
+};
+
+export const getVerifiedContactLimit = (vipPack?: string): number => {
+    if (!vipPack) return 0;
+    const pack = vipPack.toLowerCase();
+    if (pack.includes('gold') || pack.includes('platinum') || pack.includes('diamond') || pack.includes('elite')) return 10;
+    if (pack.includes('starter') || pack.includes('bronze') || pack.includes('silver')) return 5;
+    if (pack.includes('micro') || pack.includes('mini') || pack.includes('basic')) return 3;
+    return 0;
+};
+
+
+// --- Promo Codes ---
+
 export interface VipPromoCode {
+  code: string;
+  durationDays: number;
+  totalUses: number;
+  usesPerUser: number;
+  claimedBy: { [userId: string]: number };
+  createdAt: number;
+}
+export interface PointsPromoCode {
     code: string;
-    durationDays: number;
+    amount: number;
     totalUses: number;
-    usesPerUser: number;
-    claimedBy: { [uid: string]: number };
+    claimedBy: { [userId: string]: number };
     createdAt: number;
 }
 export interface BadgeGiftCode {
@@ -716,179 +467,195 @@ export interface BadgeGiftCode {
     durationDays: number;
     totalUses: number;
     usesPerUser: number;
-    claimedBy: { [uid: string]: number };
-    createdAt: number;
-}
-export interface PointsPromoCode {
-    code: string;
-    amount: number;
-    totalUses: number;
-    claimedBy: { [uid: string]: number };
+    claimedBy: { [userId: string]: number };
     createdAt: number;
 }
 
-let mockVipPromoCodes: VipPromoCode[] = [{ code: 'REDEEMBASIC7', durationDays: 7, totalUses: 100, usesPerUser: 1, claimedBy: {}, createdAt: Date.now() }];
-let mockBadgeGiftCodes: BadgeGiftCode[] = [];
-let mockPointsPromoCodes: PointsPromoCode[] = [{ code: 'GET100POINTS', amount: 100, totalUses: 100, claimedBy: {}, createdAt: Date.now() }];
-
-
-export const updateVIPStatus = async (uid: string, isVIP: boolean, vipPack?: string, durationDays?: number) => {
-    if (!isFirebaseEnabled()) {
-        const userIndex = mockUserProfiles.findIndex(p => p.uid === uid);
-        if (userIndex !== -1) {
-            mockUserProfiles[userIndex].isVIP = isVIP;
-            mockUserProfiles[userIndex].vipPack = vipPack;
-            if (isVIP && durationDays) {
-                mockUserProfiles[userIndex].vipExpiryTimestamp = Date.now() + durationDays * 24 * 60 * 60 * 1000;
-            } else {
-                 mockUserProfiles[userIndex].vipExpiryTimestamp = undefined;
-            }
-        }
-        return;
+const generateRandomString = (length: number, characters: string): string => {
+    let result = '';
+    const charactersLength = characters.length;
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
-     try {
-        const expiry = durationDays ? Date.now() + durationDays * 24 * 60 * 60 * 1000 : undefined;
-        await updateUserProfile(uid, { isVIP, vipPack, vipExpiryTimestamp: expiry });
-    } catch (error) {
-        console.error(`Error updating VIP status for ${uid}:`, error);
-        throw error;
-    }
+    return result;
 };
 
-export const redeemVipPromoCode = async (uid: string, code: string): Promise<{durationDays: number}> => {
-    // This function will remain mock-only for security reasons in a client-side context.
-    console.log(`[Mock] User ${uid} redeeming VIP promo code ${code}`);
-    const promo = mockVipPromoCodes.find(p => p.code === code);
-    if (!promo) throw new Error("Invalid or expired promo code.");
-
-    await updateVIPStatus(uid, true, `Promo (${promo.durationDays} days)`, promo.durationDays);
-    return { durationDays: promo.durationDays };
-};
-
-export const redeemPointsPromoCode = async (uid: string, code: string): Promise<{amount: number}> => {
-    // Mock only
-    console.log(`[Mock] User ${uid} redeeming Points promo code ${code}`);
-    const promo = mockPointsPromoCodes.find(p => p.code === code);
-    if (!promo) throw new Error("Invalid or expired points code.");
-    
-    const user = await getUserProfile(uid);
-    if (!user) throw new Error("User not found");
-    await updateUserProfile(uid, { points: (user.points || 0) + promo.amount });
-    return { amount: promo.amount };
-}
-
-export const redeemBadgeGiftCode = async (uid: string, code: string): Promise<{badgeType: BadgeType, durationDays: number}> => {
-     // Mock only
-     console.log(`[Mock] User ${uid} redeeming Badge Gift code ${code}`);
-     const promo = mockBadgeGiftCodes.find(p => p.code === code);
-     if (!promo) throw new Error("Invalid or expired badge gift code.");
-
-     const expiryTimestamp = Date.now() + promo.durationDays * 24 * 60 * 60 * 1000;
-     const user = await getUserProfile(uid);
-     if (!user) throw new Error("User not found");
-     
-     const badgeKey = `is${promo.badgeType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('')}` as keyof UserProfile;
-
-     await updateUserProfile(uid, {
-        [badgeKey]: true,
-        badgeExpiry: {
-            ...user.badgeExpiry,
-            [promo.badgeType]: expiryTimestamp
-        }
-     });
-     return { badgeType: promo.badgeType, durationDays: promo.durationDays };
-}
-
-export const getVipPromoCodes = async (): Promise<VipPromoCode[]> => {
-    // Mock only
-    return mockVipPromoCodes;
-}
-export const getBadgeGiftCodes = async (): Promise<BadgeGiftCode[]> => {
-    // Mock only
-    return mockBadgeGiftCodes;
-}
-export const getPointsPromoCodes = async (): Promise<PointsPromoCode[]> => {
-    // Mock only
-    return mockPointsPromoCodes;
-}
 export const createVipPromoCode = async (durationDays: number, totalUses: number, usesPerUser: number): Promise<string> => {
-    const newCode: VipPromoCode = {
-        code: `VIP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+    const randomPart1 = generateRandomString(6, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
+    const randomPart2 = generateRandomString(6, '0123456789');
+    const code = `SAVE-${randomPart1}-${randomPart2}`;
+    
+    const newCodeRef = doc(collection(db, 'vip_promo_codes'));
+    const newCode: Omit<VipPromoCode, 'code'> & { code: string } = {
+        code,
         durationDays,
         totalUses,
         usesPerUser,
         claimedBy: {},
         createdAt: Date.now(),
     };
-    mockVipPromoCodes.push(newCode);
-    console.log(`[Mock] Created VIP promo code`, newCode);
-    return newCode.code;
+    await setDoc(doc(db, 'vip_promo_codes', code), newCode);
+    return code;
 };
+
+export const redeemVipPromoCode = async (userId: string, code: string): Promise<{ success: boolean, durationDays: number }> => {
+    const codeRef = doc(db, 'vip_promo_codes', code);
+    const codeDoc = await getDoc(codeRef);
+
+    if (!codeDoc.exists()) throw new Error("Invalid promo code.");
+
+    const promoCode = codeDoc.data() as VipPromoCode;
+    const totalClaims = Object.values(promoCode.claimedBy || {}).reduce((sum, count) => sum + count, 0);
+
+    if (totalClaims >= promoCode.totalUses) throw new Error("This promo code has reached its maximum number of uses.");
+
+    const userClaims = promoCode.claimedBy[userId] || 0;
+    if (userClaims >= promoCode.usesPerUser) throw new Error("You have already redeemed this promo code the maximum number of times.");
+    
+    await updateDocumentNonBlocking(codeRef, { [`claimedBy.${userId}`]: (userClaims + 1) });
+    await updateUserProfile(userId, { 
+        isVIP: true, 
+        vipPack: `Promo (${promoCode.durationDays} days)`, 
+        vipExpiryTimestamp: Date.now() + promoCode.durationDays * 24 * 60 * 60 * 1000 
+    });
+
+    return { success: true, durationDays: promoCode.durationDays };
+};
+
+
 export const createBadgeGiftCode = async (badgeType: BadgeType, durationDays: number, totalUses: number, usesPerUser: number): Promise<BadgeGiftCode> => {
-     const giftCode: BadgeGiftCode = {
+    const randomPart1 = generateRandomString(6, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
+    const randomPart2 = generateRandomString(6, '0123456789');
+    const code = `GIFT-${randomPart1}-${randomPart2}`;
+
+    const newCode: BadgeGiftCode = {
         type: 'badge_gift',
-        code: `BADGE-${badgeType.toUpperCase()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+        code,
         badgeType,
         durationDays,
         totalUses,
         usesPerUser,
         claimedBy: {},
         createdAt: Date.now(),
-     };
-    mockBadgeGiftCodes.push(giftCode);
-    console.log(`[Mock] Created Badge gift code`, giftCode);
-    return giftCode;
-}
+    };
+    await setDoc(doc(db, 'badge_gift_codes', code), newCode);
+    return newCode;
+};
+
+export const redeemBadgeGiftCode = async (userId: string, code: string): Promise<{ success: true, badgeType: string, durationDays: number }> => {
+    const codeRef = doc(db, 'badge_gift_codes', code);
+    const codeDoc = await getDoc(codeRef);
+
+    if (!codeDoc.exists()) throw new Error("Invalid or expired gift code.");
+    
+    const giftCode = codeDoc.data() as BadgeGiftCode;
+    const totalClaims = Object.values(giftCode.claimedBy || {}).reduce((sum, count) => sum + count, 0);
+    if (totalClaims >= giftCode.totalUses) throw new Error("This gift code has reached its maximum number of uses.");
+    
+    const userClaims = (giftCode.claimedBy || {})[userId] || 0;
+    if (userClaims >= giftCode.usesPerUser) throw new Error("You have already claimed this gift code the maximum number of times.");
+    
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    if (!userDoc.exists()) throw new Error("User not found.");
+
+    const badgeKey = `is${giftCode.badgeType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('')}` as keyof UserProfile;
+    const expiryKey = `badgeExpiry.${giftCode.badgeType}`;
+    
+    const updateData: Partial<UserProfile> & { [key: string]: any } = { [badgeKey]: true };
+    if (giftCode.durationDays !== Infinity) {
+        updateData[expiryKey] = Date.now() + giftCode.durationDays * 24 * 60 * 60 * 1000;
+    }
+    
+    await updateDocumentNonBlocking(userRef, updateData);
+    await updateDocumentNonBlocking(codeRef, { [`claimedBy.${userId}`]: (userClaims + 1) });
+
+    return { success: true, badgeType: giftCode.badgeType, durationDays: giftCode.durationDays };
+};
+
 export const createPointsPromoCode = async (amount: number, totalUses: number): Promise<string> => {
-    const newCode: PointsPromoCode = {
-        code: `PTS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+    const randomPart1 = generateRandomString(6, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
+    const randomPart2 = generateRandomString(6, '0123456789');
+    const code = `PTS-${randomPart1}-${randomPart2}`;
+
+    const newCode: Omit<PointsPromoCode, 'code'> & { code: string } = {
+        code,
         amount,
         totalUses,
         claimedBy: {},
         createdAt: Date.now(),
     };
-    mockPointsPromoCodes.push(newCode);
-    console.log(`[Mock] Created Points promo code`, newCode);
-    return newCode.code;
-}
-export const deleteVipPromoCode = async (code: string) => {
-    mockVipPromoCodes = mockVipPromoCodes.filter(p => p.code !== code);
-    console.log(`[Mock] Deleted VIP code ${code}`);
-};
-export const deleteBadgeGiftCode = async (code: string) => {
-    mockBadgeGiftCodes = mockBadgeGiftCodes.filter(p => p.code !== code);
-    console.log(`[Mock] Deleted Badge code ${code}`);
-};
-export const deletePointsPromoCode = async (code: string) => {
-    mockPointsPromoCodes = mockPointsPromoCodes.filter(p => p.code !== code);
-    console.log(`[Mock] Deleted Points code ${code}`);
+    await setDoc(doc(db, 'points_promo_codes', code), newCode);
+    return code;
 };
 
+export const redeemPointsPromoCode = async (userId: string, code: string): Promise<{ success: boolean; amount: number }> => {
+    const codeRef = doc(db, 'points_promo_codes', code);
+    const codeDoc = await getDoc(codeRef);
 
-export const getVerifiedContactLimit = (vipPack?: string): number => {
-    if (!vipPack) return 3;
-    const pack = vipPack.toLowerCase();
-    if (pack.includes('gold') || pack.includes('platinum') || pack.includes('diamond') || pack.includes('elite')) return 10;
-    if (pack.includes('starter') || pack.includes('bronze') || pack.includes('silver')) return 5;
-    return 3;
-}
+    if (!codeDoc.exists()) throw new Error("Invalid points promo code.");
 
+    const promoCode = codeDoc.data() as PointsPromoCode;
+    const totalClaims = Object.values(promoCode.claimedBy || {}).length;
 
-// Gift Points
-export const giftPoints = async (fromUid: string, toUid: string, amount: number) => {
-    // Mock only
-    const fromUser = await getUserProfile(fromUid);
-    const toUser = await getUserProfile(toUid);
+    if (totalClaims >= promoCode.totalUses) throw new Error("This promo code has reached its maximum uses.");
+    if (promoCode.claimedBy[userId]) throw new Error("You have already redeemed this code.");
+    
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    if (!userDoc.exists()) throw new Error("User not found.");
 
-    if (!fromUser || !toUser) throw new Error("User not found.");
-    if ((fromUser.points || 0) < amount) throw new Error("Insufficient points.");
+    await updateDocumentNonBlocking(codeRef, { [`claimedBy.${userId}`]: 1 });
+    await updateDocumentNonBlocking(userRef, { points: (userDoc.data().points || 0) + promoCode.amount });
 
-    await updateUserProfile(fromUid, { points: (fromUser.points || 0) - amount });
-    await updateUserProfile(toUid, { 
-        points: (toUser.points || 0) + amount,
+    return { success: true, amount: promoCode.amount };
+};
+
+export const getVipPromoCodes = async (): Promise<VipPromoCode[]> => {
+    const snapshot = await getDocs(query(collection(db, 'vip_promo_codes'), orderBy('createdAt', 'desc')));
+    return snapshot.docs.map(doc => doc.data() as VipPromoCode);
+};
+
+export const getBadgeGiftCodes = async (): Promise<BadgeGiftCode[]> => {
+    const snapshot = await getDocs(query(collection(db, 'badge_gift_codes'), orderBy('createdAt', 'desc')));
+    return snapshot.docs.map(doc => doc.data() as BadgeGiftCode);
+};
+
+export const getPointsPromoCodes = async (): Promise<PointsPromoCode[]> => {
+    const snapshot = await getDocs(query(collection(db, 'points_promo_codes'), orderBy('createdAt', 'desc')));
+    return snapshot.docs.map(doc => doc.data() as PointsPromoCode);
+};
+
+export const deleteVipPromoCode = async (code: string): Promise<void> => {
+    await deleteDocumentNonBlocking(doc(db, 'vip_promo_codes', code));
+};
+
+export const deleteBadgeGiftCode = async (code: string): Promise<void> => {
+    await deleteDocumentNonBlocking(doc(db, 'badge_gift_codes', code));
+};
+
+export const deletePointsPromoCode = async (code: string): Promise<void> => {
+    await deleteDocumentNonBlocking(doc(db, 'points_promo_codes', code));
+};
+
+export const giftPoints = async (fromUid: string, toUid: string, amount: number): Promise<void> => {
+    const fromUserRef = doc(db, 'users', fromUid);
+    const toUserRef = doc(db, 'users', toUid);
+
+    const fromUserDoc = await getDoc(fromUserRef);
+    const toUserDoc = await getDoc(toUserRef);
+
+    if (!fromUserDoc.exists() || !toUserDoc.exists()) throw new Error("Sender or receiver not found.");
+    if ((fromUserDoc.data().points || 0) < amount) throw new Error("Insufficient points.");
+    
+    const batch = writeBatch(db);
+    batch.update(fromUserRef, { points: (fromUserDoc.data().points || 0) - amount });
+    batch.update(toUserRef, { 
+        points: (toUserDoc.data().points || 0) + amount,
         hasNewPointsGift: true,
         pointsGifterUid: fromUid,
         lastGiftedPointsAmount: amount,
     });
-    console.log(`[Mock] Gifted ${amount} points from ${fromUid} to ${toUid}`);
-}
+    
+    await batch.commit();
+};

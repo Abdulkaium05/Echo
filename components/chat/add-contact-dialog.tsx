@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Loader2, ShieldAlert, QrCode } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
-import { findUserByEmail, findChatBetweenUsers, createChat, BOT_UID, DEV_UID } from '@/services/firestore';
+import { findUserByDisplayId, findChatBetweenUsers, createChat } from '@/services/firestore';
 import { useAuth } from '@/context/auth-context';
 import { useVIP } from '@/context/vip-context';
 import { ScanQrDialog } from './scan-qr-dialog'; // Import the new component
@@ -35,13 +35,13 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
   const router = useRouter();
   const { userProfile: currentUserProfile } = useAuth();
   const { hasVipAccess } = useVIP();
-  const [contactEmail, setContactEmail] = useState('');
+  const [contactId, setContactId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isScanQrOpen, setIsScanQrOpen] = useState(false); // State for ScanQrDialog
 
   const handleAddContact = async () => {
-    if (!contactEmail.trim() || !/\S+@\S+\.\S+/.test(contactEmail)) {
-      toast({ title: "Invalid Email", description: "Please enter a valid email address.", variant: "destructive" });
+    if (!contactId.trim()) {
+      toast({ title: "Invalid User ID", description: "Please enter a valid User ID.", variant: "destructive" });
       return;
     }
     if (!currentUserId || !currentUserProfile) {
@@ -50,13 +50,13 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
     }
 
     setIsLoading(true);
-    console.log(`AddContactDialog: Adding contact ${contactEmail} for user ${currentUserId}.`);
+    console.log(`AddContactDialog: Adding contact with User ID ${contactId} for user ${currentUserId}.`);
 
     try {
-      const targetUser = await findUserByEmail(contactEmail);
+      const targetUser = await findUserByDisplayId(contactId);
 
       if (!targetUser) {
-        toast({ title: "User Not Found", description: `No user found with email ${contactEmail}.`, variant: "destructive" });
+        toast({ title: "User Not Found", description: `No user found with ID "${contactId}".`, variant: "destructive" });
         setIsLoading(false);
         return;
       }
@@ -91,18 +91,18 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
       if (existingChatId) {
          toast({ title: "Chat Exists", description: `You already have a chat with ${targetUser.name || 'this user'}. Redirecting...`, variant: "default" });
          onOpenChange(false);
-         router.push(`/chat/${targetUser.uid}`); // Navigate to chat using partner's UID
+         router.push(`/chat/${existingChatId}`);
       } else {
-         await createChat(currentUserId, targetUser.uid);
+         const newChatId = await createChat(currentUserId, targetUser.uid);
          toast({
            title: "Chat Created!",
-           description: `Started a chat with ${targetUser.name || 'this user'}. It will appear in your list shortly.`,
+           description: `Started a chat with ${targetUser.name || 'this user'}. Redirecting...`,
            action: <UserPlus className="h-5 w-5 text-green-500" />,
          });
          onOpenChange(false);
-         router.push(`/chat`); // Redirect to the main chat list to allow it to update
+         router.push(`/chat/${newChatId}`);
       }
-      setContactEmail('');
+      setContactId('');
     } catch (error: any) {
       console.error("AddContactDialog: Error adding contact:", error);
       toast({
@@ -116,7 +116,7 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
   };
 
   const handleCancel = () => {
-     setContactEmail('');
+     setContactId('');
      onOpenChange(false);
   };
 
@@ -134,7 +134,7 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
               <UserPlus className="h-5 w-5" /> Add New Contact
             </DialogTitle>
             <DialogDescription>
-              Add a new person to your chat list by their email address or by scanning their QR code.
+              Add a new person to your chat list by their User ID or by scanning their QR code.
             </DialogDescription>
           </DialogHeader>
           
@@ -150,13 +150,13 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contact-email-dialog">Email Address</Label>
+            <Label htmlFor="contact-id-dialog">User ID</Label>
             <Input
-              id="contact-email-dialog"
-              type="email"
-              placeholder="name@example.com"
-              value={contactEmail}
-              onChange={(e) => setContactEmail(e.target.value)}
+              id="contact-id-dialog"
+              type="text"
+              placeholder="e.g, abdul.kaium.05"
+              value={contactId}
+              onChange={(e) => setContactId(e.target.value)}
               className="mt-1"
               disabled={isLoading}
             />
@@ -168,7 +168,7 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
                     Cancel
                 </Button>
             </DialogClose>
-            <Button type="button" onClick={handleAddContact} disabled={isLoading || !contactEmail.trim()}>
+            <Button type="button" onClick={handleAddContact} disabled={isLoading || !contactId.trim()}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isLoading ? 'Adding...' : 'Add Contact'}
               </Button>

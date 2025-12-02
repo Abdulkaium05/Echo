@@ -18,19 +18,17 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-       {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
-        port: '',
-      }
     ],
   },
-  experimental: {
-    allowedDevOrigins: [
-        "6000-firebase-echobeta-1764480590173.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev",
-        "9000-firebase-echobeta-1764480590173.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev"
-    ]
-  }
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/login',
+        permanent: false, // Set to true if this is a permanent redirect
+      },
+    ];
+  },
 };
 
 export default nextConfig;

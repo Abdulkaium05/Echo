@@ -13,6 +13,7 @@ interface SubscriptionCardProps {
   isPopular?: boolean;
   paymentMethod: 'money' | 'points';
   onSubscribe: () => void;
+  disabled?: boolean;
 }
 
 export function SubscriptionCard({
@@ -24,12 +25,14 @@ export function SubscriptionCard({
   isPopular = false,
   paymentMethod,
   onSubscribe,
+  disabled = false,
 }: SubscriptionCardProps) {
   return (
     <Card className={cn(
         "flex flex-col",
         "transition-all hover:scale-105 hover:shadow-xl",
-        isPopular ? "border-primary border-2 shadow-lg" : ""
+        isPopular ? "border-primary border-2 shadow-lg" : "",
+        disabled ? "opacity-60 grayscale cursor-not-allowed" : ""
     )}>
       {isPopular && (
         <div className="bg-primary text-primary-foreground text-center py-1 text-xs sm:text-sm font-medium rounded-t-md -mt-px -mx-px">
@@ -62,7 +65,7 @@ export function SubscriptionCard({
         </ul>
       </CardContent>
       <CardFooter className="px-4 pb-4 sm:px-6 sm:pb-6 pt-0">
-        <Button className="w-full" onClick={onSubscribe}>
+        <Button className="w-full" onClick={onSubscribe} disabled={disabled}>
           Subscribe Now
         </Button>
       </CardFooter>
