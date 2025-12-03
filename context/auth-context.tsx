@@ -1,4 +1,3 @@
-
 // src/context/auth-context.tsx
 'use client';
 
@@ -106,7 +105,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             let expiryChanged = false;
             for (const key in expiryMap) {
                 const type = key as BadgeType;
-                if (expiryMap[type]! < now) {
+                const expiry = expiryMap[type];
+                if (expiry && expiry < now) { // Only check if expiry is a number
                     delete expiryMap[type];
                     const stateKey = 'is' + type.replace(/_([a-z])/g, (_, g) => g.toUpperCase()).replace(/^\w/, c => c.toUpperCase());
                     updatedProfileData[stateKey as keyof UserProfile] = false;
@@ -198,8 +198,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isBetaTester: false,
         createdAt: serverTimestamp() as Timestamp,
         lastSeen: serverTimestamp() as Timestamp,
-        selectedVerifiedContacts: [],
-        hasMadeVipSelection: false,
         blockedUsers: [],
         badgeOrder: [],
         badgeExpiry: {},

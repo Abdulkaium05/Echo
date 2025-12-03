@@ -69,12 +69,10 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
       const isTargetUserVerifiedOrDev = (targetUser.isVerified) && !targetUser.isBot;
 
       if (isTargetUserVerifiedOrDev) {
-          const isCurrentUserAllowedByTarget = targetUser.allowedNormalContacts?.includes(currentUserId);
-
-          if (!hasVipAccess && !isCurrentUserAllowedByTarget) {
+          if (!hasVipAccess) {
                toast({
                 title: "VIP Required",
-                description: "This is a verified user. You must either be a VIP member or be specifically allowed by them to start a conversation.",
+                description: "This is a verified user. You must be a VIP member to start a conversation.",
                 variant: "destructive",
                 duration: 7000,
                 action: <ShieldAlert className="h-5 w-5" />,

@@ -1,4 +1,3 @@
-
 // src/components/chat/chat-list.tsx
 'use client';
 
@@ -12,9 +11,8 @@ import { cn } from '@/lib/utils';
 import { AddContactDialog } from './add-contact-dialog';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getUserChats, mapChatToChatItem, type Chat, getVerifiedContactLimit, getUserProfile, type UserProfile, BOT_UID } from '@/services/firestore';
+import { getUserChats, mapChatToChatItem, type Chat, getUserProfile, type UserProfile, BOT_UID } from '@/services/firestore';
 import { useAuth } from '@/context/auth-context';
-import { SelectVerifiedDialog } from './select-verified-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useBlockUser } from '@/context/block-user-context';
 import { useTrash } from '@/context/trash-context'; 
@@ -38,13 +36,11 @@ interface ChatListProps {
 
 export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
   const { userProfile, isUserProfileLoading } = useAuth();
-  const { hasVipAccess } = useVIP();
   const { toast } = useToast();
   const { addBlockedUser, unblockUser, isUserBlocked } = useBlockUser();
   const { trashChat, isChatTrashed } = useTrash();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
-  const [isSelectVerifiedOpen, setIsSelectVerifiedOpen] = useState(false);
   const [chats, setChats] = useState<ChatItemProps[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,10 +84,6 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
         window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
-  
-  const vipLimit = (userProfile?.isVerified || userProfile?.isCreator) 
-    ? Number.MAX_SAFE_INTEGER 
-    : getVerifiedContactLimit(userProfile?.vipPack);
   
   useEffect(() => {
     if (!currentUserId || isUserProfileLoading || !userProfile) {
@@ -290,21 +282,6 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
               </TooltipTrigger>
               <TooltipContent><p>Add Contact by User ID</p></TooltipContent>
             </Tooltip>
-           {hasVipAccess && (
-             <Tooltip>
-               <TooltipTrigger asChild>
-                 <Button
-                   variant="ghost"
-                   size="icon"
-                   className="shrink-0"
-                   onClick={() => setIsSelectVerifiedOpen(true)}
-                 >
-                   <Edit className="h-5 w-5" />
-                 </Button>
-               </TooltipTrigger>
-               <TooltipContent><p>Select Verified Users</p></TooltipContent>
-             </Tooltip>
-           )}
         </div>
 
         <ScrollArea className="flex-1">
@@ -325,13 +302,6 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
                 onOpenChange={setIsAddContactOpen}
                 currentUserId={currentUserId}
             />
-        )}
-        {hasVipAccess && currentUserId && userProfile && (
-             <SelectVerifiedDialog
-                isOpen={isSelectVerifiedOpen}
-                onOpenChange={setIsSelectVerifiedOpen}
-                limit={vipLimit}
-             />
         )}
       </div>
     </TooltipProvider>

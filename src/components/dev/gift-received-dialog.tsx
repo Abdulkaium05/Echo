@@ -1,4 +1,3 @@
-
 // src/components/dev/gift-received-dialog.tsx
 'use client';
 

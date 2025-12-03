@@ -1,4 +1,3 @@
-
 // src/app/(app)/layout.tsx
 'use client';
 
@@ -22,7 +21,6 @@ import { VerifiedBadge } from '@/components/verified-badge';
 import { NotificationPopover } from '@/components/chat/notification-popover';
 import { MusicPlayerProvider } from '@/context/music-player-context';
 import { ShareProfileDialog } from '@/components/profile/share-profile-dialog'; // Import ShareProfileDialog
-import { AllowNormalUsersDialog } from '@/components/chat/allow-normal-users-dialog';
 import { GiftBadgeDialog } from '@/components/dev/gift-badge-dialog';
 import { GiftReceivedDialog } from '@/components/dev/gift-received-dialog';
 import { ScanQrDialog } from '@/components/chat/scan-qr-dialog';
@@ -39,7 +37,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isAppearanceDialogOpen, setAppearanceDialogOpen] = useState(false);
   const [isAboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [isShareProfileDialogOpen, setShareProfileDialogOpen] = useState(false);
-  const [isAllowUsersDialogOpen, setAllowUsersDialogOpen] = useState(false);
   const [isGiftBadgeDialogOpen, setIsGiftBadgeDialogOpen] = useState(false);
   const [isGiftReceivedDialogOpen, setIsGiftReceivedDialogOpen] = useState(false);
   const [isPointsReceivedDialogOpen, setIsPointsReceivedDialogOpen] = useState(false);
@@ -146,7 +143,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       onOpenAppearanceSettings={() => setAppearanceDialogOpen(true)}
                       onOpenAboutDialog={() => setAboutDialogOpen(true)}
                       onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
-                      onOpenAllowUsersDialog={() => setAllowUsersDialogOpen(true)}
                       onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
                       onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
                       onOpenEchoOldDialog={() => setIsEchoOldDialogOpen(true)}
@@ -172,7 +168,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   onOpenAppearanceSettings={() => setAppearanceDialogOpen(true)}
                   onOpenAboutDialog={() => setAboutDialogOpen(true)}
                   onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
-                  onOpenAllowUsersDialog={() => setAllowUsersDialogOpen(true)}
                   onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
                   onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
                   onOpenEchoOldDialog={() => setIsEchoOldDialogOpen(true)}
@@ -232,10 +227,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             onOpenChange={setShareProfileDialogOpen}
             user={currentUserProfile}
           />
-          <AllowNormalUsersDialog
-            isOpen={isAllowUsersDialogOpen}
-            onOpenChange={setAllowUsersDialogOpen}
-          />
           <GiftBadgeDialog
             isOpen={isGiftBadgeDialogOpen}
             onOpenChange={setIsGiftBadgeDialogOpen}
@@ -273,7 +264,6 @@ interface UserMenuProps {
   onOpenAppearanceSettings: () => void;
   onOpenAboutDialog: () => void;
   onOpenShareProfileDialog: () => void;
-  onOpenAllowUsersDialog: () => void;
   onOpenGiftBadgeDialog: () => void;
   onOpenScanQrDialog: () => void;
   onOpenEchoOldDialog: () => void;
@@ -294,7 +284,7 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
 };
 
 
-function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenAllowUsersDialog, onOpenGiftBadgeDialog, onOpenScanQrDialog, onOpenEchoOldDialog, onProfileUpdate }: UserMenuProps) {
+function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenGiftBadgeDialog, onOpenScanQrDialog, onOpenEchoOldDialog, onProfileUpdate }: UserMenuProps) {
    const router = useRouter();
    const fallbackInitials = user.name ? user.name.substring(0, 2).toUpperCase() : '??';
 
@@ -310,7 +300,6 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
    const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
-   const isAtLeastVerified = user.isVerified || user.isCreator || user.isDevTeam;
    const isDev = user.isDevTeam;
    
    return (
@@ -367,12 +356,6 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
                 <Coins className="mr-2 h-4 w-4" />
                 <span>Points</span>
             </DropdownMenuItem>
-            {isAtLeastVerified && (
-                 <DropdownMenuItem onClick={onOpenAllowUsersDialog}>
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    <span>Allow Users</span>
-                </DropdownMenuItem>
-            )}
             {isDev && (
               <>
                 <DropdownMenuSeparator />

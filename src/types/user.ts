@@ -20,15 +20,12 @@ export interface UserProfile {
   isMemeCreator?: boolean; // New badge property
   isBetaTester?: boolean;  // New badge property
   lastSeen?: Timestamp; 
-  selectedVerifiedContacts?: string[]; 
-  allowedNormalContacts?: string[]; // List of normal user UIDs this verified user allows to message them.
-  hasMadeVipSelection?: boolean;
   blockedUsers?: string[]; // List of UIDs this user has blocked
   
   // Badge Management
   badgeOrder?: BadgeType[];
   badgeExpiry?: { // New property to store expiry dates for gifted badges
-    [key in BadgeType]?: number; // Unix timestamp in ms
+    [key in BadgeType]?: number | null; // Unix timestamp in ms or null for lifetime
   };
 
   // Chat Customization

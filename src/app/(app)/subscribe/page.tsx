@@ -1,4 +1,3 @@
-
 // src/app/(app)/subscribe/page.tsx
 'use client';
 
@@ -34,16 +33,16 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const subscriptionPlans = [
-    { planName: 'Micro VIP', price: 1, points: 100, durationDays: 1, features: ['VIP Badge', 'Select 3 Verified Users', 'Exclusive Chat Access'] },
-    { planName: 'Mini Pass', price: 2, points: 200, durationDays: 3, features: ['VIP Badge', 'Select 3 Verified Users', 'Exclusive Chat Access'] },
-    { planName: 'Basic Pack', price: 4, points: 400, durationDays: 7, features: ['VIP Badge', 'Select 3 Verified Users', 'Exclusive Chat Access'] },
-    { planName: 'Starter', price: 7, points: 700, durationDays: 14, features: ['VIP Badge', 'Select 5 Verified Users', 'Exclusive Chat Access'] },
-    { planName: 'Bronze', price: 12, points: 1200, durationDays: 30, features: ['VIP Badge', 'Select 5 Verified Users', 'Exclusive Chat Access', 'Early Feature Access'] },
-    { planName: 'Silver', price: 20, points: 2000, durationDays: 60, features: ['VIP Badge', 'Select 5 Verified Users', 'Exclusive Chat Access', 'Early Feature Access', 'Custom Theme'], isPopular: true },
-    { planName: 'Gold', price: 30, points: 3000, durationDays: 90, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme'] },
-    { planName: 'Platinum', price: 50, points: 5000, durationDays: 180, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
-    { planName: 'Diamond', price: 60, points: 6000, durationDays: 270, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
-    { planName: 'Elite Yearly', price: 75, points: 7500, durationDays: 365, features: ['VIP Badge', 'Select 10 Verified Users', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
+    { planName: 'Micro VIP', price: 1, points: 100, durationDays: 1, features: ['VIP Badge', 'Exclusive Chat Access'] },
+    { planName: 'Mini Pass', price: 2, points: 200, durationDays: 3, features: ['VIP Badge', 'Exclusive Chat Access'] },
+    { planName: 'Basic Pack', price: 4, points: 400, durationDays: 7, features: ['VIP Badge', 'Exclusive Chat Access'] },
+    { planName: 'Starter', price: 7, points: 700, durationDays: 14, features: ['VIP Badge', 'Exclusive Chat Access'] },
+    { planName: 'Bronze', price: 12, points: 1200, durationDays: 30, features: ['VIP Badge', 'Exclusive Chat Access', 'Early Feature Access'] },
+    { planName: 'Silver', price: 20, points: 2000, durationDays: 60, features: ['VIP Badge', 'Exclusive Chat Access', 'Early Feature Access', 'Custom Theme'], isPopular: true },
+    { planName: 'Gold', price: 30, points: 3000, durationDays: 90, features: ['VIP Badge', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme'] },
+    { planName: 'Platinum', price: 50, points: 5000, durationDays: 180, features: ['VIP Badge', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
+    { planName: 'Diamond', price: 60, points: 6000, durationDays: 270, features: ['VIP Badge', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
+    { planName: 'Elite Yearly', price: 75, points: 7500, durationDays: 365, features: ['VIP Badge', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
 ];
 
 const lifetimePlan = {
@@ -94,7 +93,7 @@ export default function SubscribePage() {
     });
     try {
       await updateVIPStatus(user.uid, false);
-      updateMockUserProfile(user.uid, { isVIP: false, vipPack: undefined, vipExpiryTimestamp: undefined, selectedVerifiedContacts: [], hasMadeVipSelection: false });
+      updateMockUserProfile(user.uid, { isVIP: false, vipPack: undefined, vipExpiryTimestamp: undefined });
       setContextVIPStatus(false, undefined);
       setRemainingTime(null); 
     } catch (error) {
@@ -140,8 +139,6 @@ export default function SubscribePage() {
        router.push('/login');
        return;
     }
-    setIsProcessing(true);
-    setSubscribedPlan({ name: plan.planName, features: plan.features });
     
     const userPoints = userProfile.points || 0;
     if (userPoints < plan.points) {
@@ -150,9 +147,11 @@ export default function SubscribePage() {
           description: `You need ${plan.points} points, but you only have ${userPoints}.`,
           variant: "destructive",
         });
-        setIsProcessing(false);
         return;
     }
+
+    setIsProcessing(true);
+    setSubscribedPlan({ name: plan.planName, features: plan.features });
     
     await new Promise(resolve => setTimeout(resolve, 1500)); 
 
@@ -165,8 +164,6 @@ export default function SubscribePage() {
           isVIP: true, 
           vipPack: plan.planName, 
           vipExpiryTimestamp: expiry,
-          selectedVerifiedContacts: userProfile?.selectedVerifiedContacts || [], 
-          hasMadeVipSelection: userProfile?.hasMadeVipSelection || false,
           points: updatedPoints,
       });
       setContextVIPStatus(true, plan.planName);
@@ -182,7 +179,7 @@ export default function SubscribePage() {
       console.error("Error subscribing:", error);
       toast({
         title: "Subscription Failed",
-        description: "Could not update your VIP status. Please try again.",
+        description: "Could not update your VIP status. This may be due to security rules. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -346,7 +343,7 @@ export default function SubscribePage() {
         <span className="mt-3 md:mt-4 text-base md:text-lg text-muted-foreground max-w-2xl mx-auto block">
             {hasVipAccess && !hasVipBadge
               ? "You already have VIP feature access! Purchase a plan to get the exclusive VIP crown badge next to your name."
-              : "Unlock exclusive features like the VIP theme, select verified users to chat with, get a VIP badge, and support Echo Message."
+              : "Unlock exclusive features like the VIP theme, exclusive chat access, get a VIP badge, and support Echo Message."
             }
         </span>
       </div>

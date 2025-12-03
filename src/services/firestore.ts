@@ -1,4 +1,3 @@
-
 // src/services/firestore.ts
 import { 
     doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp,
@@ -409,28 +408,7 @@ export const updateVIPStatus = async (uid: string, isVIP: boolean, vipPack?: str
         vipExpiryTimestamp: isVIP ? expiryTimestamp : undefined,
     };
     
-    if (!isVIP) {
-        profileUpdate.selectedVerifiedContacts = [];
-        profileUpdate.hasMadeVipSelection = false;
-    }
-
     await updateUserProfile(uid, profileUpdate);
-};
-
-export const getVerifiedUsers = async (): Promise<UserProfile[]> => {
-  const usersRef = collection(firestore, 'users');
-  const q = query(usersRef, where("isVerified", "==", true), where("isBot", "!=", true));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => doc.data() as UserProfile);
-};
-
-export const getVerifiedContactLimit = (vipPack?: string): number => {
-    if (!vipPack) return 0;
-    const pack = vipPack.toLowerCase();
-    if (pack.includes('gold') || pack.includes('platinum') || pack.includes('diamond') || pack.includes('elite') || pack.includes('lifetime')) return 10;
-    if (pack.includes('bronze') || pack.includes('silver')) return 5;
-    if (pack.includes('starter') || pack.includes('micro') || pack.includes('mini') || pack.includes('basic')) return 3;
-    return 0;
 };
 
 // ... Promo code functions ...
