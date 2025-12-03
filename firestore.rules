@@ -29,11 +29,36 @@ service cloud.firestore {
              && request.resource.data.points > resource.data.points;
     }
     
+    function isSpendingPoints() {
+        // Allow updating points only if the new value is less than the old one.
+        return request.resource.data.points < resource.data.points;
+    }
+    
     function isGiftingBadge() {
-       return isDevTeam() && request.resource.data.diff(resource.data).affectedKeys().hasAny([
+       return isDevTeam() && request.resource.data.diff(resource.data).hasAny([
           'isVerified', 'isCreator', 'isVIP', 'isMemeCreator', 'isBetaTester', 'badgeExpiry', 
           'hasNewGift', 'giftedByUid', 'lastGiftedBadge'
         ]);
+    }
+    
+    function isUpdatingLastSeen() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeen']);
+    }
+    
+    function isClearingGiftNotification() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'hasNewGift', 'giftedByUid', 'lastGiftedBadge',
+        'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount'
+      ]);
+    }
+    
+    function isUpdatingOwnProfileSafely() {
+      // User can change their own profile, BUT cannot change protected fields.
+      // This is a "deny list" approach.
+      return isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'isVerified', 'isCreator', 'isDevTeam', 'isBot', 'points',
+        'isMemeCreator', 'isBetaTester'
+      ]);
     }
 
     // =====================================================
@@ -45,21 +70,31 @@ service cloud.firestore {
       allow create: if request.auth.uid == userId;
       
       // Allow updates by the owner or for specific gift-related actions.
-      allow update: if (isOwner(userId) && (
-                      // Case 1: Owner is purchasing VIP or making a regular profile update.
-                      // Prevent them from changing their own special roles or points.
-                      !(request.resource.data.diff(resource.data).affectedKeys().hasAny([
-                        'isVerified', 'isCreator', 'isDevTeam', 'isBot', 'points',
-                        'isMemeCreator', 'isBetaTester', 'badgeExpiry', 'hasNewGift', 'giftedByUid', 'lastGiftedBadge',
-                        'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount'
-                      ]))
-                    ))
-                    ||
-                    // Case 2: Another user is gifting points to this user.
-                    (isSignedIn() && isGiftingPoints())
-                    ||
-                    // Case 3: A dev team member is gifting a badge.
-                    (isGiftingBadge());
+      allow update: if 
+            // Case 1: A user is updating their own profile (name, avatar, badgeOrder, etc).
+            // This is the main fix. It allows any change as long as it's not to a protected field.
+            isUpdatingOwnProfileSafely()
+            ||
+            // Case 2: The owner is spending points (e.g., buying VIP).
+            (isOwner(userId) && isSpendingPoints())
+            ||
+            // Case 3: The owner is updating their online status
+            (isOwner(userId) && isUpdatingLastSeen())
+            ||
+            // Case 4: Owner is clearing gift notifications after viewing them.
+            (isOwner(userId) && isClearingGiftNotification())
+            ||
+            // Case 5: Another user is gifting points to this user.
+            (isSignedIn() && isGiftingPoints())
+            ||
+            // Case 6: A dev team member is gifting a badge.
+            (isGiftingBadge());
+
+      // Gift History Subcollection
+      match /gifts/{giftId} {
+        allow read, list: if isOwner(userId);
+        allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+      }
     }
 
     // =====================================================

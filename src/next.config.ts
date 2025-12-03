@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -21,6 +22,11 @@ const nextConfig: NextConfig = {
         port: '',
       }
     ],
+  },
+  experimental: {
+    allowedDevOrigins: [
+      "https://9000-firebase-echob-1764679135376.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev"
+    ]
   },
 };
 

@@ -15,7 +15,7 @@ import {
 import { Loader2, Gift, Crown, Bot, Wrench, SmilePlus, FlaskConical, Clock, Search, User as UserIcon, UserCheck, AlertCircle } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
-import { findUserByDisplayUid, type UserProfile, getUserProfile } from '@/services/firestore';
+import { findUserByDisplayUid, type UserProfile, getUserProfile, logGift } from '@/services/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -116,6 +116,13 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
             giftedByUid: currentUserProfile.uid,
             hasNewGift: true,
             lastGiftedBadge: selectedBadge,
+        });
+
+        await logGift({
+            senderId: currentUserProfile.uid,
+            receiverId: selectedUser.uid,
+            giftType: 'badge',
+            badgeType: selectedBadge,
         });
 
         toast({
@@ -250,3 +257,5 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
     </Dialog>
   );
 }
+
+    

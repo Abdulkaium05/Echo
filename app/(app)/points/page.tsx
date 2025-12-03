@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Loader2, Gift, Coins, User as UserIcon, Search, AlertCircle, UserCheck } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
-import { type UserProfile, giftPoints, findUserByDisplayUid } from '@/services/firestore';
+import { type UserProfile, giftPoints, findUserByDisplayUid, logGift } from '@/services/firestore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -65,6 +65,13 @@ function GiftPointsCard() {
         
         try {
             await giftPoints(userProfile.uid, foundUser.uid, amount);
+
+            await logGift({
+                senderId: userProfile.uid,
+                receiverId: foundUser.uid,
+                giftType: 'points',
+                pointsAmount: amount,
+            });
 
             updateMockUserProfile(userProfile.uid, { points: (userProfile.points || 0) - amount });
             
@@ -178,3 +185,5 @@ export default function PointsDashboardPage() {
         </div>
     );
 }
+
+    

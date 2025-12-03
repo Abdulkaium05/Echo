@@ -1,3 +1,4 @@
+
 // src/services/firestore.ts
 import { 
     doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp,
@@ -55,6 +56,16 @@ export interface Chat {
   createdAt?: Timestamp;
   lastMessage?: Message;
   participantProfiles: UserProfile[];
+}
+
+export interface Gift {
+    id: string;
+    senderId: string;
+    receiverId: string;
+    giftType: 'badge' | 'points';
+    badgeType?: BadgeType;
+    pointsAmount?: number;
+    timestamp: Timestamp;
 }
 
 export const mapChatToChatItem = async (chat: Chat, currentUserId: string): Promise<ChatItemProps> => {
@@ -157,12 +168,17 @@ export const findUserByDisplayUid = async (displayUid: string): Promise<UserProf
 
 export const updateUserProfile = async (uid: string, data: Partial<UserProfile>): Promise<void> => {
     const userRef = doc(firestore, 'users', uid);
-    const dataWithTimestamp = { ...data, lastSeen: serverTimestamp() };
-    updateDoc(userRef, dataWithTimestamp).catch(error => {
+    // This is the fix. The data being sent to updateDoc must not include the timestamp object directly
+    // when using serverTimestamp(). Instead, the timestamp should be part of the update payload.
+    const updateData = {
+        ...data,
+        lastSeen: serverTimestamp()
+    };
+    updateDoc(userRef, updateData).catch(error => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: userRef.path,
         operation: 'update',
-        requestResourceData: dataWithTimestamp
+        requestResourceData: updateData
       }));
     });
 };
@@ -397,7 +413,7 @@ export const markMessagesAsSeen = async (chatId: string, userId: string): Promis
 };
 
 // ---------------------------------
-// Other Functions (VIP, etc.)
+// Other Functions (VIP, Gifts, etc.)
 // ---------------------------------
 export const updateVIPStatus = async (uid: string, isVIP: boolean, vipPack?: string, durationDays?: number): Promise<void> => {
     const expiryTimestamp = durationDays && durationDays !== Infinity 
@@ -413,7 +429,34 @@ export const updateVIPStatus = async (uid: string, isVIP: boolean, vipPack?: str
     await updateUserProfile(uid, profileUpdate);
 };
 
-// ... Promo code functions ...
+export const logGift = async (giftData: Omit<Gift, 'id' | 'timestamp'>) => {
+    const giftWithTimestamp = {
+        ...giftData,
+        timestamp: serverTimestamp(),
+    };
+    const giftsRef = collection(firestore, 'users', giftData.receiverId, 'gifts');
+    addDoc(giftsRef, giftWithTimestamp).catch(error => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: giftsRef.path,
+            operation: 'create',
+            requestResourceData: giftWithTimestamp
+        }));
+    });
+};
+
+export const getGiftHistory = (userId: string, callback: (gifts: Gift[]) => void, onError: (error: Error) => void): Unsubscribe => {
+    const giftsRef = collection(firestore, 'users', userId, 'gifts');
+    const q = query(giftsRef, orderBy('timestamp', 'desc'));
+
+    return onSnapshot(q, (querySnapshot) => {
+        const gifts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Gift));
+        callback(gifts);
+    }, (error) => {
+        console.error("Error in getGiftHistory snapshot:", error);
+        onError(new FirestorePermissionError({ path: `users/${userId}/gifts`, operation: 'list' }));
+    });
+};
+
 export interface VipPromoCode {
     code: string;
     durationDays: number;
@@ -611,4 +654,5 @@ export const getVerifiedUsers = async (): Promise<UserProfile[]> => {
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => doc.data() as UserProfile);
 };
+    
     

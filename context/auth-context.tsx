@@ -9,7 +9,7 @@ import {
   createUserWithEmailAndPassword, 
   type User 
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, Timestamp, updateDoc, deleteField } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { BadgeType } from '@/app/(app)/layout';
 import { getUserProfile, updateUserProfile as updateUserInFirestore, sendWelcomeMessage } from '@/services/firestore';
@@ -44,7 +44,7 @@ interface AuthContextProps {
   login: (email: string, pass: string) => Promise<{ success: boolean; message: string }>;
   signup: (email: string, pass: string) => Promise<{ success: boolean; message: string; user: User | null, userProfile: UserProfile | null }>;
   logout: () => Promise<void>;
-  updateMockUserProfile: (uid: string, data: Partial<UserProfile>) => Promise<void>; // This is now a live update function
+  updateUserProfile: (data: Partial<UserProfile>) => Promise<void>;
   auth: Auth;
   firestore: Firestore;
   storage: FirebaseStorage;
@@ -62,15 +62,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const { toast } = useToast();
 
-  const updateMockUserProfile = useCallback(
-    async (uid: string, data: Partial<UserProfile>) => {
-      await updateUserInFirestore(uid, data);
-      // If updating the current user, optimistically update local state
-      if (user?.uid === uid) {
-        setUserProfile(prev => (prev ? { ...prev, ...data } : null));
+  const updateUserProfile = useCallback(
+    async (data: Partial<UserProfile>) => {
+      const currentUser = firebaseAuth.currentUser;
+      if (!currentUser?.uid) {
+        throw new Error("User not authenticated.");
       }
+      await updateUserInFirestore(currentUser.uid, data);
+      setUserProfile(prev => (prev ? { ...prev, ...data } : null));
     },
-    [user?.uid]
+    []
   );
   
     const processLogin = useCallback(async (firebaseUser: User) => {
@@ -89,18 +90,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         let localProfile = { ...profile };
 
-        // Handle gifts
-        if (localProfile.hasNewGift && localProfile.giftedByUid && localProfile.lastGiftedBadge) {
-            const gifterProfile = await getUserProfile(localProfile.giftedByUid);
-            if (gifterProfile) setGiftInfo({ gifterProfile, giftedBadge: localProfile.lastGiftedBadge as BadgeType });
-            updatedProfileData = { ...updatedProfileData, hasNewGift: false, giftedByUid: null, lastGiftedBadge: null };
+        // Handle gifts silently now
+        if (localProfile.hasNewGift) {
+            updatedProfileData = { 
+                ...updatedProfileData, 
+                hasNewGift: false, 
+                giftedByUid: deleteField(), 
+                lastGiftedBadge: deleteField() 
+            };
             needsServerUpdate = true;
         }
 
-        if (localProfile.hasNewPointsGift && localProfile.pointsGifterUid && localProfile.lastGiftedPointsAmount) {
-            const gifterProfile = await getUserProfile(localProfile.pointsGifterUid);
-            if (gifterProfile) setPointsGiftInfo({ gifterProfile, giftedPointsAmount: localProfile.lastGiftedPointsAmount });
-            updatedProfileData = { ...updatedProfileData, hasNewPointsGift: false, pointsGifterUid: null, lastGiftedPointsAmount: null };
+        if (localProfile.hasNewPointsGift) {
+            updatedProfileData = { 
+                ...updatedProfileData, 
+                hasNewPointsGift: false, 
+                pointsGifterUid: deleteField(), 
+                lastGiftedPointsAmount: deleteField() 
+            };
             needsServerUpdate = true;
         }
 
@@ -129,7 +136,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUserProfile(localProfile);
 
         if (needsServerUpdate) {
-            await updateUserInFirestore(firebaseUser.uid, updatedProfileData);
+            const userDocRef = doc(firebaseFirestore, 'users', firebaseUser.uid);
+            await updateDoc(userDocRef, updatedProfileData);
         }
 
     } catch (error) {
@@ -188,14 +196,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const newUser = userCredential.user;
       
       const username = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').substring(0, 15) || 'newuser';
-      const avatar = `https://picsum.photos/seed/${newUser.uid}/200`;
-
+      
       const profile: UserProfile = {
         uid: newUser.uid,
         displayUid: Math.floor(10000000 + Math.random() * 90000000).toString(),
         name: username,
         email,
-        avatarUrl: avatar,
+        avatarUrl: 'default-avatar',
         points: 0,
         isVIP: false,
         isVerified: false,
@@ -250,7 +257,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     login,
     signup,
     logout,
-    updateMockUserProfile,
+    updateUserProfile,
     auth: firebaseAuth,
     firestore: firebaseFirestore,
     storage: firebaseStorage,

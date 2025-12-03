@@ -38,13 +38,12 @@ interface ProfileSettingsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   user: UserProfile | null;
-  onProfileUpdate: (updatedData: Partial<UserProfile>) => Promise<void>;
 }
 
 
-export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpdate }: ProfileSettingsDialogProps) {
+export function ProfileSettingsDialog({ isOpen, onOpenChange, user }: ProfileSettingsDialogProps) {
   const { toast } = useToast();
-  const { auth, storage } = useAuth();
+  const { storage, updateUserProfile, user: authUser } = useAuth();
   const [currentUserName, setCurrentUserName] = useState(user?.name || '');
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(user?.avatarUrl);
   const [newAvatarFile, setNewAvatarFile] = useState<string | null>(null);
@@ -70,13 +69,13 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
   }, [isOpen, user]);
 
   const handleSave = async () => {
-    if (!auth || !user || !storage) {
-      toast({ title: "Error", description: "User not found or services unavailable.", variant: "destructive" });
-      return;
-    }
     if (!currentUserName.trim()) {
       toast({ title: "Invalid Input", description: "Username cannot be empty.", variant: "destructive" });
       return;
+    }
+    if (!authUser?.uid || !storage) {
+       toast({ title: "Error", description: "User not found or services unavailable. Please try logging in again.", variant: "destructive" });
+       return;
     }
 
     setIsLoading(true);
@@ -84,15 +83,15 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
 
     try {
       if (newAvatarFile) { // This means a file was uploaded
-        finalAvatarUrl = await mockUploadAvatar(storage, user.uid, newAvatarFile);
+        finalAvatarUrl = await mockUploadAvatar(storage, authUser.uid, newAvatarFile);
         toast({ title: "Avatar Processed", description: "Your new avatar has been processed." });
       }
       // If newAvatarFile is null but avatarPreview is different from user.avatarUrl, it means a URL was pasted
-      else if (avatarPreview !== user.avatarUrl) {
+      else if (avatarPreview !== user?.avatarUrl) {
          finalAvatarUrl = avatarPreview;
       }
 
-      await onProfileUpdate({
+      await updateUserProfile({
         name: currentUserName.trim(),
         avatarUrl: finalAvatarUrl,
         badgeOrder: tempBadgeOrder,
@@ -137,6 +136,7 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user, onProfileUpd
   const handleBadgeOrderSave = (newOrder: BadgeType[]) => {
     setTempBadgeOrder(newOrder);
     setIsBadgeDialogOpen(false);
+    toast({ title: "Badge Order Updated", description: "Click 'Save changes' to apply."});
   };
 
   const handleApplyUrl = () => {

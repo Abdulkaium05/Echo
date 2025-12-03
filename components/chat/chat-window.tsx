@@ -1,7 +1,7 @@
 // src/components/chat/chat-window.tsx
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { Timestamp } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './message-bubble';
 import { MessageInput, type MessageInputHandle } from './message-input';
 import { VerifiedBadge } from '@/components/verified-badge';
-import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban, Trash2, UserX, UserCheck, Leaf } from 'lucide-react';
+import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban, Trash2, UserX, UserCheck, Leaf, SmilePlus, FlaskConical } from 'lucide-react';
 import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
@@ -48,6 +48,18 @@ import { useVIP } from '@/context/vip-context';
 import { useBlockUser } from '@/context/block-user-context';
 import { useTrash } from '@/context/trash-context';
 import { useRouter } from 'next/navigation';
+import type { BadgeType } from '@/app/(app)/layout';
+
+const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
+    creator: ({className}) => <CreatorLetterCBBadgeIcon className={cn("h-4 w-4", className)} />,
+    vip: ({className}) => <Crown className={cn("h-4 w-4 text-yellow-500", className)} />,
+    verified: ({className}) => <VerifiedBadge className={cn("h-4 w-4", className)} />,
+    dev: ({className}) => <Wrench className={cn("h-4 w-4 text-blue-600", className)} />,
+    bot: ({className}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} />,
+    meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
+    beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
+};
+
 
 interface ChatWindowProps {
   chatId: string;
@@ -493,6 +505,22 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
     </DropdownMenuItem>
 );
 
+const orderedBadges = useMemo(() => {
+    if (!partnerProfileDetails) return [];
+    
+    const earnedBadges: BadgeType[] = [];
+    if(partnerProfileDetails.isCreator) earnedBadges.push('creator');
+    if(partnerProfileDetails.isVIP) earnedBadges.push('vip');
+    if(partnerProfileDetails.isVerified && !partnerProfileDetails.isCreator) earnedBadges.push('verified');
+    if(partnerProfileDetails.isDevTeam) earnedBadges.push('dev');
+    if(partnerProfileDetails.isBot) earnedBadges.push('bot');
+    if(partnerProfileDetails.isMemeCreator) earnedBadges.push('meme_creator');
+    if(partnerProfileDetails.isBetaTester) earnedBadges.push('beta_tester');
+
+    const badgeDisplayOrder = partnerProfileDetails.badgeOrder?.length ? partnerProfileDetails.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
+    return badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
+}, [partnerProfileDetails]);
+
 
   return (
     <>
@@ -507,14 +535,14 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
              <p className="text-sm font-medium text-foreground truncate whitespace-nowrap">{chatName}</p>
-            {chatPartnerId === BOT_UID ? (
+            {isChattingWithBot ? (
                 currentTheme === 'theme-light-green' ? <Leaf className="h-4 w-4 text-green-500" /> : <SquareBotBadgeIcon />
             ) : (
                 <>
-                  {isDevTeam && <Wrench className="h-4 w-4 text-blue-600 shrink-0" />}
-                  {isCreator && <CreatorLetterCBBadgeIcon className="h-4 w-4" />}
-                  {isVIP && <Crown className="h-4 w-4 text-yellow-500 shrink-0" />}
-                  {isVerified && !isCreator && <VerifiedBadge className={cn("shrink-0", (isVIP || isCreator) && "ml-0.5")}/>}
+                  {orderedBadges.map(badgeKey => {
+                      const BadgeComponent = BadgeComponents[badgeKey];
+                      return BadgeComponent ? <BadgeComponent key={badgeKey} /> : null;
+                  })}
                 </>
             )}
           </div>

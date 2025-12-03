@@ -26,6 +26,7 @@ import { PointsReceivedDialog } from '@/components/dev/points-received-dialog';
 import { CompleteProfileDialog } from '@/components/auth/complete-profile-dialog';
 import { EchoOldDialog } from '@/components/echo-old-dialog';
 import { Toaster } from '@/components/ui/toaster';
+import { GiftHistoryDialog } from '@/components/profile/gift-history-dialog';
 
 export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester';
 export type BadgeColor = 'sky-blue' | 'light-green' | 'red' | 'orange' | 'yellow' | 'purple' | 'pink' | 'indigo' | 'teal' | 'white' | 'black';
@@ -41,7 +42,7 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
 };
 
 
-function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenGiftBadgeDialog, onOpenScanQrDialog, onOpenEchoOldDialog }: { 
+function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenGiftBadgeDialog, onOpenScanQrDialog, onOpenEchoOldDialog, onOpenGiftHistoryDialog }: { 
     user: UserProfile, 
     onLogout: () => void, 
     onOpenProfileSettings: () => void,
@@ -51,6 +52,7 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
     onOpenGiftBadgeDialog: () => void;
     onOpenScanQrDialog: () => void;
     onOpenEchoOldDialog: () => void;
+    onOpenGiftHistoryDialog: () => void;
 }) {
    const router = useRouter();
    const fallbackInitials = user.name ? user.name.substring(0, 2).toUpperCase() : '??';
@@ -123,6 +125,10 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
                 <Coins className="mr-2 h-4 w-4" />
                 <span>Points</span>
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={onOpenGiftHistoryDialog}>
+                <History className="mr-2 h-4 w-4" />
+                <span>Gift History</span>
+            </DropdownMenuItem>
             {isDev && (
               <>
                 <DropdownMenuSeparator />
@@ -161,7 +167,7 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user: currentUser, userProfile: currentUserProfile, loading: authLoading, isUserProfileLoading, logout, updateMockUserProfile, giftInfo, setGiftInfo, pointsGiftInfo, setPointsGiftInfo } = useAuth();
+  const { user: currentUser, userProfile: currentUserProfile, loading: authLoading, isUserProfileLoading, logout, updateUserProfile, giftInfo, setGiftInfo, pointsGiftInfo, setPointsGiftInfo } = useAuth();
 
   const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
   const [isAppearanceDialogOpen, setAppearanceDialogOpen] = useState(false);
@@ -173,16 +179,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isScanQrDialogOpen, setIsScanQrDialogOpen] = useState(false);
   const [isCompleteProfileOpen, setIsCompleteProfileOpen] = useState(false);
   const [isEchoOldDialogOpen, setIsEchoOldDialogOpen] = useState(false);
+  const [isGiftHistoryDialogOpen, setIsGiftHistoryDialogOpen] = useState(false);
 
   useEffect(() => {
     if (giftInfo.gifterProfile && giftInfo.giftedBadge) {
       setIsGiftReceivedDialogOpen(true);
+    } else {
+      setIsGiftReceivedDialogOpen(false);
     }
   }, [giftInfo]);
 
   useEffect(() => {
     if (pointsGiftInfo.gifterProfile && pointsGiftInfo.giftedPointsAmount) {
         setIsPointsReceivedDialogOpen(true);
+    } else {
+        setIsPointsReceivedDialogOpen(false);
     }
   }, [pointsGiftInfo]);
 
@@ -215,8 +226,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
    const handleProfileUpdate = async (updatedData: Partial<UserProfile>) => {
-     if (!currentUser || !currentUserProfile) return;
-      updateMockUserProfile(currentUser.uid, updatedData);
+     if (!currentUser) return;
+      updateUserProfile(updatedData);
    };
 
   useEffect(() => {
@@ -282,6 +293,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
                         onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
                         onOpenEchoOldDialog={() => setIsEchoOldDialogOpen(true)}
+                        onOpenGiftHistoryDialog={() => setIsGiftHistoryDialogOpen(true)}
                     />
                   )}
                 </div>
@@ -306,6 +318,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
                     onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
                     onOpenEchoOldDialog={() => setIsEchoOldDialogOpen(true)}
+                    onOpenGiftHistoryDialog={() => setIsGiftHistoryDialogOpen(true)}
                 />
               )}
             </div>
@@ -347,7 +360,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             isOpen={isProfileDialogOpen}
             onOpenChange={setProfileDialogOpen}
             user={currentUserProfile}
-            onProfileUpdate={handleProfileUpdate}
           />
           <AppearanceSettingsDialog
             isOpen={isAppearanceDialogOpen}
@@ -385,6 +397,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
              <EchoOldDialog
               isOpen={isEchoOldDialogOpen}
               onOpenChange={setIsEchoOldDialogOpen}
+            />
+            <GiftHistoryDialog
+              isOpen={isGiftHistoryDialogOpen}
+              onOpenChange={setIsGiftHistoryDialogOpen}
             />
         </>
       )}
