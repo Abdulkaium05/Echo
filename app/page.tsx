@@ -21,9 +21,12 @@ export default function Home() {
   }, [user, loading, router]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'sans-serif', gap: '1rem' }}>
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      <h1 style={{ fontSize: '1.5em' }}>Loading...</h1>
+    <div className="flex h-screen w-full items-center justify-center bg-background text-center p-4">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <h1 className="text-xl font-semibold text-foreground">Loading Your Experience</h1>
+        <p className="text-muted-foreground">Please wait a moment...</p>
+      </div>
     </div>
   );
 }

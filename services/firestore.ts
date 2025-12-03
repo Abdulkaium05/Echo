@@ -4,12 +4,14 @@ import {
     orderBy, limit, arrayUnion, arrayRemove, writeBatch, deleteDoc, Timestamp,
     type DocumentData, type Unsubscribe
 } from 'firebase/firestore';
-import { firestore } from '@/lib/firebase/config';
+import { initializeFirebase } from '@/firebase'; // Corrected import
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { UserProfile } from '@/types/user';
 import type { ChatItemProps } from '@/components/chat/chat-item';
 import type { BadgeType } from '@/app/(app)/layout';
+
+const { firestore } = initializeFirebase();
 
 export const BOT_UID = 'blue_bird_ai_uid';
 
@@ -540,22 +542,48 @@ export const deleteBadgeGiftCode = async (code: string) => {
 }
 
 export const giftPoints = async (senderUid: string, recipientUid: string, amount: number) => {
-    const sender = await getUserProfile(senderUid);
-    const recipient = await getUserProfile(recipientUid);
-    if (!sender || !recipient) throw new Error("User not found.");
-    if ((sender.points || 0) < amount) throw new Error("Insufficient points.");
-
     const senderRef = doc(firestore, 'users', senderUid);
     const recipientRef = doc(firestore, 'users', recipientUid);
     const batch = writeBatch(firestore);
+
+    // Get sender's data to verify points
+    const senderSnap = await getDoc(senderRef);
+    if (!senderSnap.exists()) throw new Error("Sender not found.");
+    const sender = senderSnap.data() as UserProfile;
+    if ((sender.points || 0) < amount) throw new Error("Insufficient points.");
+
+    // Update sender's points
     batch.update(senderRef, { points: (sender.points || 0) - amount });
+
+    // Get recipient's data to update points
+    const recipientSnap = await getDoc(recipientRef);
+    if (!recipientSnap.exists()) throw new Error("Recipient not found.");
+    const recipient = recipientSnap.data() as UserProfile;
+
+    // Update recipient's points and gift status
     batch.update(recipientRef, { 
         points: (recipient.points || 0) + amount,
         hasNewPointsGift: true,
         pointsGifterUid: senderUid,
         lastGiftedPointsAmount: amount,
     });
-    await batch.commit();
+    
+    await batch.commit().catch(error => {
+        console.error("Batch write failed in giftPoints:", error);
+        // We only need to emit a permission error if the rule itself fails.
+        // Let's create a specific error for the recipient update part.
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: `users/${recipientUid}`,
+            operation: 'update',
+            requestResourceData: { 
+                points: (recipient.points || 0) + amount,
+                hasNewPointsGift: true,
+                pointsGifterUid: senderUid,
+                lastGiftedPointsAmount: amount
+            }
+        }));
+        throw new Error("Failed to commit points transaction due to permissions.");
+    });
 }
 
 export const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
@@ -577,4 +605,10 @@ export const formatLastSeen = (timestamp: Timestamp | null | undefined): string 
     return `Last seen on ${lastSeenDate.toLocaleDateString()}`;
 };
 
+export const getVerifiedUsers = async (): Promise<UserProfile[]> => {
+  const usersRef = collection(firestore, 'users');
+  const q = query(usersRef, where('isVerified', '==', true));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => doc.data() as UserProfile);
+};
     

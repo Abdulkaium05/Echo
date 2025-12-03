@@ -13,8 +13,14 @@ import { doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { BadgeType } from '@/app/(app)/layout';
 import { getUserProfile, updateUserProfile as updateUserInFirestore, sendWelcomeMessage } from '@/services/firestore';
-import { auth as firebaseAuth, firestore as firebaseFirestore, storage as firebaseStorage, isFirebaseConfigured } from '@/lib/firebase/config';
+import { initializeFirebase } from '@/firebase'; // Corrected import
+import type { FirebaseApp } from 'firebase/app';
+import type { Auth } from 'firebase/auth';
+import type { Firestore } from 'firebase/firestore';
+import type { FirebaseStorage } from 'firebase/storage';
 import type { UserProfile } from '@/types/user';
+
+const { firebaseApp, auth: firebaseAuth, firestore: firebaseFirestore, storage: firebaseStorage } = initializeFirebase();
 
 export interface GiftInfo {
   gifterProfile: UserProfile | null;
@@ -39,9 +45,9 @@ interface AuthContextProps {
   signup: (email: string, pass: string) => Promise<{ success: boolean; message: string; user: User | null, userProfile: UserProfile | null }>;
   logout: () => Promise<void>;
   updateMockUserProfile: (uid: string, data: Partial<UserProfile>) => Promise<void>; // This is now a live update function
-  auth: typeof firebaseAuth;
-  firestore: typeof firebaseFirestore;
-  storage: typeof firebaseStorage;
+  auth: Auth;
+  firestore: Firestore;
+  storage: FirebaseStorage;
 }
 
 export const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -135,7 +141,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (!isFirebaseConfigured()) {
+    if (!firebaseAuth) {
       console.warn("AuthProvider: Firebase is not configured.");
       setLoading(false);
       setIsUserProfileLoading(false);
@@ -159,7 +165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [processLogin]);
 
   const login = async (email: string, pass: string): Promise<{ success: boolean; message: string }> => {
-    if (!isFirebaseConfigured()) return { success: false, message: "Firebase not configured." };
+    if (!firebaseAuth) return { success: false, message: "Firebase not configured." };
     setLoading(true);
     setIsUserProfileLoading(true);
     try {
@@ -174,7 +180,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signup = async (email: string, pass: string): Promise<{ success: boolean; message: string; user: User | null; userProfile: UserProfile | null }> => {
-    if (!isFirebaseConfigured()) return { success: false, message: "Firebase not configured.", user: null, userProfile: null };
+    if (!firebaseAuth) return { success: false, message: "Firebase not configured.", user: null, userProfile: null };
     setLoading(true);
     setIsUserProfileLoading(true);
     try {
@@ -223,7 +229,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     setLoading(true);
-    if (user && isFirebaseConfigured()) {
+    if (user && firebaseAuth) {
       await updateUserInFirestore(user.uid, { lastSeen: serverTimestamp() as Timestamp });
       await signOut(firebaseAuth);
     }

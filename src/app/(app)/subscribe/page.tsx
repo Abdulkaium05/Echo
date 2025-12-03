@@ -1,4 +1,4 @@
-// src/app/(app)/subscribe/page.tsx
+// src/app/subscribe/page.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -33,16 +33,16 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const subscriptionPlans = [
-    { planName: 'Micro VIP', price: 1, points: 100, durationDays: 1, features: ['VIP Badge', 'Exclusive Chat Access'] },
-    { planName: 'Mini Pass', price: 2, points: 200, durationDays: 3, features: ['VIP Badge', 'Exclusive Chat Access'] },
-    { planName: 'Basic Pack', price: 4, points: 400, durationDays: 7, features: ['VIP Badge', 'Exclusive Chat Access'] },
-    { planName: 'Starter', price: 7, points: 700, durationDays: 14, features: ['VIP Badge', 'Exclusive Chat Access'] },
-    { planName: 'Bronze', price: 12, points: 1200, durationDays: 30, features: ['VIP Badge', 'Exclusive Chat Access', 'Early Feature Access'] },
-    { planName: 'Silver', price: 20, points: 2000, durationDays: 60, features: ['VIP Badge', 'Exclusive Chat Access', 'Early Feature Access', 'Custom Theme'], isPopular: true },
-    { planName: 'Gold', price: 30, points: 3000, durationDays: 90, features: ['VIP Badge', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme'] },
-    { planName: 'Platinum', price: 50, points: 5000, durationDays: 180, features: ['VIP Badge', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
-    { planName: 'Diamond', price: 60, points: 6000, durationDays: 270, features: ['VIP Badge', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
-    { planName: 'Elite Yearly', price: 75, points: 7500, durationDays: 365, features: ['VIP Badge', 'Dedicated Support', 'Exclusive Chat Access', 'Custom Theme', 'Increased Limits'] },
+    { planName: 'Micro VIP', price: 1, points: 100, durationDays: 1, features: ['VIP Badge', 'VIP Chat Theme'] },
+    { planName: 'Mini Pass', price: 2, points: 200, durationDays: 3, features: ['VIP Badge', 'VIP Chat Theme'] },
+    { planName: 'Basic Pack', price: 4, points: 400, durationDays: 7, features: ['VIP Badge', 'VIP Chat Theme'] },
+    { planName: 'Starter', price: 7, points: 700, durationDays: 14, features: ['VIP Badge', 'VIP Chat Theme'] },
+    { planName: 'Bronze', price: 12, points: 1200, durationDays: 30, features: ['VIP Badge', 'VIP Chat Theme', 'Early Feature Access'] },
+    { planName: 'Silver', price: 20, points: 2000, durationDays: 60, features: ['VIP Badge', 'VIP Chat Theme', 'Early Feature Access', 'Custom Bubble Colors'], isPopular: true },
+    { planName: 'Gold', price: 30, points: 3000, durationDays: 90, features: ['VIP Badge', 'Dedicated Support', 'VIP Chat Theme', 'Custom Bubble Colors'] },
+    { planName: 'Platinum', price: 50, points: 5000, durationDays: 180, features: ['VIP Badge', 'Dedicated Support', 'VIP Chat Theme', 'Custom Bubble Colors', 'Increased Limits'] },
+    { planName: 'Diamond', price: 60, points: 6000, durationDays: 270, features: ['VIP Badge', 'Dedicated Support', 'VIP Chat Theme', 'Custom Bubble Colors', 'Increased Limits'] },
+    { planName: 'Elite Yearly', price: 75, points: 7500, durationDays: 365, features: ['VIP Badge', 'Dedicated Support', 'VIP Chat Theme', 'Custom Bubble Colors', 'Increased Limits'] },
 ];
 
 const lifetimePlan = {
@@ -343,7 +343,7 @@ export default function SubscribePage() {
         <span className="mt-3 md:mt-4 text-base md:text-lg text-muted-foreground max-w-2xl mx-auto block">
             {hasVipAccess && !hasVipBadge
               ? "You already have VIP feature access! Purchase a plan to get the exclusive VIP crown badge next to your name."
-              : "Unlock exclusive features like the VIP theme, exclusive chat access, get a VIP badge, and support Echo Message."
+              : "Unlock exclusive features like the VIP theme, get a VIP badge, and support Echo Message."
             }
         </span>
       </div>

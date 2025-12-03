@@ -17,61 +17,92 @@ service cloud.firestore {
     function isChatParticipant(chatId) {
       return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
     }
+    
+    function isDevTeam() {
+      // Use exists() for safety in case the user document is in the process of being created.
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isDevTeam == true;
+    }
+    
+    function isGiftingPoints() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAll(['points', 'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount'])
+             && request.resource.data.hasNewPointsGift == true
+             && request.resource.data.points > resource.data.points;
+    }
+    
+    function isGiftingBadge() {
+       return isDevTeam() && request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'isVerified', 'isCreator', 'isVIP', 'isMemeCreator', 'isBetaTester', 'badgeExpiry', 
+          'hasNewGift', 'giftedByUid', 'lastGiftedBadge'
+        ]);
+    }
 
     // =====================================================
     // Users Collection
     // =====================================================
     match /users/{userId} {
-      // Any signed-in user can read any user's profile (to see avatars, names, etc.)
       allow read: if isSignedIn();
       allow list: if isSignedIn();
+      allow create: if request.auth.uid == userId;
       
-      // A user can only create their own profile document.
-      allow create: if isOwner(userId);
-      
-      // A user can only update their own profile, and cannot elevate their own privileges.
-      allow update: if isOwner(userId)
-                    && !(request.resource.data.diff(resource.data).affectedKeys().hasAny([
-                      'isVIP', 'isVerified', 'isCreator', 'isDevTeam', 'isBot', 'points'
-                    ]));
+      // Allow updates by the owner or for specific gift-related actions.
+      allow update: if (isOwner(userId) && (
+                      // Case 1: Owner is purchasing VIP or making a regular profile update.
+                      // Prevent them from changing their own special roles or points.
+                      !(request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                        'isVerified', 'isCreator', 'isDevTeam', 'isBot', 'points',
+                        'isMemeCreator', 'isBetaTester', 'badgeExpiry', 'hasNewGift', 'giftedByUid', 'lastGiftedBadge',
+                        'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount'
+                      ]))
+                    ))
+                    ||
+                    // Case 2: Another user is gifting points to this user.
+                    (isSignedIn() && isGiftingPoints())
+                    ||
+                    // Case 3: A dev team member is gifting a badge.
+                    (isGiftingBadge());
     }
 
     // =====================================================
     // Chats Collection
     // =====================================================
     match /chats/{chatId} {
-      // Allow a user to get a single chat document if they are a participant.
       allow get: if isChatParticipant(chatId);
-      
-      // Securely allow querying the chat list.
-      // The app MUST use `where('participants', 'array-contains', request.auth.uid)` in its query.
       allow list: if isSignedIn();
-      
-      // A user can create a chat if they are one of the participants.
       allow create: if isSignedIn() && request.auth.uid in request.resource.data.participants;
-      
-      // Participants can update chat metadata (e.g., lastMessage).
       allow update: if isChatParticipant(chatId);
 
-      // Messages subcollection
       match /messages/{messageId} {
-        // Allow reading/listing messages if the user is a participant of the parent chat.
         allow read: if isChatParticipant(chatId);
-        
-        // A participant can create a message, and they must be the sender.
         allow create: if isChatParticipant(chatId) && request.resource.data.senderId == request.auth.uid;
-        
-        // Allow a user to update/delete their own sent messages (e.g., for reactions or soft-deletes).
         allow update, delete: if isChatParticipant(chatId) && resource.data.senderId == request.auth.uid;
       }
     }
 
     // =====================================================
-    // Promo Codes and Gift Codes (Read-only for clients)
+    // Promo Codes and Gift Codes
     // =====================================================
-    match /vipPromoCodes/{code} { allow read: if isSignedIn(); allow write: if false; }
-    match /pointsPromoCodes/{code} { allow read: if isSignedIn(); allow write: if false; }
-    match /badgeGiftCodes/{code} { allow read: if isSignedIn(); allow write: if false; }
-
+    // Any signed-in user can read a code to check its validity.
+    // Any signed-in user can update the 'claimedBy' field to redeem it. No other fields can be changed.
+    // Only Dev Team can create or delete codes.
+    match /vipPromoCodes/{code} { 
+      allow read: if isSignedIn();
+      allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy']);
+      allow create, delete: if isDevTeam();
+    }
+    match /pointsPromoCodes/{code} { 
+      allow read: if isSignedIn();
+      allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy']);
+      allow create, delete: if isDevTeam();
+    }
+    match /badgeGiftCodes/{code} { 
+      allow read: if isSignedIn();
+      allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy']);
+      allow create, delete: if isDevTeam();
+    }
+    
+    // Deny all other access
+    match /{path=**} {
+      allow read, write: if false;
+    }
   }
 }

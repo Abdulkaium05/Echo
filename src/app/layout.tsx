@@ -1,50 +1,17 @@
-
-import type {Metadata, Viewport} from 'next';
-import {GeistSans} from 'geist/font/sans';
-import {GeistMono} from 'geist/font/mono';
+// src/app/layout.tsx
+import { GeistSans } from 'geist/font/sans';
+import { Providers } from './providers';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster";
-import { Providers } from '@/components/providers';
-
-export const metadata: Metadata = {
-  title: 'echo', // Updated app title
-  description: 'Exclusive Messaging App',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'Echo',
-  },
-  mobileWebApp: true,
-  icons: {
-    icon: '/logo.png',
-    shortcut: '/logo.png',
-    apple: '/logo.png',
-  },
-};
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  viewportFit: 'cover',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'hsl(0 0% 100%)' }, // White
-    { media: '(prefers-color-scheme: dark)', color: 'hsl(0 0% 8%)' }, // Almost black
-  ],
-};
-
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
-      <body className="antialiased">
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
+    <html lang="en" suppressHydrationWarning>
+      <body className={GeistSans.className}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

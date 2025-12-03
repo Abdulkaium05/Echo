@@ -22,6 +22,19 @@ service cloud.firestore {
       // Use exists() for safety in case the user document is in the process of being created.
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isDevTeam == true;
     }
+    
+    function isGiftingPoints() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAll(['points', 'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount'])
+             && request.resource.data.hasNewPointsGift == true
+             && request.resource.data.points > resource.data.points;
+    }
+    
+    function isGiftingBadge() {
+       return isDevTeam() && request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'isVerified', 'isCreator', 'isVIP', 'isMemeCreator', 'isBetaTester', 'badgeExpiry', 
+          'hasNewGift', 'giftedByUid', 'lastGiftedBadge'
+        ]);
+    }
 
     // =====================================================
     // Users Collection
@@ -31,24 +44,25 @@ service cloud.firestore {
       allow list: if isSignedIn();
       allow create: if request.auth.uid == userId;
       
-      // Allow updates by owner or by a dev team member for gifting.
-      allow update: if isOwner(userId) && (
-        // Allow a non-VIP user to become VIP (i.e., purchase a plan).
-        (!resource.data.isVIP && request.resource.data.isVIP == true)
-        ||
-        // Prevent users from changing their own special roles or points balance.
-        !(request.resource.data.diff(resource.data).affectedKeys().hasAny([
-          'isVerified', 'isCreator', 'isDevTeam', 'isBot', 'points',
-          'isMemeCreator', 'isBetaTester', 'badgeExpiry', 'hasNewGift', 'giftedByUid', 'lastGiftedBadge',
-          'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount'
-        ]))
-      ) || (
-        // Allow a dev team member to gift badges and related properties.
-        isDevTeam() && request.resource.data.diff(resource.data).affectedKeys().hasAny([
-          'isVerified', 'isCreator', 'isVIP', 'isMemeCreator', 'isBetaTester', 'badgeExpiry', 
-          'hasNewGift', 'giftedByUid', 'lastGiftedBadge'
-        ])
-      );
+      // Allow updates by the owner or for specific gift-related actions.
+      allow update: if (isOwner(userId) && (
+                      // Case 1: Owner is purchasing VIP.
+                      (!resource.data.isVIP && request.resource.data.isVIP == true)
+                      ||
+                      // Case 2: Owner is making a regular profile update.
+                      // Prevent them from changing their own special roles or points.
+                      !(request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                        'isVerified', 'isCreator', 'isDevTeam', 'isBot', 'points',
+                        'isMemeCreator', 'isBetaTester', 'badgeExpiry', 'hasNewGift', 'giftedByUid', 'lastGiftedBadge',
+                        'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount'
+                      ]))
+                    ))
+                    ||
+                    // Case 3: Another user is gifting points to this user.
+                    (isSignedIn() && isGiftingPoints())
+                    ||
+                    // Case 4: A dev team member is gifting a badge.
+                    (isGiftingBadge());
     }
 
     // =====================================================

@@ -1,5 +1,4 @@
-
-// src/app/(app)/chat/[chatId]/page.tsx
+// src/app/chat/[chatId]/page.tsx
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';

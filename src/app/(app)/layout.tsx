@@ -1,4 +1,4 @@
-// src/app/(app)/layout.tsx
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -6,12 +6,11 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, Star, QrCode, ShieldCheck, SmilePlus, FlaskConical, BarChart, Gift, Code, Check, Camera, Coins, History } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Gift, Code } from 'lucide-react';
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
-import { VIPProvider } from '@/context/vip-context';
 import { ProfileSettingsDialog } from '@/components/settings/profile-settings-dialog';
 import { AppearanceSettingsDialog } from '@/components/settings/appearance-settings-dialog';
 import { AboutDialog } from '@/components/about-dialog';
@@ -19,256 +18,14 @@ import { Logo } from '@/components/logo';
 import { useAuth, type UserProfile } from '@/context/auth-context';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { NotificationPopover } from '@/components/chat/notification-popover';
-import { MusicPlayerProvider } from '@/context/music-player-context';
-import { ShareProfileDialog } from '@/components/profile/share-profile-dialog'; // Import ShareProfileDialog
+import { ShareProfileDialog } from '@/components/profile/share-profile-dialog';
 import { GiftBadgeDialog } from '@/components/dev/gift-badge-dialog';
 import { GiftReceivedDialog } from '@/components/dev/gift-received-dialog';
 import { ScanQrDialog } from '@/components/chat/scan-qr-dialog';
 import { PointsReceivedDialog } from '@/components/dev/points-received-dialog';
 import { CompleteProfileDialog } from '@/components/auth/complete-profile-dialog';
 import { EchoOldDialog } from '@/components/echo-old-dialog';
-
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user: currentUser, userProfile: currentUserProfile, loading: authLoading, isUserProfileLoading, logout, updateMockUserProfile, giftInfo, setGiftInfo, pointsGiftInfo, setPointsGiftInfo } = useAuth();
-
-  const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
-  const [isAppearanceDialogOpen, setAppearanceDialogOpen] = useState(false);
-  const [isAboutDialogOpen, setAboutDialogOpen] = useState(false);
-  const [isShareProfileDialogOpen, setShareProfileDialogOpen] = useState(false);
-  const [isGiftBadgeDialogOpen, setIsGiftBadgeDialogOpen] = useState(false);
-  const [isGiftReceivedDialogOpen, setIsGiftReceivedDialogOpen] = useState(false);
-  const [isPointsReceivedDialogOpen, setIsPointsReceivedDialogOpen] = useState(false);
-  const [isScanQrDialogOpen, setIsScanQrDialogOpen] = useState(false);
-  const [isCompleteProfileOpen, setIsCompleteProfileOpen] = useState(false);
-  const [isEchoOldDialogOpen, setIsEchoOldDialogOpen] = useState(false);
-
-  useEffect(() => {
-    if (giftInfo.gifterProfile && giftInfo.giftedBadge) {
-      setIsGiftReceivedDialogOpen(true);
-    }
-  }, [giftInfo]);
-
-  useEffect(() => {
-    if (pointsGiftInfo.gifterProfile && pointsGiftInfo.giftedPointsAmount) {
-        setIsPointsReceivedDialogOpen(true);
-    }
-  }, [pointsGiftInfo]);
-
-  useEffect(() => {
-      if (currentUserProfile && !currentUserProfile.hasCompletedOnboarding && !isUserProfileLoading) {
-          setIsCompleteProfileOpen(true);
-      } else {
-          setIsCompleteProfileOpen(false);
-      }
-  }, [currentUserProfile, isUserProfileLoading]);
-
-
-  const handleCloseGiftDialog = () => {
-    setIsGiftReceivedDialogOpen(false);
-    // Reset gift info after showing the dialog
-    setGiftInfo({ gifterProfile: null, giftedBadge: null });
-  };
-  
-  const handleClosePointsGiftDialog = () => {
-    setIsPointsReceivedDialogOpen(false);
-    // Reset points gift info after showing the dialog
-    setPointsGiftInfo({ gifterProfile: null, giftedPointsAmount: null });
-  };
-
-  const isChatPage = /^\/chat(\/.*)?$/.test(pathname);
-  const isViewingChat = /^\/chat\/[^/]+$/.test(pathname);
-  const currentChatId = isViewingChat ? pathname.split('/')[2] : undefined;
-
-  const handleLogout = async () => {
-    await logout();
-  };
-
-   const handleProfileUpdate = async (updatedData: Partial<UserProfile>) => {
-     if (!currentUser || !currentUserProfile) return;
-      updateMockUserProfile(currentUser.uid, updatedData);
-   };
-
-  useEffect(() => {
-    if (!authLoading && !currentUser && !isUserProfileLoading) {
-      router.replace('/login');
-    }
-  }, [authLoading, currentUser, isUserProfileLoading, router]);
-
-   if (authLoading || (currentUser && isUserProfileLoading)) {
-       return (
-           <div className="flex h-screen w-full items-center justify-center bg-background">
-               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-               <p className="ml-2 text-muted-foreground">Loading User Data...</p>
-           </div>
-       );
-   }
-
-    if (!currentUser) {
-         return (
-             <div className="flex h-screen w-full items-center justify-center bg-background">
-                 <Loader2 className="h-8 w-8 animate-spin text-destructive" />
-                 <p className="ml-2 text-destructive">Redirecting to login...</p>
-             </div>
-         );
-    }
-  
-    if (!currentUserProfile) {
-         return (
-             <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4 p-4 text-center">
-                 <Loader2 className="h-8 w-8 animate-spin text-destructive" />
-                 <p className="text-destructive">Error: User profile data could not be loaded.</p>
-                 <Button onClick={handleLogout} variant="outline" className="mt-2">Logout</Button>
-             </div>
-         );
-    }
-
-  return (
-    <div className={cn(
-        "flex h-screen w-full bg-background flex-col md:flex-row"
-        )}>
-      <aside className="hidden md:flex md:flex-col w-80 border-r bg-secondary shrink-0">
-         <div className="flex items-center justify-between p-4 border-b">
-             <Link href="/chat" className="flex items-center gap-2">
-                <Logo className="h-8" />
-             </Link>
-              <div className="flex items-center gap-2">
-                <NotificationPopover />
-                {currentUserProfile && (
-                  <UserMenu
-                      user={currentUserProfile}
-                      onLogout={handleLogout}
-                      onOpenProfileSettings={() => setProfileDialogOpen(true)}
-                      onOpenAppearanceSettings={() => setAppearanceDialogOpen(true)}
-                      onOpenAboutDialog={() => setAboutDialogOpen(true)}
-                      onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
-                      onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
-                      onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
-                      onOpenEchoOldDialog={() => setIsEchoOldDialogOpen(true)}
-                      onProfileUpdate={handleProfileUpdate}
-                  />
-                )}
-              </div>
-         </div>
-        {currentUser && <ChatList currentChatId={currentChatId} currentUserId={currentUser.uid} />}
-      </aside>
-
-      <header className="md:hidden flex items-center justify-between p-3 border-b bg-secondary sticky top-0 z-10 shrink-0">
-         <Link href="/chat" className="flex items-center gap-2">
-             <Logo className="h-8" />
-         </Link>
-          <div className="flex items-center gap-2">
-            <NotificationPopover />
-            {currentUserProfile && (
-              <UserMenu
-                  user={currentUserProfile}
-                  onLogout={handleLogout}
-                  onOpenProfileSettings={() => setProfileDialogOpen(true)}
-                  onOpenAppearanceSettings={() => setAppearanceDialogOpen(true)}
-                  onOpenAboutDialog={() => setAboutDialogOpen(true)}
-                  onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
-                  onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
-                  onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
-                  onOpenEchoOldDialog={() => setIsEchoOldDialogOpen(true)}
-                  onProfileUpdate={handleProfileUpdate}
-              />
-            )}
-          </div>
-      </header>
-
-      <main className="flex-1 flex flex-col overflow-y-auto">
-          {/* Mobile Chat List View */}
-          <div className={cn("h-full md:hidden", {
-              'block': pathname === '/chat', // Show only on the main chat list page
-              'hidden': pathname !== '/chat',
-          })}>
-            {currentUser && <ChatList currentChatId={currentChatId} currentUserId={currentUser.uid} />}
-          </div>
-
-          {/* Mobile Content View (for individual chats AND other pages) */}
-          <div className={cn("h-full", {
-              'block': pathname !== '/chat', // Show for any page that is NOT the main chat list
-              'hidden': pathname === '/chat',
-              'md:block': !isChatPage, // On desktop, show if not a chat page at all
-              'md:flex-1 md:flex md:flex-col': isChatPage && isViewingChat, // Correctly handle flex for chat window
-              'md:hidden': isChatPage && !isViewingChat, // On desktop, hide if on main chat list
-          })}>
-              {children}
-          </div>
-      </main>
-
-      {currentUserProfile && (
-        <>
-          {currentUser && (
-             <CompleteProfileDialog 
-                isOpen={isCompleteProfileOpen}
-                onOpenChange={setIsCompleteProfileOpen}
-                user={currentUserProfile}
-                onProfileUpdate={handleProfileUpdate}
-             />
-          )}
-          <ProfileSettingsDialog
-            isOpen={isProfileDialogOpen}
-            onOpenChange={setProfileDialogOpen}
-            user={currentUserProfile}
-            onProfileUpdate={handleProfileUpdate}
-          />
-          <AppearanceSettingsDialog
-            isOpen={isAppearanceDialogOpen}
-            onOpenChange={setAppearanceDialogOpen}
-          />
-          <AboutDialog
-            isOpen={isAboutDialogOpen}
-            onOpenChange={setAboutDialogOpen}
-          />
-          <ShareProfileDialog
-            isOpen={isShareProfileDialogOpen}
-            onOpenChange={setShareProfileDialogOpen}
-            user={currentUserProfile}
-          />
-          <GiftBadgeDialog
-            isOpen={isGiftBadgeDialogOpen}
-            onOpenChange={setIsGiftBadgeDialogOpen}
-          />
-           <GiftReceivedDialog 
-                isOpen={isGiftReceivedDialogOpen}
-                onOpenChange={handleCloseGiftDialog}
-                gifterProfile={giftInfo.gifterProfile}
-                giftedBadge={giftInfo.giftedBadge}
-            />
-            <PointsReceivedDialog
-                isOpen={isPointsReceivedDialogOpen}
-                onOpenChange={handleClosePointsGiftDialog}
-                gifterProfile={pointsGiftInfo.gifterProfile}
-                giftedPointsAmount={pointsGiftInfo.giftedPointsAmount}
-            />
-            <ScanQrDialog
-                isOpen={isScanQrDialogOpen}
-                onOpenChange={setIsScanQrDialogOpen}
-            />
-             <EchoOldDialog
-              isOpen={isEchoOldDialogOpen}
-              onOpenChange={setIsEchoOldDialogOpen}
-            />
-        </>
-      )}
-    </div>
-  );
-}
-
-interface UserMenuProps {
-  user: UserProfile;
-  onLogout: () => void;
-  onOpenProfileSettings: () => void;
-  onOpenAppearanceSettings: () => void;
-  onOpenAboutDialog: () => void;
-  onOpenShareProfileDialog: () => void;
-  onOpenGiftBadgeDialog: () => void;
-  onOpenScanQrDialog: () => void;
-  onOpenEchoOldDialog: () => void;
-  onProfileUpdate: (data: Partial<UserProfile>) => void;
-}
+import { Toaster } from '@/components/ui/toaster';
 
 export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester';
 export type BadgeColor = 'sky-blue' | 'light-green' | 'red' | 'orange' | 'yellow' | 'purple' | 'pink' | 'indigo' | 'teal' | 'white' | 'black';
@@ -284,7 +41,17 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
 };
 
 
-function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenGiftBadgeDialog, onOpenScanQrDialog, onOpenEchoOldDialog, onProfileUpdate }: UserMenuProps) {
+function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenGiftBadgeDialog, onOpenScanQrDialog, onOpenEchoOldDialog }: { 
+    user: UserProfile, 
+    onLogout: () => void, 
+    onOpenProfileSettings: () => void,
+    onOpenAppearanceSettings: () => void,
+    onOpenAboutDialog: () => void,
+    onOpenShareProfileDialog: () => void;
+    onOpenGiftBadgeDialog: () => void;
+    onOpenScanQrDialog: () => void;
+    onOpenEchoOldDialog: () => void;
+}) {
    const router = useRouter();
    const fallbackInitials = user.name ? user.name.substring(0, 2).toUpperCase() : '??';
 
@@ -389,4 +156,239 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
        </DropdownMenuContent>
      </DropdownMenu>
    );
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user: currentUser, userProfile: currentUserProfile, loading: authLoading, isUserProfileLoading, logout, updateMockUserProfile, giftInfo, setGiftInfo, pointsGiftInfo, setPointsGiftInfo } = useAuth();
+
+  const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [isAppearanceDialogOpen, setAppearanceDialogOpen] = useState(false);
+  const [isAboutDialogOpen, setAboutDialogOpen] = useState(false);
+  const [isShareProfileDialogOpen, setShareProfileDialogOpen] = useState(false);
+  const [isGiftBadgeDialogOpen, setIsGiftBadgeDialogOpen] = useState(false);
+  const [isGiftReceivedDialogOpen, setIsGiftReceivedDialogOpen] = useState(false);
+  const [isPointsReceivedDialogOpen, setIsPointsReceivedDialogOpen] = useState(false);
+  const [isScanQrDialogOpen, setIsScanQrDialogOpen] = useState(false);
+  const [isCompleteProfileOpen, setIsCompleteProfileOpen] = useState(false);
+  const [isEchoOldDialogOpen, setIsEchoOldDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (giftInfo.gifterProfile && giftInfo.giftedBadge) {
+      setIsGiftReceivedDialogOpen(true);
+    }
+  }, [giftInfo]);
+
+  useEffect(() => {
+    if (pointsGiftInfo.gifterProfile && pointsGiftInfo.giftedPointsAmount) {
+        setIsPointsReceivedDialogOpen(true);
+    }
+  }, [pointsGiftInfo]);
+
+  useEffect(() => {
+      if (currentUserProfile && !currentUserProfile.hasCompletedOnboarding && !isUserProfileLoading) {
+          setIsCompleteProfileOpen(true);
+      } else {
+          setIsCompleteProfileOpen(false);
+      }
+  }, [currentUserProfile, isUserProfileLoading]);
+
+
+  const handleCloseGiftDialog = () => {
+    setIsGiftReceivedDialogOpen(false);
+    setGiftInfo({ gifterProfile: null, giftedBadge: null });
+  };
+  
+  const handleClosePointsGiftDialog = () => {
+    setIsPointsReceivedDialogOpen(false);
+    setPointsGiftInfo({ gifterProfile: null, giftedPointsAmount: null });
+  };
+
+  const isChatPage = /^\/chat(\/.*)?$/.test(pathname);
+  const isViewingChat = /^\/chat\/[^/]+$/.test(pathname);
+  const currentChatId = isViewingChat ? pathname.split('/')[2] : undefined;
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/login');
+  };
+
+   const handleProfileUpdate = async (updatedData: Partial<UserProfile>) => {
+     if (!currentUser || !currentUserProfile) return;
+      updateMockUserProfile(currentUser.uid, updatedData);
+   };
+
+  useEffect(() => {
+    if (!authLoading && !currentUser && !isUserProfileLoading) {
+      router.replace('/login');
+    }
+  }, [authLoading, currentUser, isUserProfileLoading, router]);
+
+  const isAuthPage = pathname === '/login' || pathname === '/signup';
+
+  if (isAuthPage) {
+    return <>{children}</>;
+  }
+
+   if (authLoading || (currentUser && isUserProfileLoading)) {
+       return (
+           <div className="flex h-screen w-full items-center justify-center bg-background">
+               <Loader2 className="h-8 w-8 animate-spin text-primary" />
+               <p className="ml-2 text-muted-foreground">Loading User Data...</p>
+           </div>
+       );
+   }
+
+    if (!currentUser) {
+         return (
+             <div className="flex h-screen w-full items-center justify-center bg-background">
+                 <Loader2 className="h-8 w-8 animate-spin text-destructive" />
+                 <p className="ml-2 text-destructive">Redirecting to login...</p>
+             </div>
+         );
+    }
+  
+    if (!currentUserProfile) {
+         return (
+             <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4 p-4 text-center">
+                 <Loader2 className="h-8 w-8 animate-spin text-destructive" />
+                 <p className="text-destructive">Error: User profile data could not be loaded.</p>
+                 <Button onClick={handleLogout} variant="outline" className="mt-2">Logout</Button>
+             </div>
+         );
+    }
+
+  return (
+    <>
+      <div className={cn(
+          "flex h-screen w-full bg-background flex-col md:flex-row"
+          )}>
+        <aside className="hidden md:flex md:flex-col w-80 border-r bg-secondary shrink-0">
+           <div className="flex items-center justify-between p-4 border-b">
+               <Link href="/chat" className="flex items-center gap-2">
+                  <Logo className="h-8" />
+               </Link>
+                <div className="flex items-center gap-2">
+                  <NotificationPopover />
+                  {currentUserProfile && (
+                    <UserMenu
+                        user={currentUserProfile}
+                        onLogout={handleLogout}
+                        onOpenProfileSettings={() => setProfileDialogOpen(true)}
+                        onOpenAppearanceSettings={() => setAppearanceDialogOpen(true)}
+                        onOpenAboutDialog={() => setAboutDialogOpen(true)}
+                        onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
+                        onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
+                        onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
+                        onOpenEchoOldDialog={() => setIsEchoOldDialogOpen(true)}
+                    />
+                  )}
+                </div>
+           </div>
+          {currentUser && <ChatList currentChatId={currentChatId} currentUserId={currentUser.uid} />}
+        </aside>
+
+        <header className="md:hidden flex items-center justify-between p-3 border-b bg-secondary sticky top-0 z-10 shrink-0">
+           <Link href="/chat" className="flex items-center gap-2">
+               <Logo className="h-8" />
+           </Link>
+            <div className="flex items-center gap-2">
+              <NotificationPopover />
+              {currentUserProfile && (
+                <UserMenu
+                    user={currentUserProfile}
+                    onLogout={handleLogout}
+                    onOpenProfileSettings={() => setProfileDialogOpen(true)}
+                    onOpenAppearanceSettings={() => setAppearanceDialogOpen(true)}
+                    onOpenAboutDialog={() => setAboutDialogOpen(true)}
+                    onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
+                    onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
+                    onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
+                    onOpenEchoOldDialog={() => setIsEchoOldDialogOpen(true)}
+                />
+              )}
+            </div>
+        </header>
+
+        <main className="flex-1 flex flex-col overflow-y-auto">
+            {/* Mobile Chat List View */}
+            <div className={cn("h-full md:hidden", {
+                'block': pathname === '/chat', // Show only on the main chat list page
+                'hidden': pathname !== '/chat',
+            })}>
+              {currentUser && <ChatList currentChatId={currentChatId} currentUserId={currentUser.uid} />}
+            </div>
+
+            {/* Mobile Content View (for individual chats AND other pages) */}
+            <div className={cn("h-full", {
+                'block': pathname !== '/chat', // Show for any page that is NOT the main chat list
+                'hidden': pathname === '/chat',
+                'md:block': !isChatPage, // On desktop, show if not a chat page at all
+                'md:flex-1 md:flex md:flex-col': isChatPage && isViewingChat, // Correctly handle flex for chat window
+                'md:hidden': isChatPage && !isViewingChat, // On desktop, hide if on main chat list
+            })}>
+                {children}
+            </div>
+        </main>
+      </div>
+
+      {currentUserProfile && (
+        <>
+          {currentUser && (
+             <CompleteProfileDialog 
+                isOpen={isCompleteProfileOpen}
+                onOpenChange={setIsCompleteProfileOpen}
+                user={currentUserProfile}
+                onProfileUpdate={handleProfileUpdate}
+             />
+          )}
+          <ProfileSettingsDialog
+            isOpen={isProfileDialogOpen}
+            onOpenChange={setProfileDialogOpen}
+            user={currentUserProfile}
+            onProfileUpdate={handleProfileUpdate}
+          />
+          <AppearanceSettingsDialog
+            isOpen={isAppearanceDialogOpen}
+            onOpenChange={setAppearanceDialogOpen}
+          />
+          <AboutDialog
+            isOpen={isAboutDialogOpen}
+            onOpenChange={setAboutDialogOpen}
+          />
+          <ShareProfileDialog
+            isOpen={isShareProfileDialogOpen}
+            onOpenChange={setShareProfileDialogOpen}
+            user={currentUserProfile}
+          />
+          <GiftBadgeDialog
+            isOpen={isGiftBadgeDialogOpen}
+            onOpenChange={setIsGiftBadgeDialogOpen}
+          />
+           <GiftReceivedDialog 
+                isOpen={isGiftReceivedDialogOpen}
+                onOpenChange={handleCloseGiftDialog}
+                gifterProfile={giftInfo.gifterProfile}
+                giftedBadge={giftInfo.giftedBadge}
+            />
+            <PointsReceivedDialog
+                isOpen={isPointsReceivedDialogOpen}
+                onOpenChange={handleClosePointsGiftDialog}
+                gifterProfile={pointsGiftInfo.gifterProfile}
+                giftedPointsAmount={pointsGiftInfo.giftedPointsAmount}
+            />
+            <ScanQrDialog
+                isOpen={isScanQrDialogOpen}
+                onOpenChange={setIsScanQrDialogOpen}
+            />
+             <EchoOldDialog
+              isOpen={isEchoOldDialogOpen}
+              onOpenChange={setIsEchoOldDialogOpen}
+            />
+        </>
+      )}
+      <Toaster />
+    </>
+  );
 }

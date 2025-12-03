@@ -1,5 +1,4 @@
-
-// src/app/(app)/points/page.tsx
+// src/app/points/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
