@@ -111,7 +111,7 @@ export async function blueBirdAssistant(input: BlueBirdAssistantInput): Promise<
 
 const blueBirdPrompt = ai.definePrompt({
   name: 'blueBirdPrompt',
-  model: 'groq/gemma-7b-it',
+  model: 'groq/gemma2-9b-it',
   input: {schema: BlueBirdAssistantInputSchema},
   output: {schema: BlueBirdAssistantOutputSchema},
   tools: [getRealTimeNews, getCurrentTime],
