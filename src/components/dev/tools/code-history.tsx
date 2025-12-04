@@ -1,10 +1,9 @@
-
 // src/components/dev/tools/code-history.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, History, Trash2, Copy, Crown, SmilePlus, FlaskConical, Coins } from 'lucide-react';
+import { Loader2, History, Trash2, Copy, Crown, SmilePlus, FlaskConical, Coins, Rocket, Gem } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
     getVipPromoCodes, getBadgeGiftCodes, getPointsPromoCodes,
@@ -35,6 +34,8 @@ const badgeComponentMap: Record<BadgeType, React.FC<{className?: string}>> = {
   bot: () => null,
   meme_creator: (props) => <SmilePlus {...props} />,
   beta_tester: (props) => <FlaskConical {...props} />,
+  pioneer: (props) => <Rocket {...props} />,
+  patron: (props) => <Gem {...props} />,
 };
 
 export function CodeHistoryTab() {
@@ -305,5 +306,3 @@ export function CodeHistoryTab() {
     </Card>
   );
 }
-
-    

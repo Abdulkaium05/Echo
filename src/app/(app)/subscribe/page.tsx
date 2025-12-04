@@ -58,7 +58,7 @@ const lifetimePlan = {
 export default function SubscribePage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { user, userProfile, loading: authLoading, isUserProfileLoading, updateMockUserProfile } = useAuth();
+  const { user, userProfile, loading: authLoading, isUserProfileLoading, updateUserProfile } = useAuth();
   const { isVIP: hasVipBadge, hasVipAccess, setVIPStatus: setContextVIPStatus } = useVIP();
 
   const isEligibleForLifetime = userProfile?.isVerified || userProfile?.isCreator;
@@ -93,7 +93,7 @@ export default function SubscribePage() {
     });
     try {
       await updateVIPStatus(user.uid, false);
-      updateMockUserProfile(user.uid, { isVIP: false, vipPack: undefined, vipExpiryTimestamp: undefined });
+      updateUserProfile({ isVIP: false, vipPack: undefined, vipExpiryTimestamp: undefined });
       setContextVIPStatus(false, undefined);
       setRemainingTime(null); 
     } catch (error) {
@@ -106,7 +106,7 @@ export default function SubscribePage() {
     } finally {
       setIsProcessing(false);
     }
-  }, [user, updateMockUserProfile, setContextVIPStatus, toast]);
+  }, [user, updateUserProfile, setContextVIPStatus, toast]);
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null;
@@ -160,7 +160,7 @@ export default function SubscribePage() {
       const updatedPoints = userPoints - plan.points;
       
       await updateVIPStatus(user.uid, true, plan.planName, plan.durationDays);
-      updateMockUserProfile(user.uid, { 
+      updateUserProfile({ 
           isVIP: true, 
           vipPack: plan.planName, 
           vipExpiryTimestamp: expiry,
@@ -199,7 +199,7 @@ export default function SubscribePage() {
 
     try {
         await updateVIPStatus(user.uid, false);
-        updateMockUserProfile(user.uid, { isVIP: false, vipPack: undefined, vipExpiryTimestamp: undefined });
+        updateUserProfile({ isVIP: false, vipPack: undefined, vipExpiryTimestamp: undefined });
         setContextVIPStatus(false, undefined);
         setRemainingTime(null);
 
@@ -248,7 +248,7 @@ export default function SubscribePage() {
             const planName = `VIP (${result.durationDays} days)`;
             
             const expiry = Date.now() + result.durationDays * 24 * 60 * 60 * 1000;
-            updateMockUserProfile(user.uid, { 
+            updateUserProfile({ 
                 isVIP: true, 
                 vipPack: planName, 
                 vipExpiryTimestamp: expiry,
@@ -264,7 +264,7 @@ export default function SubscribePage() {
             });
         } else if (code.startsWith('PTS-')) {
             const result = await redeemPointsPromoCode(user.uid, code);
-            updateMockUserProfile(user.uid, {
+            updateUserProfile({
                 points: (userProfile.points || 0) + result.amount,
             });
             toast({

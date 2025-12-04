@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { cn } from '@/lib/utils';
-import { Crown, Wrench, User as UserIcon, UserX, Trash2, UserCheck, SmilePlus, FlaskConical, Leaf } from 'lucide-react';
+import { Crown, Wrench, User as UserIcon, UserX, Trash2, UserCheck, SmilePlus, FlaskConical, Leaf, Bot } from 'lucide-react';
 import type { UserProfile } from '@/services/firestore';
 import { OutlineBirdIcon, SquareBotBadgeIcon, CreatorLetterCBBadgeIcon } from './bot-icons';
 import {
@@ -119,7 +119,7 @@ export function ChatItem(props: ChatItemProps) {
   const renderAvatarOrIcon = () => {
     const avatarBaseClasses = "h-10 w-10";
     const iconWrapperClasses = `${avatarBaseClasses} flex items-center justify-center rounded-full`;
-    const dataAiHint = isBot ? "green leaf" : (isDevTeam ? "team avatar" : (isCreator ? "creator avatar" : "user avatar"));
+    const dataAiHint = isBot ? "ai bot" : (isDevTeam ? "team avatar" : (isCreator ? "creator avatar" : "user avatar"));
 
     if (iconIdentifier === 'outline-bird-avatar') {
       return (
@@ -136,6 +136,16 @@ export function ChatItem(props: ChatItemProps) {
             <Avatar className={cn(avatarBaseClasses, "border-[hsl(var(--bot-accent-color))]")}>
                 <AvatarFallback className="bg-green-100 dark:bg-green-900/50">
                     <Leaf className="text-green-600 dark:text-green-400 p-1" />
+                </AvatarFallback>
+            </Avatar>
+        );
+    }
+
+    if (iconIdentifier === 'echo-bot-icon') {
+        return (
+            <Avatar className={cn(avatarBaseClasses, "border-gray-500/50")}>
+                <AvatarFallback className="bg-muted">
+                    <Bot className="text-foreground/70 p-1" />
                 </AvatarFallback>
             </Avatar>
         );

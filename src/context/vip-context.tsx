@@ -4,6 +4,9 @@
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
+import { deleteField } from 'firebase/firestore';
+import { updateUserProfile as updateUserInFirestore } from '@/services/firestore';
+
 
 interface VIPContextProps {
   isVIP: boolean; // Does the user have a purchased VIP plan (and thus the badge)?
@@ -15,7 +18,7 @@ interface VIPContextProps {
 const VIPContext = createContext<VIPContextProps | undefined>(undefined);
 
 export const VIPProvider = ({ children }: { children: ReactNode }) => {
-  const { userProfile, isUserProfileLoading } = useAuth();
+  const { user, userProfile, isUserProfileLoading, updateUserProfile } = useAuth();
   
   const [isVIP, setIsVIP] = useState(false); // For the badge
   const [hasVipAccess, setHasVipAccess] = useState(false); // For features
@@ -41,6 +44,20 @@ export const VIPProvider = ({ children }: { children: ReactNode }) => {
         console.log("VIPProvider: VIP subscription expired. Reverting badge status.");
         currentVipBadgeStatus = false;
         currentVIPPack = undefined;
+        // Also trigger an update in Firestore to clear the expired status
+        if (user) {
+            updateUserInFirestore(user.uid, {
+                isVIP: false,
+                vipPack: deleteField(),
+                vipExpiryTimestamp: deleteField(),
+            });
+            // Update local profile state as well
+            updateUserProfile({
+                 isVIP: false,
+                 vipPack: undefined,
+                 vipExpiryTimestamp: undefined
+            });
+        }
       }
       
       console.log(`VIPProvider: Initializing VIP Access: ${currentVipAccess}, Badge: ${currentVipBadgeStatus}, Pack: ${currentVIPPack}`);
@@ -53,7 +70,7 @@ export const VIPProvider = ({ children }: { children: ReactNode }) => {
       setHasVipAccess(false);
       setVipPack(undefined);
     }
-  }, [userProfile, isUserProfileLoading]);
+  }, [userProfile, isUserProfileLoading, user, updateUserProfile]);
 
 
   const setVIPStatus = useCallback((status: boolean, pack?: string) => {

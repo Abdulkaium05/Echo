@@ -1,8 +1,9 @@
 
+
 // src/services/firestore.ts
 import { 
     doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp,
-    orderBy, limit, arrayUnion, arrayRemove, writeBatch, deleteDoc, Timestamp,
+    orderBy, limit, arrayUnion, arrayRemove, writeBatch, deleteDoc, Timestamp, deleteField,
     type DocumentData, type Unsubscribe
 } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase'; // Corrected import
@@ -418,16 +419,27 @@ export const markMessagesAsSeen = async (chatId: string, userId: string): Promis
 // Other Functions (VIP, Gifts, etc.)
 // ---------------------------------
 export const updateVIPStatus = async (uid: string, isVIP: boolean, vipPack?: string, durationDays?: number): Promise<void> => {
-    const expiryTimestamp = durationDays && durationDays !== Infinity 
-        ? Date.now() + durationDays * 24 * 60 * 60 * 1000 
-        : undefined;
+    let profileUpdate: Partial<UserProfile>;
 
-    const profileUpdate: Partial<UserProfile> = {
-        isVIP,
-        vipPack: isVIP ? vipPack : undefined,
-        vipExpiryTimestamp: isVIP ? expiryTimestamp : undefined,
-    };
-    
+    if (isVIP) {
+        const expiryTimestamp = durationDays && durationDays !== Infinity
+            ? Date.now() + durationDays * 24 * 60 * 60 * 1000
+            : undefined;
+
+        profileUpdate = {
+            isVIP: true,
+            vipPack: vipPack,
+            vipExpiryTimestamp: expiryTimestamp,
+        };
+    } else {
+        // When expiring, we just clear the fields.
+        profileUpdate = {
+            isVIP: false,
+            vipPack: deleteField() as any,
+            vipExpiryTimestamp: deleteField() as any,
+        };
+    }
+
     await updateUserProfile(uid, profileUpdate);
 };
 
@@ -450,9 +462,13 @@ export const getGiftHistory = (userId: string, callback: (gifts: Gift[]) => void
     const giftsRef = collection(firestore, 'users', userId, 'gifts');
     const q = query(giftsRef, orderBy('timestamp', 'desc'));
 
-    return onSnapshot(q, (querySnapshot) => {
-        const gifts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Gift));
-        callback(gifts);
+    return onSnapshot(q, async (querySnapshot) => {
+        const enrichedGifts = await Promise.all(querySnapshot.docs.map(async (doc) => {
+            const gift = { id: doc.id, ...doc.data() } as Gift;
+            const senderProfile = await getUserProfile(gift.senderId);
+            return { ...gift, senderProfile };
+        }));
+        callback(enrichedGifts);
     }, (error) => {
         console.error("Error in getGiftHistory snapshot:", error);
         onError(new FirestorePermissionError({ path: `users/${userId}/gifts`, operation: 'list' }));

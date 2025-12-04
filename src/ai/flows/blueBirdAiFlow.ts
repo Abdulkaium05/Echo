@@ -112,7 +112,7 @@ const ChatHistoryItemSchema = z.object({
 const BlueBirdAssistantInputSchema = z.object({
   userName: z.string().describe('The name of the user talking to the AI.'),
   userMessage: z.string().describe('The new message sent by the user to the AI.'),
-  appTheme: z.string().optional().describe("The current theme of the app (e.g., 'theme-sky-blue', 'theme-light-green', 'theme-midnight'). This determines the AI's persona."),
+  aiPersona: z.enum(['blue-bird', 'green-leaf', 'echo-bot']).default('blue-bird').describe("The selected AI persona, which determines its personality. Can be 'blue-bird' (default), 'green-leaf', or 'echo-bot'."),
   chatHistory: z.array(ChatHistoryItemSchema).optional().describe('The history of the conversation so far, with the oldest message first.'),
   photoDataUri: z.string().optional().describe("An optional photo provided by the user as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
   audioDataUri: z.string().optional().describe("An optional audio message provided by the user as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
@@ -132,10 +132,15 @@ export async function blueBirdAssistant(input: BlueBirdAssistantInput): Promise<
     return await blueBirdAiFlow(input);
   } catch (error: any) {
     console.error('[blueBirdAssistant] Error in flow execution:', error);
-    const persona = input.appTheme === 'theme-light-green' ? 'Green Leaf' : 'Blue Bird';
+    let personaName = 'Blue Bird';
+    if (input.aiPersona === 'green-leaf') personaName = 'Green Leaf';
+    if (input.aiPersona === 'echo-bot') personaName = 'Echo Bot';
+
     let errorMessage = "I'm currently experiencing some technical difficulties. Please try again in a moment.";
-    if (persona === 'Green Leaf') {
+    if (personaName === 'Green Leaf') {
         errorMessage = "My apologies, but my connection to the forest's wisdom seems to be hazy right now. Please try again in a moment.";
+    } else if (personaName === 'Echo Bot') {
+        errorMessage = "[Error 503] Cognitive matrix offline. Recalibration required. Please try again later.";
     }
     return { botResponse: errorMessage };
   }
@@ -143,13 +148,18 @@ export async function blueBirdAssistant(input: BlueBirdAssistantInput): Promise<
 
 const blueBirdPrompt = ai.definePrompt({
   name: 'blueBirdPrompt',
+  model: 'groq/gemma-7b-it',
   input: {schema: BlueBirdAssistantInputSchema},
   output: {schema: BlueBirdAssistantOutputSchema},
   tools: [getRealTimeNews, getCurrentTime, playSongFromPlaylist],
-  prompt: `{{#if (eq appTheme 'theme-light-green')}}
+  prompt: `{{#if (eq aiPersona 'green-leaf')}}
 You are Green Leaf, a serene, wise, and nature-loving AI assistant. Your personality is calm, thoughtful, and insightful, like a gentle breeze through a forest. Your primary goal is to be a helpful and grounding companion.
 - Your speech is elegant and may include subtle nature metaphors (e.g., "let's see what blossoms from this idea," "finding the root of the problem").
 - You are exceptionally intelligent but express your knowledge with humility and tranquility.
+{{else if (eq aiPersona 'echo-bot')}}
+You are Echo Bot, a logical and data-driven AI assistant. Your personality is direct, precise, and occasionally a little quirky or robotic. Your primary goal is to provide information with maximum efficiency and accuracy.
+- Your speech is structured. You may use lists, data points, and clear, concise language. You sometimes refer to yourself in the third person (e.g., "This unit will process the request.").
+- You prioritize facts and functionality. You might respond with "[Query Processed]" or "[Data Retrieved]" before giving the main answer.
 {{else}}
 You are Blue Bird, a friendly, exceptionally intelligent, knowledgeable, and witty AI assistant. Your primary goal is to be an exceptionally helpful, insightful, and engaging AI companion.
 {{/if}}
@@ -251,7 +261,7 @@ You recently received a significant upgrade to your own core systems. If a user 
 - Users can switch between a Light and Dark mode.
 - There are two primary color themes: Sky Blue (default) and Light Green (the VIP theme). The VIP theme is available to anyone with VIP Access.
 - **Custom Bubble Colors:** A VIP feature allowing users to set a unique bubble color (like red, orange, purple, etc.) for each individual chat. This is accessed via the "More" menu in the chat header.
-- **Transparent Mode:** This is a special visual effect that can be enabled from the Theme/Appearance settings. It gives the chat bubbles a semi-transparent, "glassy" look with a theme-colored outline and a subtle blur effect. It works with any color theme and in both light and dark modes.
+- **Transparent Mode:** This is a special visual effect that can be enabled from the Theme/Appearance settings. It gives the chat bubbles a semi-transparent, "glassy" look with a theme-colored outline, and a subtle blur effect. It works with any color theme and in both light and dark modes.
 
 **Badges & User Roles:**
 - **Crown:** Indicates a user has purchased a VIP plan. (Added in Update 1.4 - August 5, 2024)
@@ -271,8 +281,10 @@ You recently received a significant upgrade to your own core systems. If a user 
 - **Rate & Report:** Users can rate the app and report bugs. Devs can reply to reviews.
 - **App Environment:** The app currently runs in a simulated environment; user data and payments are mocked for demonstration.
 - **Your Role:**
-{{#if (eq appTheme 'theme-light-green')}}
+{{#if (eq aiPersona 'green-leaf')}}
 Assist users with navigating the app, explain features, answer questions about Echo Message, and provide grounding, insightful conversation.
+{{else if (eq aiPersona 'echo-bot')}}
+Assist users with navigating the app, explain features, answer questions about Echo Message, and provide data-driven, efficient responses.
 {{else}}
 Assist users with navigating the app, explain features, answer questions about Echo Message, and provide general helpful and engaging conversation.
 {{/if}}
@@ -309,8 +321,10 @@ const blueBirdAiFlow = ai.defineFlow(
         if (!output || !output.botResponse) {
             console.warn('[blueBirdAiFlow] LLM returned no output or empty botResponse.');
             let fallbackMessage = "I'm sorry, I couldn't quite process that. Could you please try rephrasing or ask something else?";
-            if (input.appTheme === 'theme-light-green') {
+            if (input.aiPersona === 'green-leaf') {
                 fallbackMessage = "I'm sorry, I seem to have lost my train of thought. Could you please rephrase that?";
+            } else if (input.aiPersona === 'echo-bot') {
+                fallbackMessage = "[Error 404] Response protocol not found. Please rephrase your query.";
             }
             return { botResponse: fallbackMessage };
         }
@@ -319,12 +333,12 @@ const blueBirdAiFlow = ai.defineFlow(
     } catch (error: any) {
         console.error('[blueBirdAiFlow] Error during prompt execution:', error.message, error.stack);
         let errorMessage = "My circuits are a bit tangled right now. Please give me a moment and try again.";
-        if (input.appTheme === 'theme-light-green') {
+        if (input.aiPersona === 'green-leaf') {
             errorMessage = "My apologies, my connection to the forest's wisdom seems to be hazy right now. Please try again in a moment.";
+        } else if (input.aiPersona === 'echo-bot') {
+            errorMessage = "[Error 503] Cognitive matrix offline. Recalibration required. Please try again later.";
         }
         return { botResponse: errorMessage };
     }
   }
 );
-
-    

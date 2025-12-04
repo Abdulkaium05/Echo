@@ -1,3 +1,4 @@
+
 // src/components/chat/chat-list.tsx
 'use client';
 
@@ -5,7 +6,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatItem, type ChatItemProps } from './chat-item';
-import { Search, Users, MessageCircle, UserPlus, Loader2, AlertCircle, Edit, Leaf } from 'lucide-react';
+import { Search, Users, MessageCircle, UserPlus, Loader2, AlertCircle, Edit, Leaf, Bot as BotIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { AddContactDialog } from './add-contact-dialog';
@@ -34,6 +35,8 @@ interface ChatListProps {
   currentUserId: string | null | undefined;
 }
 
+type AIPersona = 'blue-bird' | 'green-leaf' | 'echo-bot';
+
 export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
   const { userProfile, isUserProfileLoading } = useAuth();
   const { toast } = useToast();
@@ -59,22 +62,21 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
     profile: UserProfile | null;
   }>({ isOpen: false, profile: null });
   
-  const [currentTheme, setCurrentTheme] = useState('theme-sky-blue');
+  const [aiPersona, setAiPersona] = useState<AIPersona>('blue-bird');
 
   useEffect(() => {
-    // This effect ensures the component re-renders when the theme is toggled globally.
+    // This effect ensures the component re-renders when the persona is toggled.
     if (typeof window === 'undefined') return;
 
-    const checkGlobalTheme = () => {
-        const savedTheme = localStorage.getItem('theme_color') || 'theme-sky-blue';
-        setCurrentTheme(savedTheme);
+    const checkGlobalPersona = () => {
+        const savedPersona = localStorage.getItem('ai_persona') as AIPersona | null;
+        setAiPersona(savedPersona || 'blue-bird');
     };
-    checkGlobalTheme();
+    checkGlobalPersona();
 
-    // Also listen for storage changes from other tabs
     const handleStorageChange = (event: StorageEvent) => {
-        if (event.key === 'theme_color') {
-            checkGlobalTheme();
+        if (event.key === 'ai_persona') {
+            checkGlobalPersona();
         }
     };
     window.addEventListener('storage', handleStorageChange);
@@ -228,13 +230,19 @@ export function ChatList({ currentChatId, currentUserId }: ChatListProps) {
      const renderChatItems = (chatItems: ChatItemProps[]) => {
         return chatItems.map((chat) => {
             const isBotChat = chat.contactUserId === BOT_UID;
-            const isGreenTheme = currentTheme === 'theme-light-green';
-            const botName = isGreenTheme ? 'Green Leaf' : 'Blue Bird (AI Assistant)';
             
             const itemProps = { ...chat };
             if (isBotChat) {
-                itemProps.name = botName;
-                itemProps.iconIdentifier = isGreenTheme ? 'green-leaf-icon' : 'outline-bird-avatar';
+                if (aiPersona === 'green-leaf') {
+                    itemProps.name = 'Green Leaf';
+                    itemProps.iconIdentifier = 'green-leaf-icon';
+                } else if (aiPersona === 'echo-bot') {
+                    itemProps.name = 'Echo Bot';
+                    itemProps.iconIdentifier = 'echo-bot-icon';
+                } else {
+                    itemProps.name = 'Blue Bird (AI Assistant)';
+                    itemProps.iconIdentifier = 'outline-bird-avatar';
+                }
             }
 
             return (

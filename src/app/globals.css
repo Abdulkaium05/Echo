@@ -1,4 +1,6 @@
 
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -78,6 +80,8 @@ body {
     --badge-teal: 162 72% 45%;
     --badge-white: 0 0% 100%;
     --badge-black: 0 0% 10%;
+
+    --font-sans: 'Geist Sans', Arial, Helvetica, sans-serif;
   }
 
   .theme-light-green {
@@ -422,6 +426,162 @@ body {
     --bot-accent-color: 80 40% 55%;
   }
   
+  .theme-monochrome {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 7%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 7%;
+    --primary: 0 0% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 92%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 0 0% 10%;
+    --avatar-border-accent: 0 0% 10%;
+    --bot-accent-color: 0 0% 10%;
+  }
+  .dark.theme-monochrome {
+    --background: 0 0% 5%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 90%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 90%;
+    --avatar-border-accent: 0 0% 90%;
+    --bot-accent-color: 0 0% 90%;
+  }
+
+  .theme-sketchbook {
+    --background: 30 20% 95%; /* Off-white paper */
+    --foreground: 0 0% 15%; /* Charcoal text */
+    --card: 30 20% 97%;
+    --card-foreground: 0 0% 15%;
+    --popover: 30 20% 94%;
+    --popover-foreground: 0 0% 15%;
+    --primary: 0 0% 20%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 20% 90%;
+    --secondary-foreground: 0 0% 15%;
+    --muted: 30 20% 88%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 30 20% 85%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 80% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 25%;
+    --input: 30 20% 88%;
+    --ring: 0 0% 20%;
+    --avatar-border-accent: 0 0% 20%;
+    --bot-accent-color: 0 0% 20%;
+    --font-sans: 'Comic Neue', 'Comic Sans MS', cursive;
+    /* Bubble colors for Sketchbook */
+    --sent-bubble-bg: hsl(0, 0%, 20%);
+    --sent-bubble-fg: hsl(0, 0%, 98%);
+    --received-bubble-bg: hsl(0, 0%, 90%); /* Lighter gray for received */
+    --received-bubble-fg: hsl(0, 0%, 10%); /* Black text for received */
+  }
+  .dark.theme-sketchbook {
+    --background: 0 0% 10%;
+    --foreground: 30 10% 90%;
+    --card: 0 0% 14%;
+    --card-foreground: 30 10% 90%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 30 10% 90%;
+    --primary: 30 10% 85%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 30 10% 90%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 30 10% 60%;
+    --accent: 30 10% 25%;
+    --accent-foreground: 30 10% 95%;
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 30%;
+    --input: 0 0% 20%;
+    --ring: 30 10% 85%;
+    --avatar-border-accent: 30 10% 85%;
+    --bot-accent-color: 30 10% 85%;
+    --font-sans: 'Comic Neue', 'Comic Sans MS', cursive;
+    /* Bubble colors for Sketchbook Dark */
+    --sent-bubble-bg: hsl(30, 10%, 85%);
+    --sent-bubble-fg: hsl(0, 0%, 10%);
+    --received-bubble-bg: hsl(0, 0%, 20%); /* Darker gray for received */
+    --received-bubble-fg: hsl(0, 0%, 90%); /* Light text for received */
+  }
+
+  /* Special styling for sketchbook theme */
+  .theme-sketchbook, .dark.theme-sketchbook {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJ0Ij48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC45IiBudW1PY3RhdmVzPSI0IiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsdGVyPSJ1cmwoI3QpIiBvcGFjaXR5PSIwLjA0Ii8+PC9zdmc+');
+  }
+  
+  .theme-pioneer {
+    --background: 210 20% 98%;
+    --foreground: 220 20% 15%;
+    --card: 210 20% 100%;
+    --card-foreground: 220 20% 15%;
+    --primary: 220 30% 40%; /* Slate Blue */
+    --primary-foreground: 210 20% 98%;
+    --secondary: 215 20% 94%;
+    --secondary-foreground: 220 20% 10%;
+    --muted: 215 20% 94%;
+    --muted-foreground: 220 20% 40%;
+    --accent: 220 30% 45%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 80% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 220 30% 40%;
+    --border: 215 20% 88%;
+    --input: 215 20% 88%;
+    --avatar-border-accent: 220 30% 40%;
+    --bot-accent-color: 220 30% 40%;
+  }
+  .dark.theme-pioneer {
+    --background: 220 25% 10%;
+    --foreground: 210 20% 90%;
+    --card: 220 25% 14%;
+    --card-foreground: 210 20% 90%;
+    --popover: 220 25% 12%;
+    --popover-foreground: 210 20% 90%;
+    --primary: 215 40% 60%;
+    --primary-foreground: 220 25% 5%;
+    --secondary: 220 25% 18%;
+    --secondary-foreground: 210 20% 90%;
+    --muted: 220 25% 18%;
+    --muted-foreground: 210 20% 65%;
+    --accent: 215 40% 65%;
+    --accent-foreground: 220 25% 5%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 215 40% 60%;
+    --border: 220 25% 25%;
+    --input: 220 25% 25%;
+    --avatar-border-accent: 215 40% 60%;
+    --bot-accent-color: 215 40% 60%;
+  }
+
   /* Transparent Mode styles */
   .transparent-mode {
     --sent-bubble-bg: hsl(var(--primary) / 0.2);
@@ -447,7 +607,7 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
   }
 }
 
@@ -472,5 +632,3 @@ body {
       @apply bg-gradient-to-br from-background via-secondary/20 to-background;
     }
 }
-
-    

@@ -44,6 +44,12 @@ service cloud.firestore {
     function isUpdatingLastSeen() {
         return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeen']);
     }
+
+    function isClearingExpiredVip() {
+      // A user can clear their own expired VIP status.
+      // This is safe because they can only go from true to false.
+      return resource.data.isVIP == true && request.resource.data.isVIP == false;
+    }
     
     function isClearingGiftNotification() {
       return request.resource.data.diff(resource.data).affectedKeys().hasAny([
@@ -56,7 +62,7 @@ service cloud.firestore {
       // User can change their own profile, BUT cannot change protected fields.
       // This is a "deny list" approach.
       return isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'isVerified', 'isCreator', 'isDevTeam', 'isBot', 'points',
+        'isVerified', 'isCreator', 'isDevTeam', 'isBot', 'points', 'isVIP',
         'isMemeCreator', 'isBetaTester'
       ]);
     }
@@ -72,7 +78,6 @@ service cloud.firestore {
       // Allow updates by the owner or for specific gift-related actions.
       allow update: if 
             // Case 1: A user is updating their own profile (name, avatar, badgeOrder, etc).
-            // This is the main fix. It allows any change as long as it's not to a protected field.
             isUpdatingOwnProfileSafely()
             ||
             // Case 2: The owner is spending points (e.g., buying VIP).
@@ -88,7 +93,10 @@ service cloud.firestore {
             (isSignedIn() && isGiftingPoints())
             ||
             // Case 6: A dev team member is gifting a badge.
-            (isGiftingBadge());
+            (isGiftingBadge())
+            ||
+            // Case 7: The user's own VIP plan has expired, and the app is clearing it.
+            (isOwner(userId) && isClearingExpiredVip());
 
       // Gift History Subcollection
       match /gifts/{giftId} {

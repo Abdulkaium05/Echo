@@ -25,7 +25,7 @@ interface AllowNormalUsersDialogProps {
 }
 
 export function AllowNormalUsersDialog({ isOpen, onOpenChange }: AllowNormalUsersDialogProps) {
-  const { user, userProfile, updateMockUserProfile } = useAuth();
+  const { user, userProfile, updateUserProfile } = useAuth();
   const { toast } = useToast();
   
   const [allowedUsers, setAllowedUsers] = useState<UserProfile[]>([]);
@@ -100,7 +100,7 @@ export function AllowNormalUsersDialog({ isOpen, onOpenChange }: AllowNormalUser
     
     try {
       const allowedUids = allowedUsers.map(u => u.uid);
-      await updateMockUserProfile(user.uid, { 
+      await updateUserProfile({ 
           allowedNormalContacts: allowedUids,
       });
       

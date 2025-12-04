@@ -10,9 +10,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './message-bubble';
 import { MessageInput, type MessageInputHandle } from './message-input';
 import { VerifiedBadge } from '@/components/verified-badge';
-import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban, Trash2, UserX, UserCheck, Leaf, SmilePlus, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban, Trash2, UserX, UserCheck, Leaf, SmilePlus, FlaskConical, Bot } from 'lucide-react';
 import Link from 'next/link';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -74,9 +74,10 @@ interface ChatWindowProps {
   isDevTeam?: boolean;
 }
 
+type AIPersona = 'blue-bird' | 'green-leaf' | 'echo-bot';
 
 export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, chatAvatarUrl, chatIconIdentifier, isVerified, isVIP, isCreator, isDevTeam }: ChatWindowProps) {
-  const { user: currentUser, userProfile, updateMockUserProfile } = useAuth();
+  const { user: currentUser, userProfile, updateUserProfile } = useAuth();
   const { hasVipAccess } = useVIP();
   const { toast } = useToast();
   const router = useRouter();
@@ -102,7 +103,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
   const [isAudioCallDialogOpen, setIsAudioCallDialogOpen] = useState(false);
   const [isTransparentMode, setIsTransparentMode] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState('theme-sky-blue');
+  const [aiPersona, setAiPersona] = useState<AIPersona>('blue-bird');
   
   const [dialogState, setDialogState] = useState<{ isOpen: boolean; type: 'block' | 'delete' | null }>({ isOpen: false, type: null });
 
@@ -113,7 +114,12 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
   const iHaveBlockedPartner = isUserBlocked(chatPartnerId);
   
   const isChattingWithBot = chatPartnerId === BOT_UID;
-  const chatName = isChattingWithBot && currentTheme === 'theme-light-green' ? 'Green Leaf' : initialChatName;
+  let chatName = initialChatName;
+    if (isChattingWithBot) {
+        if (aiPersona === 'green-leaf') chatName = 'Green Leaf';
+        else if (aiPersona === 'echo-bot') chatName = 'Echo Bot';
+        else chatName = 'Blue Bird (AI Assistant)';
+    }
 
 
   useEffect(() => {
@@ -124,8 +130,8 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
         const isTransparent = document.documentElement.classList.contains('transparent-mode');
         setIsTransparentMode(isTransparent);
         
-        const savedTheme = localStorage.getItem('theme_color') || 'theme-sky-blue';
-        setCurrentTheme(savedTheme);
+        const savedPersona = localStorage.getItem('ai_persona') as AIPersona | null;
+        setAiPersona(savedPersona || 'blue-bird');
     };
     checkGlobalClasses();
 
@@ -141,7 +147,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
     // Also listen for storage changes from other tabs
     const handleStorageChange = (event: StorageEvent) => {
-        if (event.key === 'theme_color' || event.key === 'transparent_mode') {
+        if (event.key === 'transparent_mode' || event.key === 'ai_persona') {
             checkGlobalClasses();
         }
     };
@@ -154,6 +160,19 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
     };
   }, []);
 
+  const handleAiPersonaChange = (newPersona: AIPersona) => {
+    setAiPersona(newPersona);
+    localStorage.setItem('ai_persona', newPersona);
+    let personaName = 'Blue Bird';
+    if (newPersona === 'green-leaf') personaName = 'Green Leaf';
+    if (newPersona === 'echo-bot') personaName = 'Echo Bot';
+    
+    toast({
+        title: "AI Persona Changed",
+        description: `You are now chatting with ${personaName}.`,
+    });
+  };
+
   const handleBubbleColorChange = (color: string | null) => {
     if (!currentUser || !userProfile) {
         toast({ title: "Error", description: "You must be logged in to change settings.", variant: "destructive" });
@@ -161,7 +180,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
     }
 
     const newPreferences = { ...userProfile.chatColorPreferences, [chatId]: color };
-    updateMockUserProfile(currentUser.uid, { chatColorPreferences: newPreferences });
+    updateUserProfile({ chatColorPreferences: newPreferences });
     toast({
         title: "Bubble Color Updated",
         description: `Chat bubbles for this conversation are now ${color ? color.replace('-', ' ') : 'default'}.`
@@ -321,7 +340,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
         const aiInput: BlueBirdAssistantInput = {
           userName: userProfile.name,
           userMessage: textToSend || `[User sent an ${attachmentData?.type}]`,
-          appTheme: currentTheme,
+          aiPersona: aiPersona,
           chatHistory: historyForFlow,
           photoDataUri,
           audioDataUri,
@@ -443,13 +462,11 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
  const renderChatHeaderAvatar = () => {
     const isBot = chatPartnerId === BOT_UID;
-    const isGreenTheme = currentTheme === 'theme-light-green';
     const avatarBaseClasses = "h-8 w-8 md:h-9 md:w-9 mr-2 md:mr-3 shrink-0";
-    const dataAiHint = isBot ? "green leaf" : (isCreator ? "creator avatar" : "user avatar");
-
+    const dataAiHint = isBot ? "ai bot" : (isCreator ? "creator avatar" : "user avatar");
 
     if (isBot) {
-      if (isGreenTheme) {
+      if (aiPersona === 'green-leaf') {
         return (
           <Avatar className={cn(avatarBaseClasses, "border-green-500/50")}>
             <AvatarFallback className="bg-green-100 dark:bg-green-900/50">
@@ -458,13 +475,22 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
           </Avatar>
         );
       }
+       if (aiPersona === 'echo-bot') {
         return (
-          <Avatar className={cn(avatarBaseClasses, "border-sky-500/50")}>
+          <Avatar className={cn(avatarBaseClasses, "border-gray-500/50")}>
             <AvatarFallback className="bg-muted">
-              <OutlineBirdIcon className="text-sky-500 p-1" />
+              <Bot className="text-foreground/70 p-1" />
             </AvatarFallback>
           </Avatar>
         );
+      }
+      return (
+        <Avatar className={cn(avatarBaseClasses, "border-sky-500/50")}>
+          <AvatarFallback className="bg-muted">
+            <OutlineBirdIcon className="text-sky-500 p-1" />
+          </AvatarFallback>
+        </Avatar>
+      );
     } else if (chatAvatarUrl) {
        return (
          <Avatar className={cn(avatarBaseClasses, "cursor-pointer")} onClick={handleHeaderAvatarClick}>
@@ -537,7 +563,11 @@ const orderedBadges = useMemo(() => {
           <div className="flex items-center gap-1.5">
              <p className="text-sm font-medium text-foreground truncate whitespace-nowrap">{chatName}</p>
             {isChattingWithBot ? (
-                currentTheme === 'theme-light-green' ? <Leaf className="h-4 w-4 text-green-500" /> : <SquareBotBadgeIcon />
+              <>
+                {aiPersona === 'green-leaf' && <Leaf className="h-4 w-4 text-green-500" />}
+                {aiPersona === 'blue-bird' && <SquareBotBadgeIcon />}
+                {aiPersona === 'echo-bot' && <Bot className="h-4 w-4 text-foreground/70" />}
+              </>
             ) : (
                 <>
                   {orderedBadges.map(badgeKey => {
@@ -577,6 +607,26 @@ const orderedBadges = useMemo(() => {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+                {isChattingWithBot && (
+                    <>
+                        <DropdownMenuLabel>AI Persona</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={aiPersona} onValueChange={(v) => handleAiPersonaChange(v as AIPersona)}>
+                            <DropdownMenuRadioItem value="blue-bird">
+                                <OutlineBirdIcon className="mr-2 h-4 w-4 text-sky-500"/>
+                                Blue Bird
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="green-leaf">
+                                <Leaf className="mr-2 h-4 w-4 text-green-500"/>
+                                Green Leaf
+                            </DropdownMenuRadioItem>
+                             <DropdownMenuRadioItem value="echo-bot">
+                                <Bot className="mr-2 h-4 w-4 text-foreground/70"/>
+                                Echo Bot
+                            </DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                    </>
+                )}
                 <DropdownMenuSub>
                     <DropdownMenuSubTrigger disabled={!hasVipAccess} onClick={ hasVipAccess ? undefined : () => toast({ title: 'VIP Feature', description: 'Purchase a VIP plan to unlock custom bubble colors.'}) }>
                         <Palette className="mr-2 h-4 w-4" />
@@ -768,5 +818,3 @@ const orderedBadges = useMemo(() => {
     </>
   );
 }
-
-    

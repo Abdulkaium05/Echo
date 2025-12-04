@@ -1,3 +1,4 @@
+
 // src/context/auth-context.tsx
 'use client';
 
@@ -89,6 +90,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         let needsServerUpdate = false;
         
         let localProfile = { ...profile };
+
+        // VIP Expiry check
+        if (localProfile.isVIP && localProfile.vipExpiryTimestamp && localProfile.vipExpiryTimestamp < Date.now()) {
+            updatedProfileData = {
+                ...updatedProfileData,
+                isVIP: false,
+                vipPack: deleteField(),
+                vipExpiryTimestamp: deleteField(),
+            };
+            needsServerUpdate = true;
+        }
 
         // Handle gifts silently now
         if (localProfile.hasNewGift) {

@@ -55,7 +55,7 @@ const giftableBadges: { value: BadgeType, label: string }[] = [
 ];
 
 export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) {
-  const { user: currentUser, userProfile: currentUserProfile, updateMockUserProfile } = useAuth();
+  const { user: currentUser, userProfile: currentUserProfile, updateUserProfile } = useAuth();
   const { toast } = useToast();
   
   const [recipientUid, setRecipientUid] = useState('');
@@ -114,7 +114,7 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
             newBadgeExpiry[selectedBadge] = expiryTimestamp;
         }
 
-        await updateMockUserProfile(selectedUser.uid, { 
+        await updateUserProfile({ 
             [badgeKey]: true,
             badgeExpiry: newBadgeExpiry,
             giftedByUid: currentUserProfile.uid,

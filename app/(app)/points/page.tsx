@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
 function GiftPointsCard() {
-    const { user: currentUser, userProfile, updateMockUserProfile } = useAuth();
+    const { user: currentUser, userProfile, updateUserProfile } = useAuth();
     const { toast } = useToast();
     
     const [recipientUid, setRecipientUid] = useState('');
@@ -73,7 +73,7 @@ function GiftPointsCard() {
                 pointsAmount: amount,
             });
 
-            updateMockUserProfile(userProfile.uid, { points: (userProfile.points || 0) - amount });
+            updateUserProfile({ points: (userProfile.points || 0) - amount });
             
             toast({
                 title: 'Points Gifted!',
@@ -185,5 +185,3 @@ export default function PointsDashboardPage() {
         </div>
     );
 }
-
-    

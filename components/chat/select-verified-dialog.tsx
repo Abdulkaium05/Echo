@@ -32,7 +32,7 @@ interface SelectVerifiedDialogProps {
 }
 
 export function SelectVerifiedDialog({ isOpen, onOpenChange, limit }: SelectVerifiedDialogProps) {
-  const { user, userProfile, updateMockUserProfile } = useAuth();
+  const { user, userProfile, updateUserProfile } = useAuth();
   const { toast } = useToast();
   
   const [verifiedUsers, setVerifiedUsers] = useState<UserProfile[]>([]);
@@ -102,7 +102,7 @@ export function SelectVerifiedDialog({ isOpen, onOpenChange, limit }: SelectVeri
 
     try {
       // First, update the user profile. This is fast and will trigger UI updates.
-      await updateMockUserProfile(user.uid, { 
+      await updateUserProfile({ 
           selectedVerifiedContacts: selectedUsers,
           hasMadeVipSelection: true,
       });
