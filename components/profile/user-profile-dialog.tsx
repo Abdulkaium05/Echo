@@ -13,7 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { UserProfile } from "@/context/auth-context";
-import { Crown, Mail, MessageSquare, Loader2, Wrench, Bot, Cake, Clock, UserCircle2, SmilePlus, FlaskConical, Coins } from "lucide-react";
+import { Crown, Mail, MessageSquare, Loader2, Wrench, Bot, Cake, Clock, UserCircle2, SmilePlus, FlaskConical, Coins, Rocket, Gem } from "lucide-react";
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { useRouter } from "next/navigation";
 import { findChatBetweenUsers, createChat, formatLastSeen } from '@/services/firestore';
@@ -38,6 +38,8 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     bot: ({className}) => <SquareBotBadgeIcon className={cn("h-5 w-5", className)} />,
     meme_creator: ({className}) => <SmilePlus className={cn("h-5 w-5 text-green-500", className)} />,
     beta_tester: ({className}) => <FlaskConical className={cn("h-5 w-5 text-orange-500", className)} />,
+    pioneer: ({className}) => <Rocket className={cn("h-5 w-5 text-slate-500", className)} />,
+    patron: ({className}) => <Gem className={cn("h-5 w-5 text-rose-500", className)} />,
 };
 
 export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfileDialogProps) {
@@ -107,8 +109,11 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
   if(profile.isBot) earnedBadges.push('bot');
   if(profile.isMemeCreator) earnedBadges.push('meme_creator');
   if(profile.isBetaTester) earnedBadges.push('beta_tester');
+  if(profile.isPioneer) earnedBadges.push('pioneer');
+  if(profile.isPatron) earnedBadges.push('patron');
 
-  const badgeDisplayOrder = profile.badgeOrder?.length ? profile.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
+
+  const badgeDisplayOrder = profile.badgeOrder?.length ? profile.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester', 'pioneer', 'patron'];
   const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
   return (

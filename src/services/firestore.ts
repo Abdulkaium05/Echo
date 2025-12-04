@@ -124,6 +124,8 @@ export const mapChatToChatItem = async (chat: Chat, currentUserId: string): Prom
       isCreator: partnerProfile.isCreator,
       isMemeCreator: partnerProfile.isMemeCreator,
       isBetaTester: partnerProfile.isBetaTester,
+      isPioneer: partnerProfile.isPioneer,
+      isPatron: partnerProfile.isPatron,
       badgeOrder: partnerProfile.badgeOrder,
       href: `/chat/${partnerId}`,
       iconIdentifier: partnerProfile.avatarUrl,

@@ -1,3 +1,4 @@
+
 // src/components/chat/add-contact-dialog.tsx
 'use client';
 
@@ -153,28 +154,30 @@ export function AddContactDialog({ isOpen, onOpenChange, currentUserId }: AddCon
 
             <div className="space-y-2">
                 <Label htmlFor="contact-uid-dialog" className="text-muted-foreground">Enter User ID</Label>
-                <Input
-                id="contact-uid-dialog"
-                type="text"
-                placeholder="e.g, john.doe.123"
-                value={contactUid}
-                onChange={(e) => setContactUid(e.target.value)}
-                className="mt-1"
-                disabled={isLoading}
-                />
+                <div className="flex gap-2">
+                    <Input
+                    id="contact-uid-dialog"
+                    type="text"
+                    placeholder="e.g, john.doe.123"
+                    value={contactUid}
+                    onChange={(e) => setContactUid(e.target.value)}
+                    className="mt-1"
+                    disabled={isLoading}
+                    />
+                    <Button type="button" onClick={handleAddContact} disabled={isLoading || !contactUid.trim()}>
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      Add
+                    </Button>
+                </div>
             </div>
           </div>
           
           <DialogFooter className="mt-2">
             <DialogClose asChild>
-                <Button type="button" variant="ghost" onClick={handleCancel} disabled={isLoading}>
+                <Button type="button" variant="ghost" className="w-full" onClick={handleCancel} disabled={isLoading}>
                     Cancel
                 </Button>
             </DialogClose>
-            <Button type="button" onClick={handleAddContact} disabled={isLoading || !contactUid.trim()}>
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isLoading ? 'Adding...' : 'Add Contact'}
-              </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

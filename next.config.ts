@@ -23,6 +23,11 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  experimental: {
+    allowedDevOrigins: [
+      "https://9000-firebase-echob-1764679135376.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev"
+    ]
+  },
 };
 
 export default nextConfig;

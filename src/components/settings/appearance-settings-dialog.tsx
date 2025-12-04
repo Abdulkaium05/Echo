@@ -13,12 +13,14 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Check, Moon, Sun, Droplets, Palette } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Check, Moon, Sun, Droplets, Palette, Crown, Lock, Flame, Leaf, Waves } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { useVIP } from '@/context/vip-context';
 
 interface AppearanceSettingsDialogProps {
   isOpen: boolean;
@@ -26,12 +28,23 @@ interface AppearanceSettingsDialogProps {
 }
 
 type Mode = 'light' | 'dark';
-type Theme = 'theme-sky-blue' | 'theme-light-green';
+type Theme = 'theme-sky-blue' | 'theme-light-green' | 'theme-midnight' | 'theme-solaris' | 'theme-forest' | 'theme-ocean' | 'theme-crimson';
 
-const themes: { name: Theme, label: string, color: string }[] = [
+const generalThemes: { name: Theme, label: string, color: string }[] = [
     { name: 'theme-sky-blue', label: 'Sky Blue', color: 'bg-sky-500' },
     { name: 'theme-light-green', label: 'Light Green', color: 'bg-green-500' },
 ];
+
+const vipThemes: { name: Theme, label: string, color: string, icon: React.FC<any> }[] = [
+    { name: 'theme-midnight', label: 'Midnight', color: 'bg-violet-600', icon: Moon },
+    { name: 'theme-solaris', label: 'Solaris', color: 'bg-orange-500', icon: Sun },
+    { name: 'theme-forest', label: 'Forest', color: 'bg-emerald-600', icon: Leaf },
+    { name: 'theme-ocean', label: 'Ocean', color: 'bg-blue-600', icon: Waves },
+    { name: 'theme-crimson', label: 'Crimson', color: 'bg-red-600', icon: Flame },
+];
+
+const allThemes = [...generalThemes, ...vipThemes];
+
 
 const ModeCard = ({
     mode,
@@ -49,9 +62,10 @@ const ModeCard = ({
     theme: Theme;
 }) => {
     const isSelected = selectedMode === mode;
-    const isGreenTheme = theme === 'theme-light-green';
+    const themeInfo = allThemes.find(t => t.name === theme);
+    const primaryColor = themeInfo ? themeInfo.color : 'bg-sky-500';
     
-    const sentBubbleColor = isGreenTheme ? 'bg-green-500' : 'bg-sky-500';
+    const sentBubbleColor = primaryColor;
     const receivedBubbleColor = mode === 'light' ? 'bg-gray-200' : 'bg-gray-700';
 
     return (
@@ -95,7 +109,8 @@ const TransparentModeCard = ({
     isEnabled: boolean;
     onClick: () => void;
 }) => {
-    const themeBubbleColor = theme === 'theme-light-green' ? 'bg-green-500' : 'bg-sky-500';
+    const themeInfo = allThemes.find(t => t.name === theme);
+    const themeBubbleColor = themeInfo ? themeInfo.color : 'bg-sky-500';
     
     return (
         <div 
@@ -127,7 +142,7 @@ const TransparentModeCard = ({
                     <div className="flex justify-end">
                        <div className={cn(
                          "w-4/5 h-3 rounded-md transition-all duration-300",
-                          isEnabled ? `${themeBubbleColor}/20 border ${theme === 'theme-light-green' ? 'border-green-500/50' : 'border-sky-500/50'}` : themeBubbleColor
+                          isEnabled ? `${themeBubbleColor}/20 border ${themeBubbleColor.replace('bg-','border-')}/50` : themeBubbleColor
                        )}></div>
                     </div>
                      <div className={cn(
@@ -142,6 +157,7 @@ const TransparentModeCard = ({
 
 export function AppearanceSettingsDialog({ isOpen, onOpenChange }: AppearanceSettingsDialogProps) {
   const { toast } = useToast();
+  const { hasVipAccess } = useVIP();
   const [mode, setMode] = useState<Mode>('light');
   const [theme, setTheme] = useState<Theme>('theme-sky-blue');
   const [transparentMode, setTransparentMode] = useState(false);
@@ -174,7 +190,7 @@ export function AppearanceSettingsDialog({ isOpen, onOpenChange }: AppearanceSet
     if (!isClient) return;
 
     const root = window.document.documentElement;
-    themes.forEach(t => root.classList.remove(t.name));
+    allThemes.forEach(t => root.classList.remove(t.name));
     root.classList.add(theme);
     localStorage.setItem('theme_color', theme);
   }, [theme, isClient]);
@@ -214,67 +230,127 @@ export function AppearanceSettingsDialog({ isOpen, onOpenChange }: AppearanceSet
                 </DialogDescription>
             </DialogHeader>
 
-            <TooltipProvider>
-                <div className="p-6 grid gap-4">
-                    <div className="space-y-2">
-                        <Label>Mode</Label>
-                        <div className="grid grid-cols-2 gap-3">
-                           <ModeCard 
-                                mode="light"
-                                label="Light"
-                                icon={<Sun/>}
-                                selectedMode={mode}
-                                onClick={() => setMode('light')}
-                                theme={theme}
-                           />
-                           <ModeCard 
-                                mode="dark"
-                                label="Dark"
-                                icon={<Moon/>}
-                                selectedMode={mode}
-                                onClick={() => setMode('dark')}
-                                theme={theme}
-                           />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label>Color Theme</Label>
-                         <div className="flex items-center gap-3">
-                            {themes.map((t) => (
-                                <Tooltip key={t.name}>
-                                    <TooltipTrigger asChild>
-                                        <button
-                                            onClick={() => setTheme(t.name)}
-                                            className={cn(
-                                                "h-10 w-10 rounded-full flex items-center justify-center ring-2 ring-offset-2 ring-offset-background transition-all duration-300",
-                                                theme === t.name ? 'ring-primary' : 'ring-transparent hover:ring-primary/50'
-                                            )}
-                                        >
-                                            <div className={cn("h-8 w-8 rounded-full", t.color)} />
-                                        </button>
-                                    </TooltipTrigger>
+            <Tabs defaultValue="general" className="w-full">
+                <div className="px-6">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="general">General</TabsTrigger>
+                         <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <TabsTrigger value="vip" disabled={!hasVipAccess} className="relative">
+                                        <Crown className="mr-2 h-4 w-4 text-yellow-500" />
+                                        VIP Themes
+                                        {!hasVipAccess && (
+                                            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                                            </div>
+                                        )}
+                                    </TabsTrigger>
+                                </TooltipTrigger>
+                                {!hasVipAccess && (
                                     <TooltipContent>
-                                        <p>{t.label}</p>
+                                        <p>Purchase a VIP plan to unlock exclusive themes.</p>
                                     </TooltipContent>
-                                </Tooltip>
-                            ))}
+                                )}
+                            </Tooltip>
+                        </TooltipProvider>
+                    </TabsList>
+                </div>
+                
+                <TabsContent value="general" className="p-6 pt-4">
+                    <div className="grid gap-4">
+                        <div className="space-y-2">
+                            <Label>Mode</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                               <ModeCard 
+                                    mode="light"
+                                    label="Light"
+                                    icon={<Sun/>}
+                                    selectedMode={mode}
+                                    onClick={() => setMode('light')}
+                                    theme={theme}
+                               />
+                               <ModeCard 
+                                    mode="dark"
+                                    label="Dark"
+                                    icon={<Moon/>}
+                                    selectedMode={mode}
+                                    onClick={() => setMode('dark')}
+                                    theme={theme}
+                               />
+                            </div>
+                        </div>
+                         <div className="space-y-2">
+                            <Label>Color Theme</Label>
+                             <div className="flex items-center gap-3">
+                                {generalThemes.map((t) => (
+                                    <TooltipProvider key={t.name}>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <button
+                                                    onClick={() => setTheme(t.name)}
+                                                    className={cn(
+                                                        "h-10 w-10 rounded-full flex items-center justify-center ring-2 ring-offset-2 ring-offset-background transition-all duration-300",
+                                                        theme === t.name ? 'ring-primary' : 'ring-transparent hover:ring-primary/50'
+                                                    )}
+                                                >
+                                                    <div className={cn("h-8 w-8 rounded-full", t.color)} />
+                                                </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>{t.label}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Effects</Label>
+                            <TransparentModeCard
+                                mode={mode}
+                                theme={theme}
+                                isEnabled={transparentMode}
+                                onClick={() => handleTransparentModeChange(!transparentMode)}
+                            />
                         </div>
                     </div>
-                    
-                    <div className="space-y-2">
-                        <Label>Effects</Label>
-                        <TransparentModeCard
-                            mode={mode}
-                            theme={theme}
-                            isEnabled={transparentMode}
-                            onClick={() => handleTransparentModeChange(!transparentMode)}
-                        />
-                    </div>
-                </div>
-            </TooltipProvider>
+                </TabsContent>
 
-            <DialogFooter className="p-6 pt-2">
+                <TabsContent value="vip" className="p-6 pt-4">
+                     <div className="space-y-2">
+                        <Label>Exclusive VIP Themes</Label>
+                         <div className="grid grid-cols-3 gap-2">
+                            {vipThemes.map((t) => {
+                                const Icon = t.icon;
+                                return (
+                                <TooltipProvider key={t.name}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                onClick={() => setTheme(t.name)}
+                                                className={cn(
+                                                    "h-16 w-full rounded-md flex flex-col items-center justify-center ring-2 ring-offset-2 ring-offset-background transition-all duration-300",
+                                                    theme === t.name ? 'ring-primary' : 'ring-transparent hover:ring-primary/50'
+                                                )}
+                                            >
+                                                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-white", t.color)}>
+                                                    <Icon className="h-5 w-5" />
+                                                </div>
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>{t.label}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )})}
+                        </div>
+                    </div>
+                </TabsContent>
+            </Tabs>
+
+            <DialogFooter className="p-6 pt-2 border-t">
                 <DialogClose asChild>
                     <Button type="button" className="w-full">Done</Button>
                 </DialogClose>
@@ -283,3 +359,5 @@ export function AppearanceSettingsDialog({ isOpen, onOpenChange }: AppearanceSet
     </Dialog>
   );
 }
+
+    

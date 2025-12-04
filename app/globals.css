@@ -173,31 +173,208 @@ body {
     --bot-accent-color: 130 65% 60%;
   }
 
-  /* VIP Theme Support (Legacy - now just applies the light-green theme) */
-  .vip-theme {
-    /* Applies light-green theme variables */
-    --primary: 130 65% 55%;
-    --primary-foreground: 0 0% 10%;
-    --accent: 130 60% 48%;
-    --accent-foreground: 0 0% 10%;
-    --ring: 130 65% 55%;
-    --sidebar-primary: 130 65% 55%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent-foreground: 130 65% 55%;
-    --sidebar-ring: 130 65% 55%;
-    --avatar-border-accent: 130 70% 60%;
+ .theme-midnight, .dark.theme-midnight {
+    --background: 258 30% 8%;
+    --foreground: 258 20% 92%;
+    --card: 258 30% 12%;
+    --card-foreground: 258 20% 92%;
+    --popover: 258 30% 12%;
+    --popover-foreground: 258 20% 92%;
+    --primary: 258 65% 55%; /* Deep Violet */
+    --primary-foreground: 258 20% 98%;
+    --secondary: 258 30% 18%;
+    --secondary-foreground: 258 20% 92%;
+    --muted: 258 30% 22%;
+    --muted-foreground: 258 20% 65%;
+    --accent: 258 65% 55%;
+    --accent-foreground: 258 20% 98%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 258 65% 60%;
+    --border: 258 30% 25%;
+    --input: 258 30% 25%;
+    --avatar-border-accent: 258 65% 60%;
+    --bot-accent-color: 258 65% 55%;
   }
-  .dark.vip-theme {
-    --primary: 130 65% 60%;
-    --primary-foreground: 0 0% 10%;
-    --accent: 130 60% 52%;
-    --accent-foreground: 0 0% 10%;
-    --ring: 130 65% 60%;
-    --sidebar-primary: 130 65% 60%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent-foreground: 130 65% 60%;
-    --sidebar-ring: 130 65% 60%;
-    --avatar-border-accent: 130 70% 60%;
+  
+  .theme-solaris {
+    --background: 35 100% 97%;
+    --foreground: 25 30% 20%;
+    --card: 35 100% 100%;
+    --card-foreground: 25 30% 20%;
+    --primary: 25 95% 55%; /* Rich Orange */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 45 90% 88%; 
+    --secondary-foreground: 25 30% 15%;
+    --muted: 35 50% 92%;
+    --muted-foreground: 25 30% 45%;
+    --accent: 25 95% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 80% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 25 95% 55%;
+    --border: 35 50% 88%;
+    --input: 35 50% 88%;
+    --avatar-border-accent: 25 95% 55%;
+    --bot-accent-color: 25 95% 55%;
+  }
+  .dark.theme-solaris {
+    --background: 25 40% 10%;
+    --foreground: 35 50% 90%;
+    --card: 25 40% 14%;
+    --card-foreground: 35 50% 90%;
+    --popover: 25 40% 12%;
+    --popover-foreground: 35 50% 90%;
+    --primary: 30 90% 60%;
+    --primary-foreground: 25 30% 10%;
+    --secondary: 25 40% 18%;
+    --secondary-foreground: 35 50% 90%;
+    --muted: 25 40% 18%;
+    --muted-foreground: 35 50% 65%;
+    --accent: 30 90% 65%;
+    --accent-foreground: 25 30% 10%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 30 90% 60%;
+    --border: 25 40% 28%;
+    --input: 25 40% 28%;
+    --avatar-border-accent: 30 90% 60%;
+    --bot-accent-color: 30 90% 60%;
+  }
+  
+  .theme-forest {
+    --background: 90 20% 96%;
+    --foreground: 100 25% 20%;
+    --card: 90 20% 100%;
+    --card-foreground: 100 25% 20%;
+    --primary: 130 50% 35%; /* Deep Forest Green */
+    --primary-foreground: 90 30% 95%;
+    --secondary: 70 30% 90%;
+    --secondary-foreground: 100 25% 15%;
+    --muted: 90 20% 90%;
+    --muted-foreground: 100 25% 45%;
+    --accent: 130 50% 40%;
+    --accent-foreground: 90 30% 95%;
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 130 50% 35%;
+    --border: 90 20% 85%;
+    --input: 90 20% 85%;
+    --avatar-border-accent: 130 50% 35%;
+    --bot-accent-color: 130 50% 35%;
+  }
+  .dark.theme-forest {
+    --background: 110 25% 8%;
+    --foreground: 90 20% 90%;
+    --card: 110 25% 12%;
+    --card-foreground: 90 20% 90%;
+    --popover: 110 25% 10%;
+    --popover-foreground: 90 20% 90%;
+    --primary: 130 45% 55%;
+    --primary-foreground: 110 25% 5%;
+    --secondary: 110 25% 16%;
+    --secondary-foreground: 90 20% 90%;
+    --muted: 110 25% 16%;
+    --muted-foreground: 90 20% 60%;
+    --accent: 130 45% 50%;
+    --accent-foreground: 110 25% 5%;
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 130 45% 55%;
+    --border: 110 25% 22%;
+    --input: 110 25% 22%;
+    --avatar-border-accent: 130 45% 55%;
+    --bot-accent-color: 130 45% 55%;
+  }
+  
+  .theme-ocean {
+    --background: 210 40% 98%;
+    --foreground: 220 30% 25%;
+    --card: 210 40% 100%;
+    --card-foreground: 220 30% 25%;
+    --primary: 215 80% 55%; /* Deep Blue */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 190 70% 92%;
+    --secondary-foreground: 220 30% 20%;
+    --muted: 210 40% 94%;
+    --muted-foreground: 220 30% 50%;
+    --accent: 215 80% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 80% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 215 80% 55%;
+    --border: 210 40% 88%;
+    --input: 210 40% 88%;
+    --avatar-border-accent: 215 80% 55%;
+    --bot-accent-color: 215 80% 55%;
+  }
+  .dark.theme-ocean {
+    --background: 220 50% 10%;
+    --foreground: 210 30% 90%;
+    --card: 220 50% 14%;
+    --card-foreground: 210 30% 90%;
+    --popover: 220 50% 12%;
+    --popover-foreground: 210 30% 90%;
+    --primary: 210 85% 65%;
+    --primary-foreground: 220 50% 10%;
+    --secondary: 220 50% 18%;
+    --secondary-foreground: 210 30% 90%;
+    --muted: 220 50% 18%;
+    --muted-foreground: 210 30% 65%;
+    --accent: 210 85% 70%;
+    --accent-foreground: 220 50% 10%;
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 210 85% 65%;
+    --border: 220 50% 25%;
+    --input: 220 50% 25%;
+    --avatar-border-accent: 210 85% 65%;
+    --bot-accent-color: 210 85% 65%;
+  }
+  
+  .theme-crimson {
+    --background: 0 30% 98%;
+    --foreground: 0 40% 20%;
+    --card: 0 30% 100%;
+    --card-foreground: 0 40% 20%;
+    --primary: 0 75% 50%; /* Crimson Red */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 20% 92%;
+    --secondary-foreground: 0 40% 15%;
+    --muted: 0 20% 94%;
+    --muted-foreground: 0 40% 45%;
+    --accent: 0 75% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 80% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 0 75% 50%;
+    --border: 0 20% 88%;
+    --input: 0 20% 88%;
+    --avatar-border-accent: 0 75% 50%;
+    --bot-accent-color: 0 75% 50%;
+  }
+  .dark.theme-crimson {
+    --background: 0 40% 8%;
+    --foreground: 0 20% 90%;
+    --card: 0 40% 12%;
+    --card-foreground: 0 20% 90%;
+    --popover: 0 40% 10%;
+    --popover-foreground: 0 20% 90%;
+    --primary: 0 70% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 40% 16%;
+    --secondary-foreground: 0 20% 90%;
+    --muted: 0 40% 16%;
+    --muted-foreground: 0 20% 60%;
+    --accent: 0 70% 65%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 75% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 0 70% 60%;
+    --border: 0 40% 22%;
+    --input: 0 40% 22%;
+    --avatar-border-accent: 0 70% 60%;
+    --bot-accent-color: 0 70% 60%;
   }
   
   /* Transparent Mode styles */
@@ -230,19 +407,6 @@ body {
 }
 
 @layer components {
-    /* Apply transparent styles to default variant buttons */
-    .transparent-mode .bg-primary.text-primary-foreground {
-        @apply bg-primary/20 border border-primary text-primary hover:bg-primary/30;
-    }
-    .dark.transparent-mode .bg-primary.text-primary-foreground {
-        color: hsl(var(--primary-foreground));
-        @apply bg-primary/20 border border-primary hover:bg-primary/30;
-    }
-    /* Override for green theme in dark transparent mode */
-    .dark.theme-light-green.transparent-mode .bg-primary.text-primary-foreground {
-        color: white; /* White text for green buttons */
-    }
-
     .bg-gradient-dialog {
       background-color: hsl(var(--card));
     }
@@ -256,4 +420,12 @@ body {
     .dark .bg-premium-gradient {
         background: linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--background) / 0.3));
     }
+    .bg-auth-gradient {
+      @apply bg-gradient-to-br from-background via-secondary/50 to-background;
+    }
+    .dark .bg-auth-gradient {
+      @apply bg-gradient-to-br from-background via-secondary/20 to-background;
+    }
 }
+
+    

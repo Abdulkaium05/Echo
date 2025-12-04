@@ -299,10 +299,10 @@ export default function SubscribePage() {
         <CardHeader className="text-center">
           <Crown className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-primary" />
           <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Manage Your VIP Membership
+            You're a VIP Member!
           </CardTitle>
           <CardDescription className="mt-3 md:mt-4 text-base md:text-lg text-muted-foreground">
-             You have the {userProfile?.vipPack || 'VIP'} badge!
+             Thanks to your support, we can keep building the future of messaging. You currently have the {userProfile?.vipPack || 'VIP'} pack.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center">
@@ -338,12 +338,12 @@ export default function SubscribePage() {
       <div className="text-center mb-8 md:mb-12">
         <Crown className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-primary" />
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-          {hasVipBadge ? "Extend Your VIP Plan" : "Get a VIP Badge"}
+          {hasVipBadge ? "Extend Your VIP Plan" : "Become a VIP Member"}
         </h1>
         <span className="mt-3 md:mt-4 text-base md:text-lg text-muted-foreground max-w-2xl mx-auto block">
             {hasVipAccess && !hasVipBadge
-              ? "You already have VIP feature access! Purchase a plan to get the exclusive VIP crown badge next to your name."
-              : "Unlock exclusive features like the VIP theme, get a VIP badge, and support Echo Message."
+              ? "You already have access to VIP features! Purchase a plan to get the exclusive VIP crown badge and show your support."
+              : "Unlock exclusive features, get a VIP badge next to your name, and help support the future of Echo Message."
             }
         </span>
       </div>

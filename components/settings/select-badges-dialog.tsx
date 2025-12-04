@@ -1,7 +1,7 @@
 // src/components/settings/select-badges-dialog.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Check, Loader2, Crown, Bot, Wrench, SmilePlus, FlaskConical } from "lucide-react";
+import { Check, Crown, Bot, Wrench, SmilePlus, FlaskConical, Lock, Rocket, Gem } from "lucide-react";
 import { useAuth, type UserProfile } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
 import { CreatorLetterCBBadgeIcon } from '../chat/bot-icons';
@@ -25,7 +25,7 @@ interface SelectBadgesDialogProps {
   onSave: (newOrder: BadgeType[]) => void;
 }
 
-const allPossibleBadges: BadgeType[] = ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
+const allPossibleBadges: BadgeType[] = ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester', 'pioneer', 'patron'];
 
 const badgeComponentMap: Record<BadgeType, React.FC<{className?: string}>> = {
   creator: CreatorLetterCBBadgeIcon,
@@ -35,38 +35,48 @@ const badgeComponentMap: Record<BadgeType, React.FC<{className?: string}>> = {
   bot: (props) => <Bot {...props} />,
   meme_creator: (props) => <SmilePlus {...props} />,
   beta_tester: (props) => <FlaskConical {...props} />,
+  pioneer: (props) => <Rocket {...props} />,
+  patron: (props) => <Gem {...props} />,
 };
 
 const badgeLabelMap: Record<BadgeType, string> = {
-  creator: "Creator Badge",
-  vip: "VIP Badge",
-  verified: "Verified Badge",
-  dev: "Developer Badge",
-  bot: "Bot Badge",
-  meme_creator: "Meme Creator Badge",
-  beta_tester: "Beta Tester Badge",
+  creator: "Creator",
+  vip: "VIP",
+  verified: "Verified",
+  dev: "Developer",
+  bot: "Bot",
+  meme_creator: "Meme Creator",
+  beta_tester: "Beta Tester",
+  pioneer: "Pioneer",
+  patron: "Patron",
 };
 
 
+const EarnedBadges = (userProfile: UserProfile) => {
+    const badges = new Set<BadgeType>();
+    if (userProfile.isCreator) badges.add('creator');
+    if (userProfile.isVIP) badges.add('vip');
+    if (userProfile.isVerified) badges.add('verified');
+    if (userProfile.isDevTeam) badges.add('dev');
+    if (userProfile.isBot) badges.add('bot');
+    if (userProfile.isMemeCreator) badges.add('meme_creator');
+    if (userProfile.isBetaTester) badges.add('beta_tester');
+    if (userProfile.isPioneer) badges.add('pioneer');
+    if (userProfile.isPatron) badges.add('patron');
+    return badges;
+};
+
 export function SelectBadgesDialog({ isOpen, onOpenChange, userProfile, onSave }: SelectBadgesDialogProps) {
   const [selectedBadges, setSelectedBadges] = useState<BadgeType[]>([]);
-  
-  const earnedBadges = new Set<BadgeType>();
-  if (userProfile.isCreator) earnedBadges.add('creator');
-  if (userProfile.isVIP) earnedBadges.add('vip');
-  if (userProfile.isVerified) earnedBadges.add('verified');
-  if (userProfile.isDevTeam) earnedBadges.add('dev');
-  if (userProfile.isBot) earnedBadges.add('bot');
-  if (userProfile.isMemeCreator) earnedBadges.add('meme_creator');
-  if (userProfile.isBetaTester) earnedBadges.add('beta_tester');
-  
+  const earnedBadges = useMemo(() => EarnedBadges(userProfile), [userProfile]);
+
   useEffect(() => {
     if (isOpen) {
       // Initialize with the user's current preference, but only include earned badges
       const currentOrder = userProfile.badgeOrder || [];
       setSelectedBadges(currentOrder.filter(b => earnedBadges.has(b)));
     }
-  }, [isOpen, userProfile]);
+  }, [isOpen, userProfile.badgeOrder, earnedBadges]);
 
 
   const handleBadgeClick = (badge: BadgeType) => {
@@ -88,15 +98,15 @@ export function SelectBadgesDialog({ isOpen, onOpenChange, userProfile, onSave }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Select Badges</DialogTitle>
+          <DialogTitle>Manage Badges</DialogTitle>
           <DialogDescription>
-            Choose which of your earned badges to display. The order you select them in will be their display order on your profile.
+            Click to select badges. The selection order determines display order.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2 py-4">
+        <div className="grid grid-cols-3 gap-3 py-4">
           {allPossibleBadges.map((badgeKey) => {
             const BadgeIcon = badgeComponentMap[badgeKey];
             const hasBadge = earnedBadges.has(badgeKey);
@@ -104,24 +114,43 @@ export function SelectBadgesDialog({ isOpen, onOpenChange, userProfile, onSave }
             const selectionNumber = isSelected ? selectedBadges.indexOf(badgeKey) + 1 : null;
             
             return (
-                <div key={badgeKey} 
+                <div 
+                  key={badgeKey}
                   className={cn(
-                    "flex items-center gap-3 p-2 rounded-md transition-all",
-                    hasBadge ? "cursor-pointer hover:bg-accent" : "opacity-50 cursor-not-allowed bg-muted/50",
-                    isSelected && "bg-accent/80 border border-primary/50"
+                    "relative flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all duration-200 aspect-square group",
+                    hasBadge ? "cursor-pointer" : "opacity-50 cursor-not-allowed bg-muted/30",
+                    isSelected ? "border-primary bg-primary/5" : "border-muted hover:border-primary/50",
+                    hasBadge && "active:scale-95 active:duration-100"
                   )}
                   onClick={() => handleBadgeClick(badgeKey)}
                 >
-                    <BadgeIcon className={cn("h-5 w-5", badgeKey === 'vip' && 'text-yellow-500', badgeKey === 'dev' && 'text-blue-600', badgeKey === 'bot' && 'text-sky-500', badgeKey === 'meme_creator' && 'text-green-500', badgeKey === 'beta_tester' && 'text-orange-500')} />
-                    <span className="flex-1 font-medium text-sm">{badgeLabelMap[badgeKey]}</span>
-                    <div
-                      className={cn(
-                        "h-6 w-6 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all",
-                        isSelected ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground"
-                      )}
-                    >
-                      {selectionNumber || ''}
+                  {!hasBadge && (
+                    <div className="absolute top-1.5 right-1.5">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
                     </div>
+                  )}
+
+                  {isSelected && (
+                     <div className={cn(
+                        "absolute top-1.5 left-1.5 h-6 w-6 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold transition-transform duration-200",
+                        "group-active:scale-110"
+                     )}>
+                        {selectionNumber}
+                     </div>
+                  )}
+
+                  <BadgeIcon className={cn(
+                    "h-8 w-8 transition-transform duration-300 group-hover:scale-110",
+                    badgeKey === 'vip' && 'text-yellow-500', 
+                    badgeKey === 'dev' && 'text-blue-600', 
+                    badgeKey === 'bot' && 'text-sky-500', 
+                    badgeKey === 'meme_creator' && 'text-green-500', 
+                    badgeKey === 'beta_tester' && 'text-orange-500',
+                    badgeKey === 'pioneer' && 'text-slate-500',
+                    badgeKey === 'patron' && 'text-rose-500'
+                  )} />
+                  <span className="mt-2 text-center text-xs font-medium">{badgeLabelMap[badgeKey]}</span>
+                  
                 </div>
             );
           })}

@@ -11,7 +11,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { UserProfile } from "@/context/auth-context";
-import { Crown, Bot, Wrench, SmilePlus, FlaskConical, PartyPopper, Check, Gift } from "lucide-react";
+import { Crown, Bot, Wrench, SmilePlus, FlaskConical, PartyPopper, Check, Gift, Rocket, Gem } from "lucide-react";
 import { CreatorLetterCBBadgeIcon } from '@/components/chat/bot-icons';
 import { VerifiedBadge } from "@/components/verified-badge";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,8 @@ const badgeComponentMap: Record<string, React.FC<{className?: string}>> = {
   bot: (props) => <Bot {...props} />,
   meme_creator: (props) => <SmilePlus {...props} />,
   beta_tester: (props) => <FlaskConical {...props} />,
+  pioneer: (props) => <Rocket {...props} />,
+  patron: (props) => <Gem {...props} />,
 };
 
 const badgeLabelMap: Record<string, string> = {
@@ -42,6 +44,8 @@ const badgeLabelMap: Record<string, string> = {
   bot: "Bot",
   meme_creator: "Meme Creator",
   beta_tester: "Beta Tester",
+  pioneer: "Pioneer",
+  patron: "Patron",
 };
 
 

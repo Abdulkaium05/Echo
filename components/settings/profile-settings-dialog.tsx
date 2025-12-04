@@ -73,8 +73,12 @@ export function ProfileSettingsDialog({ isOpen, onOpenChange, user }: ProfileSet
       toast({ title: "Invalid Input", description: "Username cannot be empty.", variant: "destructive" });
       return;
     }
-    if (!authUser?.uid || !storage) {
-       toast({ title: "Error", description: "User not found or services unavailable. Please try logging in again.", variant: "destructive" });
+    if (!authUser?.uid) {
+       toast({ title: "Authentication Error", description: "User not authenticated. Please log in again.", variant: "destructive" });
+       return;
+    }
+     if (!storage) {
+       toast({ title: "Service Error", description: "Storage service is not available. Please try again later.", variant: "destructive" });
        return;
     }
 

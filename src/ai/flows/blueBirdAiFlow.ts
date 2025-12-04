@@ -112,7 +112,7 @@ const ChatHistoryItemSchema = z.object({
 const BlueBirdAssistantInputSchema = z.object({
   userName: z.string().describe('The name of the user talking to the AI.'),
   userMessage: z.string().describe('The new message sent by the user to the AI.'),
-  appTheme: z.string().optional().describe("The current theme of the app (e.g., 'theme-sky-blue', 'theme-light-green'). This determines the AI's persona."),
+  appTheme: z.string().optional().describe("The current theme of the app (e.g., 'theme-sky-blue', 'theme-light-green', 'theme-midnight'). This determines the AI's persona."),
   chatHistory: z.array(ChatHistoryItemSchema).optional().describe('The history of the conversation so far, with the oldest message first.'),
   photoDataUri: z.string().optional().describe("An optional photo provided by the user as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
   audioDataUri: z.string().optional().describe("An optional audio message provided by the user as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
@@ -133,9 +133,10 @@ export async function blueBirdAssistant(input: BlueBirdAssistantInput): Promise<
   } catch (error: any) {
     console.error('[blueBirdAssistant] Error in flow execution:', error);
     const persona = input.appTheme === 'theme-light-green' ? 'Green Leaf' : 'Blue Bird';
-    const errorMessage = persona === 'Green Leaf'
-        ? "My apologies, but my connection to the forest's wisdom seems to be hazy right now. Please try again in a moment."
-        : "I'm currently experiencing some technical difficulties. Please try again in a moment.";
+    let errorMessage = "I'm currently experiencing some technical difficulties. Please try again in a moment.";
+    if (persona === 'Green Leaf') {
+        errorMessage = "My apologies, but my connection to the forest's wisdom seems to be hazy right now. Please try again in a moment.";
+    }
     return { botResponse: errorMessage };
   }
 }
@@ -307,42 +308,23 @@ const blueBirdAiFlow = ai.defineFlow(
         const {output} = await blueBirdPrompt(input, {state: input});
         if (!output || !output.botResponse) {
             console.warn('[blueBirdAiFlow] LLM returned no output or empty botResponse.');
-            const persona = input.appTheme === 'theme-light-green' ? 'Green Leaf' : 'Blue Bird';
-            const fallbackMessage = persona === 'Green Leaf' 
-                ? "I'm sorry, I seem to have lost my train of thought. Could you please rephrase that?"
-                : "I'm sorry, I couldn't quite process that. Could you please try rephrasing or ask something else?";
+            let fallbackMessage = "I'm sorry, I couldn't quite process that. Could you please try rephrasing or ask something else?";
+            if (input.appTheme === 'theme-light-green') {
+                fallbackMessage = "I'm sorry, I seem to have lost my train of thought. Could you please rephrase that?";
+            }
             return { botResponse: fallbackMessage };
         }
         console.log('[blueBirdAiFlow] LLM generated output:', JSON.stringify(output, null, 2));
         return output;
     } catch (error: any) {
         console.error('[blueBirdAiFlow] Error during prompt execution:', error.message, error.stack);
-        const persona = input.appTheme === 'theme-light-green' ? 'Green Leaf' : 'Blue Bird';
-        const errorMessage = persona === 'Green Leaf'
-            ? "My apologies, my connection to the forest's wisdom seems to be hazy right now. Please try again in a moment."
-            : "My circuits are a bit tangled right now. Please give me a moment and try again.";
+        let errorMessage = "My circuits are a bit tangled right now. Please give me a moment and try again.";
+        if (input.appTheme === 'theme-light-green') {
+            errorMessage = "My apologies, my connection to the forest's wisdom seems to be hazy right now. Please try again in a moment.";
+        }
         return { botResponse: errorMessage };
     }
   }
 );
-    
-
-    
-
-
-
-
-
-
-    
-
-
-    
-
-    
-
-    
-
-    
 
     

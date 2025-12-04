@@ -32,7 +32,7 @@ export function AboutDialog({ isOpen, onOpenChange }: AboutDialogProps) {
         </DialogHeader>
         <div className="py-4 text-sm text-center text-muted-foreground space-y-2">
             <p>
-                Echo Message is a modern messaging app designed to deliver a real-time chatting experience. It features a clean interface, smooth interactions, and an intelligent assistant to make conversations easier and more engaging.
+                This app, Echo, was crafted with a single vision: to create a messaging experience that's not just functional, but fun. It's a place for real-time chats, powered by a smart AI companion, all wrapped in an interface you can make your own. Thank you for being a part of this journey.
             </p>
         </div>
         <DialogFooter>
