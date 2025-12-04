@@ -75,6 +75,7 @@ interface ChatWindowProps {
 }
 
 type AIPersona = 'blue-bird' | 'green-leaf' | 'echo-bot';
+const AI_CHAT_HISTORY_KEY = 'ai_chat_history';
 
 export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, chatAvatarUrl, chatIconIdentifier, isVerified, isVIP, isCreator, isDevTeam }: ChatWindowProps) {
   const { user: currentUser, userProfile, updateUserProfile } = useAuth();
@@ -120,6 +121,41 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
         else if (aiPersona === 'echo-bot') chatName = 'Echo Bot';
         else chatName = 'Blue Bird (AI Assistant)';
     }
+
+  // Load AI chat history from local storage
+  useEffect(() => {
+    if (isChattingWithBot) {
+        setLoadingMessages(true);
+        try {
+            const savedHistory = localStorage.getItem(AI_CHAT_HISTORY_KEY);
+            if (savedHistory) {
+                const parsed = JSON.parse(savedHistory);
+                // Convert timestamp strings back to Date objects
+                const historyWithDates = parsed.map((msg: any) => ({
+                    ...msg,
+                    timestamp: new Date(msg.timestamp)
+                }));
+                setMessages(historyWithDates);
+            }
+        } catch (error) {
+            console.error("Failed to load AI chat history:", error);
+            toast({ title: "Error", description: "Could not load chat history.", variant: "destructive" });
+        } finally {
+            setLoadingMessages(false);
+        }
+    }
+  }, [isChattingWithBot, toast]);
+
+  // Save AI chat history to local storage
+  useEffect(() => {
+      if (isChattingWithBot && messages.length > 0) {
+          try {
+              localStorage.setItem(AI_CHAT_HISTORY_KEY, JSON.stringify(messages));
+          } catch (error) {
+              console.error("Failed to save AI chat history:", error);
+          }
+      }
+  }, [messages, isChattingWithBot]);
 
 
   useEffect(() => {
@@ -188,6 +224,8 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
   };
 
   useEffect(() => {
+    if (isChattingWithBot) return;
+
     const fetchPartnerStatus = async () => {
         if (!chatPartnerId) return;
         const profile = await fetchChatPartnerProfile(chatPartnerId);
@@ -202,7 +240,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
 
     const intervalId = setInterval(fetchPartnerStatus, 30000); // Re-check every 30 seconds
     return () => clearInterval(intervalId);
-  }, [chatPartnerId]);
+  }, [chatPartnerId, isChattingWithBot]);
 
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
@@ -215,6 +253,8 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
   }, []);
 
    const fetchAndSetMessages = useCallback(() => {
+     if (isChattingWithBot) return () => {}; // Don't fetch for bot
+
      if (!chatId || !currentUser?.uid) {
        setLoadingMessages(false);
        setErrorMessages(currentUser?.uid ? "Chat ID is missing." : "User not identified.");
@@ -265,12 +305,13 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
        }
      );
      return unsubscribe;
-   }, [chatId, currentUser?.uid, playSound]);
+   }, [chatId, currentUser?.uid, playSound, isChattingWithBot]);
 
    useEffect(() => {
+     if (isChattingWithBot) return;
      const unsubscribe = fetchAndSetMessages();
      return () => { if (unsubscribe) unsubscribe()};
-   }, [fetchAndSetMessages, chatId]);
+   }, [fetchAndSetMessages, chatId, isChattingWithBot]);
 
    useEffect(() => {
     const hasNewMessages = messages.length > previousMessagesCountRef.current;
@@ -296,7 +337,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
      if (isSending || (!newMessageText.trim() && !attachmentData)) return;
 
     setIsSending(true);
-    console.log(`ChatWindow: Sending message to chat ${chatId}. Attachment: ${attachmentData?.name}, Reply: ${!!replyingToMessage}`);
     
     const textToSend = newMessageText.trim();
 
@@ -317,15 +357,28 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
     }
 
     try {
-      await sendMessageToChat(chatId, currentUser.uid, textToSend, attachmentData, replyContext);
-      setReplyingToMessage(null); 
-      messageInputRef.current?.clearAttachmentPreview(); 
-
-      // Bot interaction logic
-      if (isChattingWithBot) {
+      if (!isChattingWithBot) {
+        console.log(`ChatWindow: Sending message to chat ${chatId}. Attachment: ${attachmentData?.name}, Reply: ${!!replyingToMessage}`);
+        await sendMessageToChat(chatId, currentUser.uid, textToSend, attachmentData, replyContext);
+      } else {
+        // Handle bot chat locally
+        const userMessage: Message = {
+            id: `local-${Date.now()}`,
+            senderId: currentUser.uid,
+            senderName: userProfile.name,
+            text: textToSend,
+            timestamp: new Date(),
+            isSentByCurrentUser: true,
+            attachmentUrl: attachmentData?.dataUri,
+            attachmentName: attachmentData?.name,
+            attachmentType: attachmentData?.type,
+            audioDuration: attachmentData?.duration,
+            replyingTo: replyContext,
+        };
+        setMessages(prev => [...prev, userMessage]);
         setIsBotTyping(true);
 
-        const historyForFlow = messages
+        const historyForFlow = [...messages, userMessage]
           .slice(-6)
           .map(msg => ({
             role: msg.senderId === BOT_UID ? 'model' : 'user',
@@ -351,15 +404,27 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
         console.log("[ChatWindow] Calling Genkit flow with input:", aiInput);
         const aiResponse: BlueBirdAssistantOutput = await blueBirdAssistant(aiInput);
         console.log("[ChatWindow] Received Genkit response:", aiResponse);
-
+        
         if (aiResponse.songToPlay?.url) {
           setMusicUrl(aiResponse.songToPlay.url);
           toast({ title: 'Now Playing', description: `Started playing "${aiResponse.songToPlay.name}"` });
         }
-        
-        await sendMessageToChat(chatId, BOT_UID, aiResponse.botResponse, undefined, undefined, true);
+
+        const botMessage: Message = {
+            id: `local-${Date.now()}-bot`,
+            senderId: BOT_UID,
+            senderName: chatName,
+            text: aiResponse.botResponse,
+            timestamp: new Date(),
+            isSentByCurrentUser: false,
+        };
+        setMessages(prev => [...prev, botMessage]);
         setIsBotTyping(false);
       }
+
+      setReplyingToMessage(null); 
+      messageInputRef.current?.clearAttachmentPreview(); 
+
     } catch (error: any) {
       console.error("ChatWindow: Error sending message or getting AI response:", error);
       toast({ title: "Send Failed", description: error.message || "Could not send message.", variant: "destructive" });
@@ -370,6 +435,11 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
   };
 
   const handleDeleteMessage = async (messageId: string) => {
+    if (isChattingWithBot) {
+        setMessages(prev => prev.filter(m => m.id !== messageId));
+        toast({ title: "Message Removed" });
+        return;
+    }
     if (!chatId) return;
     console.log(`ChatWindow: Deleting message ${messageId} from chat ${chatId}`);
     try {
@@ -395,6 +465,37 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
         toast({ title: "Error", description: "Cannot react. User or chat not identified.", variant: "destructive" });
         return;
     }
+    
+    if (isChattingWithBot) {
+        setMessages(prevMessages => prevMessages.map(msg => {
+            if (msg.id === messageId) {
+                const reactions = { ...(msg.reactions || {}) };
+                const existingReaction = reactions[emoji];
+                if (existingReaction && existingReaction.users.includes(currentUser.uid)) {
+                    const newCount = existingReaction.count - 1;
+                    if (newCount === 0) {
+                        delete reactions[emoji];
+                    } else {
+                        reactions[emoji] = {
+                            count: newCount,
+                            users: existingReaction.users.filter(uid => uid !== currentUser.uid)
+                        };
+                    }
+                } else {
+                    if (existingReaction) {
+                        reactions[emoji].count++;
+                        reactions[emoji].users.push(currentUser.uid);
+                    } else {
+                        reactions[emoji] = { count: 1, users: [currentUser.uid] };
+                    }
+                }
+                return { ...msg, reactions };
+            }
+            return msg;
+        }));
+        return;
+    }
+
     console.log(`ChatWindow: User ${currentUser.uid} toggled reaction ${emoji} for message ${messageId}`);
     try {
         await toggleReactionOnService(chatId, messageId, emoji, currentUser.uid);
@@ -795,7 +896,7 @@ const orderedBadges = useMemo(() => {
             <AlertDialogDescription>
               {dialogState.type === 'block'
                 ? "You will not be able to send or receive messages from this user until you unblock them."
-                : "This will move the chat to the Trash. You can restore it later from Settings."}
+                : "This will move the chat to the Trash. You can restore it from Settings."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -23,6 +23,11 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isDevTeam == true;
     }
     
+    function isBot() {
+      // Allow writes from the bot when there is no auth context (server-side flow)
+      return request.auth == null;
+    }
+    
     function isGiftingPoints() {
       return request.resource.data.diff(resource.data).affectedKeys().hasAll(['points', 'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount'])
              && request.resource.data.hasNewPointsGift == true
@@ -112,11 +117,11 @@ service cloud.firestore {
       allow get: if isChatParticipant(chatId);
       allow list: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid in request.resource.data.participants;
-      allow update: if isChatParticipant(chatId);
+      allow update: if isChatParticipant(chatId) || isBot();
 
       match /messages/{messageId} {
         allow read: if isChatParticipant(chatId);
-        allow create: if isChatParticipant(chatId) && request.resource.data.senderId == request.auth.uid;
+        allow create: if (isChatParticipant(chatId) && request.resource.data.senderId == request.auth.uid) || isBot();
         allow update, delete: if isChatParticipant(chatId) && resource.data.senderId == request.auth.uid;
       }
     }

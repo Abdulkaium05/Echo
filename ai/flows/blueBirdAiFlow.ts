@@ -66,43 +66,6 @@ const PlaySongOutputSchema = z.object({
     url: z.string().describe("The URL of the found song to be played."),
 });
 
-const playSongFromPlaylist = ai.defineTool(
-    {
-        name: 'playSongFromPlaylist',
-        description: 'Finds a song by name from the user\'s saved playlist and prepares it for playback.',
-        inputSchema: z.object({
-            songName: z.string().describe("The name of the song the user wants to play."),
-        }),
-        outputSchema: PlaySongOutputSchema.optional(),
-    },
-    async ({ songName }, context) => {
-        const flowState = context?.flow?.state as BlueBirdAssistantInput | undefined;
-        if (!flowState) {
-            console.log("[playSongFromPlaylist Tool] Flow state not available.");
-            return undefined;
-        }
-
-        const savedSongs = flowState.savedSongs || [];
-        console.log(`[playSongFromPlaylist Tool] Searching for song: "${songName}" in playlist:`, savedSongs);
-        if (savedSongs.length === 0) {
-            console.log("[playSongFromPlaylist Tool] User has no saved songs.");
-            return undefined;
-        }
-
-        const foundSong = savedSongs.find(
-            (song) => song.name.toLowerCase() === songName.toLowerCase()
-        );
-
-        if (foundSong) {
-            console.log(`[playSongFromPlaylist Tool] Found song:`, foundSong);
-            return { name: foundSong.name, url: foundSong.url };
-        } else {
-            console.log(`[playSongFromPlaylist Tool] Song "${songName}" not found in playlist.`);
-            return undefined;
-        }
-    }
-);
-
 
 const ChatHistoryItemSchema = z.object({
   role: z.enum(['user', 'model']).describe('The role of the message sender (user or model/bot).'),
@@ -151,7 +114,7 @@ const blueBirdPrompt = ai.definePrompt({
   model: 'groq/gemma-7b-it',
   input: {schema: BlueBirdAssistantInputSchema},
   output: {schema: BlueBirdAssistantOutputSchema},
-  tools: [getRealTimeNews, getCurrentTime, playSongFromPlaylist],
+  tools: [getRealTimeNews, getCurrentTime],
   prompt: `{{#if (eq aiPersona 'green-leaf')}}
 You are Green Leaf, a serene, wise, and nature-loving AI assistant. Your personality is calm, thoughtful, and insightful, like a gentle breeze through a forest. Your primary goal is to be a helpful and grounding companion.
 - Your speech is elegant and may include subtle nature metaphors (e.g., "let's see what blossoms from this idea," "finding the root of the problem").
@@ -172,10 +135,8 @@ You are Blue Bird, a friendly, exceptionally intelligent, knowledgeable, and wit
 
 **Music Control:**
 - The user has a playlist of saved songs: {{{json savedSongs}}}.
-- If the user asks you to play a song, you MUST use the \`playSongFromPlaylist\` tool to find it. You must pass ONLY the \`songName\` to the tool.
-- If the tool finds the song, you MUST populate the \`songToPlay\` output field with the name and URL.
-- Your text response should confirm which song you are playing, for example: "Of course, playing 'Your Song Name'."
-- If the song is not found, inform the user gracefully, e.g., "I couldn't find a song named 'Song Name' in your playlist." DO NOT populate the \`songToPlay\` field if the song is not found.
+- If the user asks you to play a song by name, your response should suggest they play it from their playlist in the settings menu.
+- Your text response should be something like: "Of course, you can play 'Your Song Name' from your saved playlist in the music player settings."
 
 **Creative Capabilities:**
 You are also a powerful creative partner. You can generate various creative text formats on request, including:
@@ -342,3 +303,5 @@ const blueBirdAiFlow = ai.defineFlow(
     }
   }
 );
+
+    
