@@ -376,6 +376,51 @@ body {
     --avatar-border-accent: 0 70% 60%;
     --bot-accent-color: 0 70% 60%;
   }
+
+  .theme-wild-sugarcane {
+    --background: 45 40% 97%; /* Light sandy beige */
+    --foreground: 90 25% 15%; /* Dark, earthy green */
+    --card: 45 30% 99%; /* Almost white, warm */
+    --card-foreground: 90 25% 15%;
+    --primary: 90 35% 40%; /* Sugarcane green */
+    --primary-foreground: 45 40% 98%;
+    --secondary: 90 20% 92%; /* Light green-gray */
+    --secondary-foreground: 90 25% 15%;
+    --muted: 90 20% 95%; /* Even lighter green-gray */
+    --muted-foreground: 90 25% 35%;
+    --accent: 90 35% 45%; /* Slightly more vibrant green for hover */
+    --accent-foreground: 45 40% 98%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 90 35% 40%;
+    --border: 90 20% 88%;
+    --input: 90 20% 90%;
+    --avatar-border-accent: 90 35% 40%;
+    --bot-accent-color: 90 35% 40%;
+  }
+  .dark.theme-wild-sugarcane {
+    --background: 90 15% 8%; /* Deep, dark green */
+    --foreground: 75 30% 85%;
+    --card: 90 15% 12%;
+    --card-foreground: 75 30% 85%;
+    --popover: 90 15% 10%;
+    --popover-foreground: 75 30% 85%;
+    --primary: 80 40% 55%; /* Brighter, more vibrant sugarcane green */
+    --primary-foreground: 80 20% 10%;
+    --secondary: 90 15% 16%;
+    --secondary-foreground: 75 30% 85%;
+    --muted: 90 15% 18%;
+    --muted-foreground: 75 30% 60%;
+    --accent: 80 40% 60%;
+    --accent-foreground: 80 20% 10%;
+    --destructive: 0 60% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 80 40% 55%;
+    --border: 90 15% 25%;
+    --input: 90 15% 25%;
+    --avatar-border-accent: 80 40% 55%;
+    --bot-accent-color: 80 40% 55%;
+  }
   
   /* Transparent Mode styles */
   .transparent-mode {

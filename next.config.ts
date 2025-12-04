@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    allowedDevOrigins: [
+        "https://6000-firebase-echob-1764679135376.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev"
+    ]
+  },
   images: {
     remotePatterns: [
       {
@@ -22,11 +27,6 @@ const nextConfig: NextConfig = {
         port: '',
       }
     ],
-  },
-  experimental: {
-    allowedDevOrigins: [
-      "https://9000-firebase-echob-1764679135376.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev"
-    ]
   },
 };
 

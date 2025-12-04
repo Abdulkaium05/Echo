@@ -512,7 +512,7 @@ const orderedBadges = useMemo(() => {
     const earnedBadges: BadgeType[] = [];
     if(partnerProfileDetails.isCreator) earnedBadges.push('creator');
     if(partnerProfileDetails.isVIP) earnedBadges.push('vip');
-    if(partnerProfileDetails.isVerified && !partnerProfileDetails.isCreator) earnedBadges.push('verified');
+    if(partnerProfileDetails.isVerified) earnedBadges.push('verified');
     if(partnerProfileDetails.isDevTeam) earnedBadges.push('dev');
     if(partnerProfileDetails.isBot) earnedBadges.push('bot');
     if(partnerProfileDetails.isMemeCreator) earnedBadges.push('meme_creator');
@@ -768,3 +768,5 @@ const orderedBadges = useMemo(() => {
     </>
   );
 }
+
+    

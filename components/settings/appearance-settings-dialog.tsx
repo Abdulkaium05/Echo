@@ -14,7 +14,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Moon, Sun, Droplets, Palette, Crown, Lock, Flame, Leaf, Waves } from "lucide-react";
+import { Check, Moon, Sun, Droplets, Palette, Crown, Lock, Flame, Leaf, Waves, Wheat } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
@@ -28,7 +28,7 @@ interface AppearanceSettingsDialogProps {
 }
 
 type Mode = 'light' | 'dark';
-type Theme = 'theme-sky-blue' | 'theme-light-green' | 'theme-midnight' | 'theme-solaris' | 'theme-forest' | 'theme-ocean' | 'theme-crimson';
+type Theme = 'theme-sky-blue' | 'theme-light-green' | 'theme-midnight' | 'theme-solaris' | 'theme-forest' | 'theme-ocean' | 'theme-crimson' | 'theme-wild-sugarcane';
 
 const generalThemes: { name: Theme, label: string, color: string }[] = [
     { name: 'theme-sky-blue', label: 'Sky Blue', color: 'bg-sky-500' },
@@ -41,6 +41,7 @@ const vipThemes: { name: Theme, label: string, color: string, icon: React.FC<any
     { name: 'theme-forest', label: 'Forest', color: 'bg-emerald-600', icon: Leaf },
     { name: 'theme-ocean', label: 'Ocean', color: 'bg-blue-600', icon: Waves },
     { name: 'theme-crimson', label: 'Crimson', color: 'bg-red-600', icon: Flame },
+    { name: 'theme-wild-sugarcane', label: 'Wild Sugarcane', color: 'bg-lime-800', icon: Wheat },
 ];
 
 const allThemes = [...generalThemes, ...vipThemes];

@@ -2,6 +2,15 @@
 import { GeistSans } from 'geist/font/sans';
 import { Providers } from './providers';
 import './globals.css';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Echo Message',
+  description: 'A modern messaging app with an AI companion.',
+  icons: {
+    icon: '/icon.png',
+  },
+};
 
 export default function RootLayout({
   children,

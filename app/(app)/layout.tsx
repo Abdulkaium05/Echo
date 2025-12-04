@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Gift, Code, Rocket, Gem } from 'lucide-react';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Rocket, Gem, Code, Gift } from 'lucide-react';
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
@@ -29,7 +29,7 @@ import { EchoOldDialog } from '@/components/echo-old-dialog';
 import { Toaster } from '@/components/ui/toaster';
 import { GiftHistoryDialog } from '@/components/profile/gift-history-dialog';
 
-export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester' | 'pioneer' | 'patron';
+export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester';
 export type BadgeColor = 'sky-blue' | 'light-green' | 'red' | 'orange' | 'yellow' | 'purple' | 'pink' | 'indigo' | 'teal' | 'white' | 'black';
 
 const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
@@ -40,8 +40,6 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     bot: ({className}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} />,
     meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
     beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
-    pioneer: ({className}) => <Rocket className={cn("h-4 w-4 text-slate-500", className)} />,
-    patron: ({className}) => <Gem className={cn("h-4 w-4 text-rose-500", className)} />,
 };
 
 
@@ -63,15 +61,13 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    const earnedBadges: BadgeType[] = [];
    if(user.isCreator) earnedBadges.push('creator');
    if(user.isVIP) earnedBadges.push('vip');
-   if(user.isVerified && !user.isCreator) earnedBadges.push('verified');
+   if(user.isVerified) earnedBadges.push('verified');
    if(user.isDevTeam) earnedBadges.push('dev');
    if(user.isBot) earnedBadges.push('bot');
    if(user.isMemeCreator) earnedBadges.push('meme_creator');
    if(user.isBetaTester) earnedBadges.push('beta_tester');
-   if(user.isPioneer) earnedBadges.push('pioneer');
-   if(user.isPatron) earnedBadges.push('patron');
 
-   const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester', 'pioneer', 'patron'];
+   const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
    const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
    const isDev = user.isDevTeam;

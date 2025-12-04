@@ -29,10 +29,10 @@ export function EchoOldDialog({ isOpen, onOpenChange }: EchoOldDialogProps) {
         </DialogHeader>
         <div className="py-4 text-sm text-center text-muted-foreground space-y-3">
             <p>
-                This app started as a fun side-project in May 2025. What began as a simple experiment quickly grew into a passion.
+                This app started as a fun side-project in May 2025. What began as a simple experiment quickly grew into a passion, filled with late nights, lots of learning, and a few (okay, maybe more than a few) bugs.
             </p>
-            <p>
-                It's a journey filled with late nights, lots of learning, and a few (okay, maybe more than a few) bugs along the way.
+            <p className="font-semibold">
+                This was officially useable on 02-Dec-2025.
             </p>
              <p className="font-semibold text-foreground pt-2">
                 Want to see how far we've come? Check out the original version of the app!

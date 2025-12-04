@@ -38,8 +38,6 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     bot: ({className}) => <SquareBotBadgeIcon className={cn("h-5 w-5", className)} />,
     meme_creator: ({className}) => <SmilePlus className={cn("h-5 w-5 text-green-500", className)} />,
     beta_tester: ({className}) => <FlaskConical className={cn("h-5 w-5 text-orange-500", className)} />,
-    pioneer: ({className}) => <Rocket className={cn("h-5 w-5 text-slate-500", className)} />,
-    patron: ({className}) => <Gem className={cn("h-5 w-5 text-rose-500", className)} />,
 };
 
 export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfileDialogProps) {
@@ -104,16 +102,14 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
   const earnedBadges: BadgeType[] = [];
   if(profile.isCreator) earnedBadges.push('creator');
   if(profile.isVIP) earnedBadges.push('vip');
-  if(profile.isVerified && !profile.isCreator) earnedBadges.push('verified');
+  if(profile.isVerified) earnedBadges.push('verified');
   if(profile.isDevTeam) earnedBadges.push('dev');
   if(profile.isBot) earnedBadges.push('bot');
   if(profile.isMemeCreator) earnedBadges.push('meme_creator');
   if(profile.isBetaTester) earnedBadges.push('beta_tester');
-  if(profile.isPioneer) earnedBadges.push('pioneer');
-  if(profile.isPatron) earnedBadges.push('patron');
 
 
-  const badgeDisplayOrder = profile.badgeOrder?.length ? profile.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester', 'pioneer', 'patron'];
+  const badgeDisplayOrder = profile.badgeOrder?.length ? profile.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
   const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
   return (
@@ -206,3 +202,5 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
     </Dialog>
   );
 }
+
+    
