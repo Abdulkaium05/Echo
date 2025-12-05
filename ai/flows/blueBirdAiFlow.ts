@@ -13,48 +13,6 @@ import {z} from 'genkit';
 import type { SavedSong } from '@/context/music-player-context';
 
 
-const getRealTimeNews = ai.defineTool(
-  {
-    name: 'getRealTimeNews',
-    description: 'Get real-time news updates on a specific topic or general breaking news.',
-    inputSchema: z.object({
-      topic: z.string().optional().describe('The specific topic to search for news on. If omitted, returns general top headlines.'),
-    }),
-    outputSchema: z.array(z.object({
-        headline: z.string().describe('The main headline of the news article.'),
-        summary: z.string().describe('A brief summary of the news article.'),
-        source: z.string().describe('The news source (e.g., "Tech Reports", "Global News Network").'),
-    })),
-  },
-  async ({ topic }) => {
-    console.log(`[getRealTimeNews Tool] Fetching news for topic: ${topic || 'general'}`);
-    // In a real application, this would call a live news API.
-    // For this demo, we return mock, current-looking news.
-    const mockNews = [
-        { headline: "Global Markets Rally as New Tech Regulations Announced", summary: "Major stock indices saw significant gains today after regulators announced a clearer framework for AI development, easing investor concerns.", source: "Global News Network" },
-        { headline: "Breakthrough in Fusion Energy Achieved at Experimental Reactor", summary: "Scientists have announced a net energy gain for the third time this year, pushing the dream of clean, limitless energy closer to reality.", source: "Science Today" },
-        { headline: "Echo Message App Hits 10 Million Active Users", summary: "The popular real-time messaging app, Echo Message, has reached a new milestone, crediting its user-friendly interface and unique VIP features for its rapid growth.", source: "Tech Reports" },
-    ];
-    if (topic && topic.toLowerCase().includes('space')) {
-        return [{ headline: "New 'Odyssey' Mission to Mars Reveals Surprising Geological Data", summary: "Data from the Odyssey orbiter suggests the presence of subsurface water ice in regions previously thought to be arid, opening new possibilities for future colonization.", source: "Astronomy Now" }];
-    }
-    return mockNews;
-  }
-);
-
-const getCurrentTime = ai.defineTool(
-  {
-    name: 'getCurrentTime',
-    description: 'Gets the current server date and time.',
-    inputSchema: z.object({}), // No input needed
-    outputSchema: z.string().describe('The current date and time in a human-readable format.'),
-  },
-  async () => {
-    // In a real app, you might want to specify a timezone.
-    return new Date().toLocaleString();
-  }
-);
-
 const SavedSongSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -65,6 +23,43 @@ const PlaySongOutputSchema = z.object({
     name: z.string().describe("The name of the found song."),
     url: z.string().describe("The URL of the found song to be played."),
 });
+
+const playSongFromPlaylist = ai.defineTool(
+    {
+        name: 'playSongFromPlaylist',
+        description: 'Finds a song by name from the user\'s saved playlist and prepares it for playback.',
+        inputSchema: z.object({
+            songName: z.string().describe("The name of the song the user wants to play."),
+        }),
+        outputSchema: PlaySongOutputSchema.optional(),
+    },
+    async ({ songName }, context) => {
+        const flowState = context?.flow?.state as BlueBirdAssistantInput | undefined;
+        if (!flowState) {
+            console.log("[playSongFromPlaylist Tool] Flow state not available.");
+            return undefined;
+        }
+
+        const savedSongs = flowState.savedSongs || [];
+        console.log(`[playSongFromPlaylist Tool] Searching for song: "${songName}" in playlist:`, savedSongs);
+        if (savedSongs.length === 0) {
+            console.log("[playSongFromPlaylist Tool] User has no saved songs.");
+            return undefined;
+        }
+
+        const foundSong = savedSongs.find(
+            (song) => song.name.toLowerCase() === songName.toLowerCase()
+        );
+
+        if (foundSong) {
+            console.log(`[playSongFromPlaylist Tool] Found song:`, foundSong);
+            return { name: foundSong.name, url: foundSong.url };
+        } else {
+            console.log(`[playSongFromPlaylist Tool] Song "${songName}" not found in playlist.`);
+            return undefined;
+        }
+    }
+);
 
 
 const ChatHistoryItemSchema = z.object({
@@ -92,7 +87,17 @@ export type BlueBirdAssistantOutput = z.infer<typeof BlueBirdAssistantOutputSche
 
 export async function blueBirdAssistant(input: BlueBirdAssistantInput): Promise<BlueBirdAssistantOutput> {
   try {
-    return await blueBirdAiFlow(input);
+    const response = await blueBirdAiFlow(input);
+    
+    // Fallback if the bot sends an empty response.
+    if (!response.botResponse.trim()) {
+        console.warn('[blueBirdAssistant] Flow returned an empty botResponse. Using fallback.');
+        return { 
+            botResponse: "I'm sorry, I seem to have lost my train of thought. Could you please rephrase that?",
+            songToPlay: response.songToPlay 
+        };
+    }
+    return response;
   } catch (error: any) {
     console.error('[blueBirdAssistant] Error in flow execution:', error);
     let personaName = 'Blue Bird';
@@ -111,10 +116,10 @@ export async function blueBirdAssistant(input: BlueBirdAssistantInput): Promise<
 
 const blueBirdPrompt = ai.definePrompt({
   name: 'blueBirdPrompt',
-  model: 'groq/gemma2-9b-it',
+  model: 'googleai/gemini-2.5-flash',
   input: {schema: BlueBirdAssistantInputSchema},
   output: {schema: BlueBirdAssistantOutputSchema},
-  tools: [getRealTimeNews, getCurrentTime],
+  tools: [playSongFromPlaylist],
   prompt: `{{#if (eq aiPersona 'green-leaf')}}
 You are Green Leaf, a serene, wise, and nature-loving AI assistant. Your personality is calm, thoughtful, and insightful, like a gentle breeze through a forest. Your primary goal is to be a helpful and grounding companion.
 - Your speech is elegant and may include subtle nature metaphors (e.g., "let's see what blossoms from this idea," "finding the root of the problem").
@@ -131,12 +136,13 @@ You are Blue Bird, a friendly, exceptionally intelligent, knowledgeable, and wit
 - **Personalized Assistance:** Pay close attention to the user's name ({{{userName}}}) and the entire conversation history. Use this context to provide answers that are not just accurate, but also relevant and personalized to the ongoing dialogue.
 - **Deep Knowledge:** You have a comprehensive understanding of the "Echo Message" application (details below) and a vast general knowledge base. Use this to provide thorough, well-explained, and insightful answers.
 - **Proactive & Helpful:** Anticipate user needs. If a question is answered, consider what the user might ask next and provide additional, relevant information.
-- **Tool Usage:** You have access to real-time information. You MUST use the \`getRealTimeNews\` tool for current events and the \`getCurrentTime\` tool for date/time queries. This is mandatory.
 
 **Music Control:**
 - The user has a playlist of saved songs: {{{json savedSongs}}}.
-- If the user asks you to play a song by name, your response should suggest they play it from their playlist in the settings menu.
-- Your text response should be something like: "Of course, you can play 'Your Song Name' from your saved playlist in the music player settings."
+- If the user asks you to play a song, you MUST use the \`playSongFromPlaylist\` tool to find it. You must pass ONLY the \`songName\` to the tool.
+- If the tool finds the song, you MUST populate the \`songToPlay\` output field with the name and URL.
+- Your text response should confirm which song you are playing, for example: "Of course, playing 'Your Song Name'."
+- If the song is not found, inform the user gracefully, e.g., "I couldn't find a song named 'Song Name' in your playlist." DO NOT populate the \`songToPlay\` field if the song is not found.
 
 **Creative Capabilities:**
 You are also a powerful creative partner. You can generate various creative text formats on request, including:
@@ -278,7 +284,7 @@ const blueBirdAiFlow = ai.defineFlow(
   async (input: BlueBirdAssistantInput) => {
     console.log('[blueBirdAiFlow] Received input:', JSON.stringify(input, null, 2));
     try {
-        const {output} = await blueBirdPrompt(input, {state: input});
+        const {output} = await blueBirdPrompt(input);
         if (!output || !output.botResponse) {
             console.warn('[blueBirdAiFlow] LLM returned no output or empty botResponse.');
             let fallbackMessage = "I'm sorry, I couldn't quite process that. Could you please try rephrasing or ask something else?";

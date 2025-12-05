@@ -23,11 +23,6 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isDevTeam == true;
     }
     
-    function isBot() {
-      // Allow writes from the bot when there is no auth context (server-side flow)
-      return request.auth == null;
-    }
-    
     function isGiftingPoints() {
       return request.resource.data.diff(resource.data).affectedKeys().hasAll(['points', 'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount'])
              && request.resource.data.hasNewPointsGift == true
@@ -70,6 +65,12 @@ service cloud.firestore {
         'isVerified', 'isCreator', 'isDevTeam', 'isBot', 'points', 'isVIP',
         'isMemeCreator', 'isBetaTester'
       ]);
+    }
+    
+    function isBot() {
+      // The bot sends messages from the server, so it has no auth object.
+      // We identify it by checking for a specific UID in the message data.
+      return request.resource.data.lastMessage.senderId == 'blue_bird_ai_uid';
     }
 
     // =====================================================
@@ -117,11 +118,12 @@ service cloud.firestore {
       allow get: if isChatParticipant(chatId);
       allow list: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid in request.resource.data.participants;
-      allow update: if isChatParticipant(chatId) || isBot();
+      allow update: if isChatParticipant(chatId) || isBot(); // Allow bot to update lastMessage
 
       match /messages/{messageId} {
         allow read: if isChatParticipant(chatId);
-        allow create: if (isChatParticipant(chatId) && request.resource.data.senderId == request.auth.uid) || isBot();
+        // Allow create if user is a participant OR if it's the bot sending a message
+        allow create: if (isChatParticipant(chatId) && request.resource.data.senderId == request.auth.uid) || request.resource.data.senderId == 'blue_bird_ai_uid';
         allow update, delete: if isChatParticipant(chatId) && resource.data.senderId == request.auth.uid;
       }
     }

@@ -1,4 +1,5 @@
 
+
 // src/services/firestore.ts
 import { 
     doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp,
@@ -25,7 +26,7 @@ export interface Message {
   senderId: string;
   senderName: string;
   text: string;
-  timestamp: Timestamp | Date;
+  timestamp: Timestamp;
   isSentByCurrentUser?: boolean;
   isDeleted?: boolean;
   seenBy?: string[];
@@ -80,9 +81,11 @@ export const mapChatToChatItem = async (chat: Chat, currentUserId: string): Prom
     }
   
     const lastMessage = chat.lastMessage;
-    const lastMessageTimestamp = lastMessage?.timestamp ?? chat.createdAt ?? new Date('2020-01-01T00:00:00Z');
+    const lastMessageTimestamp = lastMessage?.timestamp ?? chat.createdAt ?? { toDate: () => new Date('2020-01-01T00:00:00Z'), seconds: 0, nanoseconds: 0 };
     
-    const date = 'toDate' in lastMessageTimestamp ? lastMessageTimestamp.toDate() : lastMessageTimestamp;
+    // Defensive check to ensure toDate exists and is a function
+    const hasValidTimestamp = lastMessageTimestamp && typeof lastMessageTimestamp.toDate === 'function';
+    const date = hasValidTimestamp ? lastMessageTimestamp.toDate() : new Date('2020-01-01T00:00:00Z');
 
     const now = new Date();
     const diffSeconds = Math.round((now.getTime() - date.getTime()) / 1000);
@@ -114,7 +117,7 @@ export const mapChatToChatItem = async (chat: Chat, currentUserId: string): Prom
       avatarUrl: partnerProfile.avatarUrl,
       lastMessage: lastMessage?.isDeleted ? 'Message deleted' : (lastMessage?.text || (lastMessage?.attachmentName ? `Attachment: ${lastMessage.attachmentName}` : 'No messages yet')),
       timestamp: timestampStr,
-      lastMessageTimestampValue: 'seconds' in lastMessageTimestamp ? lastMessageTimestamp.seconds : date.getTime(),
+      lastMessageTimestampValue: hasValidTimestamp ? lastMessageTimestamp.seconds : 0,
       isVerified: partnerProfile.isVerified,
       isContactVIP: partnerProfile.isVIP,
       isDevTeam: partnerProfile.isDevTeam,
@@ -232,14 +235,14 @@ export const sendMessage = async (
     chatId: string, 
     senderId: string, 
     text: string, 
-    attachmentData?: { dataUri: string, name: string, type: 'image' | 'video' | 'audio' | 'document' | 'other', duration?: number },
+    attachmentData?: { dataUri: string, name: string, type: 'image' | 'video' | 'document' | 'audio' | 'other', duration?: number },
     replyingTo?: Message['replyingTo'],
     isBotMessage: boolean = false
 ): Promise<void> => {
     const senderProfile = await getUserProfile(senderId);
     if (!senderProfile) throw new Error("Sender profile not found.");
 
-    const newMessage: Omit<Message, 'id'> = {
+    const newMessageData: Omit<Message, 'id'> = {
         senderId,
         senderName: senderProfile.name,
         text,
@@ -251,84 +254,35 @@ export const sendMessage = async (
     };
 
     if (attachmentData) {
-        newMessage.attachmentUrl = attachmentData.dataUri;
-        newMessage.attachmentName = attachmentData.name;
-        newMessage.attachmentType = attachmentData.type;
+        newMessageData.attachmentUrl = attachmentData.dataUri;
+        newMessageData.attachmentName = attachmentData.name;
+        newMessageData.attachmentType = attachmentData.type;
         if (attachmentData.type === 'audio') {
-            newMessage.audioDuration = attachmentData.duration;
+            newMessageData.audioDuration = attachmentData.duration;
         }
     }
 
     const messagesRef = collection(firestore, 'chats', chatId, 'messages');
     const chatRef = doc(firestore, 'chats', chatId);
 
-    let newDocRefPromise: Promise<any>;
+    // Using a batch to ensure atomicity
+    const batch = writeBatch(firestore);
+    const newMessageRef = doc(messagesRef); // Create a new doc ref with a unique ID
 
-    if (isBotMessage) {
-        // Use non-blocking writes for bot messages to get contextual errors
-        newDocRefPromise = addDocumentNonBlocking(messagesRef, newMessage);
-    } else {
-        newDocRefPromise = addDoc(messagesRef, newMessage).catch(error => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: messagesRef.path,
-                operation: 'create',
-                requestResourceData: newMessage
-            }));
-            throw error; // Re-throw to be caught by the caller
+    batch.set(newMessageRef, newMessageData);
+    batch.update(chatRef, { lastMessage: { ...newMessageData, id: newMessageRef.id } });
+
+    // Use .catch for error handling to enable detailed permission error reporting
+    return batch.commit().catch(error => {
+        console.error("Error sending message:", error);
+        const permissionError = new FirestorePermissionError({
+            path: isBotMessage ? chatRef.path : newMessageRef.path,
+            operation: 'write',
+            requestResourceData: isBotMessage ? { lastMessage: newMessageData } : newMessageData
         });
-    }
-
-    try {
-        const newDocRef = await newDocRefPromise;
-        const lastMessageUpdate = { lastMessage: { ...newMessage, id: newDocRef.id } };
-
-        if (isBotMessage) {
-            // Use non-blocking update for bot messages
-            updateDocumentNonBlocking(chatRef, lastMessageUpdate);
-        } else {
-            await updateDoc(chatRef, lastMessageUpdate).catch(error => {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: chatRef.path,
-                    operation: 'update',
-                    requestResourceData: lastMessageUpdate
-                }));
-                throw error; // Re-throw
-            });
-        }
-    } catch (error) {
-        // This will catch permission errors from either the addDoc or updateDoc.
-        // The specific error with its context has already been emitted.
-        console.error("sendMessage failed due to a Firestore operation error:", error);
-        // Re-throw if the caller needs to handle the failure UI.
-        throw new Error("Error sending message.");
-    }
-};
-
-const addDocumentNonBlocking = (colRef: any, data: any) => {
-    return addDoc(colRef, data).catch(error => {
-        errorEmitter.emit(
-            'permission-error',
-            new FirestorePermissionError({
-                path: colRef.path,
-                operation: 'create',
-                requestResourceData: data,
-            })
-        );
-        throw error;
-    });
-};
-
-const updateDocumentNonBlocking = (docRef: any, data: any) => {
-    updateDoc(docRef, data).catch(error => {
-        errorEmitter.emit(
-            'permission-error',
-            new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'update',
-                requestResourceData: data,
-            })
-        );
-        throw error;
+        errorEmitter.emit('permission-error', permissionError);
+        // Re-throw to allow the calling component to handle the failure state
+        throw permissionError;
     });
 };
 
@@ -700,9 +654,9 @@ export const giftPoints = async (senderUid: string, recipientUid: string, amount
     });
 }
 
-export const formatTimestamp = (timestamp: Timestamp | Date | null | undefined): string => {
-  if (!timestamp) return '';
-  const date = 'toDate' in timestamp ? timestamp.toDate() : timestamp;
+export const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
+  if (!timestamp || typeof timestamp.toDate !== 'function') return '';
+  const date = timestamp.toDate();
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 };
 
@@ -725,4 +679,5 @@ export const getVerifiedUsers = async (): Promise<UserProfile[]> => {
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => doc.data() as UserProfile);
 };
+    
     
