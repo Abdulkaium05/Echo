@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
-    "@genkit-ai/next": "^1.20.0",
+    "@genkit-ai/next": "latest",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
@@ -50,7 +50,7 @@
     "immer": "^10.1.1",
     "jsqr": "^1.4.0",
     "lucide-react": "^0.475.0",
-    "next": "14.2.5",
+    "next": "latest",
     "react": "18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "18.3.1",
