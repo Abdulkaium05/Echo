@@ -1,4 +1,3 @@
-
 // src/components/chat/chat-window.tsx
 'use client';
 
@@ -10,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './message-bubble';
 import { MessageInput, type MessageInputHandle } from './message-input';
 import { VerifiedBadge } from '@/components/verified-badge';
-import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban, Trash2, UserX, UserCheck, Leaf, SmilePlus, FlaskConical, Bot } from 'lucide-react';
+import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban, Trash2, UserX, UserCheck, Leaf, SmilePlus, FlaskConical, Bot, Rocket, Gem } from 'lucide-react';
 import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import {
@@ -59,6 +58,8 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     bot: ({className}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} />,
     meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
     beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
+    pioneer: (props) => <Rocket {...props} />,
+    patron: (props) => <Gem {...props} />,
 };
 
 
@@ -67,7 +68,7 @@ interface ChatWindowProps {
   chatPartnerId: string;
   chatName: string;
   chatAvatarUrl?: string;
-  chatIconIdentifier?: 'dev-team-svg';
+  chatIconIdentifier?: string;
   isVerified?: boolean; // General verified status
   isVIP?: boolean;
   isCreator?: boolean;
@@ -107,9 +108,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
   
   const [dialogState, setDialogState] = useState<{ isOpen: boolean; type: 'block' | 'delete' | null }>({ isOpen: false, type: null });
 
-  const previousMessagesCountRef = useRef(0);
-  const isInitialLoadRef = useRef(true);
-
   const customBubbleColor = userProfile?.chatColorPreferences?.[chatId];
   const amBlockedByPartner = partnerProfileDetails?.blockedUsers?.includes(currentUser?.uid ?? '') ?? false;
   const iHaveBlockedPartner = isUserBlocked(chatPartnerId);
@@ -121,6 +119,20 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
         else if (aiPersona === 'echo-bot') chatName = 'Echo Bot';
         else chatName = 'Blue Bird (AI Assistant)';
     }
+
+  useEffect(() => {
+    if (loadingMessages) return;
+
+    // This ensures that we scroll to the bottom only once after the initial message load.
+    const timer = setTimeout(() => {
+        const viewport = scrollViewportRef.current;
+        if (viewport) {
+            viewport.scrollTop = viewport.scrollHeight;
+        }
+    }, 0); // A timeout of 0ms defers the execution until after the next repaint.
+
+    return () => clearTimeout(timer);
+  }, [loadingMessages]);
 
 
   useEffect(() => {
@@ -206,15 +218,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
   }, [chatPartnerId]);
 
 
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
-    requestAnimationFrame(() => {
-        const viewport = scrollViewportRef.current;
-        if (viewport) {
-              viewport.scrollTo({ top: viewport.scrollHeight, behavior });
-        }
-    });
-  }, []);
-
    const fetchAndSetMessages = useCallback(() => {
      if (!chatId || !currentUser?.uid) {
        setLoadingMessages(false);
@@ -235,17 +238,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
            ...msg,
            isSentByCurrentUser: msg.senderId === currentUser.uid,
          }));
-
-         const newMessagesCount = fetchedMessages.length;
-         const previousMessagesCount = previousMessagesCountRef.current;
-
-         // Play sound for new messages from other users
-         if (newMessagesCount > previousMessagesCount) {
-            const lastNewMessage = fetchedMessages[fetchedMessages.length - 1];
-            if (lastNewMessage.senderId !== currentUser.uid) {
-                playSound('/sounds/message-received.mp3');
-            }
-         }
          
          setMessages(processedMessages);
          
@@ -266,23 +258,12 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
        }
      );
      return unsubscribe;
-   }, [chatId, currentUser?.uid, playSound]);
+   }, [chatId, currentUser?.uid]);
 
    useEffect(() => {
-     isInitialLoadRef.current = true;
      const unsubscribe = fetchAndSetMessages();
      return () => { if (unsubscribe) unsubscribe()};
    }, [fetchAndSetMessages, chatId]);
-
-  useEffect(() => {
-    if (isInitialLoadRef.current && messages.length > 0) {
-      setTimeout(() => {
-        scrollToBottom('auto');
-        isInitialLoadRef.current = false;
-      }, 0);
-    }
-  }, [messages, scrollToBottom]);
-
 
   const handleSendMessage = async (
     newMessageText: string, 
@@ -319,7 +300,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
       await sendMessageToChat(chatId, currentUser.uid, textToSend, attachmentData, replyContext);
       setReplyingToMessage(null); 
       messageInputRef.current?.clearAttachmentPreview(); 
-      scrollToBottom('smooth');
       playSound('/sounds/message-sent.mp3');
 
       // Bot interaction logic
@@ -358,8 +338,17 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
           toast({ title: 'Now Playing', description: `Started playing "${aiResponse.songToPlay.name}"` });
         }
         
+        let botAttachment: { dataUri: string; name: string; type: 'image'; } | undefined;
+        if (aiResponse.generatedImageUrl) {
+            botAttachment = {
+                dataUri: aiResponse.generatedImageUrl,
+                name: 'generated-image.png',
+                type: 'image',
+            };
+        }
+        
         // Let the service handle message creation
-        await sendMessageToChat(chatId, BOT_UID, aiResponse.botResponse, undefined, undefined, true);
+        await sendMessageToChat(chatId, BOT_UID, aiResponse.botResponse, botAttachment, undefined, true);
         setIsBotTyping(false);
       }
     } catch (error: any) {
@@ -545,8 +534,11 @@ const orderedBadges = useMemo(() => {
     if(partnerProfileDetails.isBot) earnedBadges.push('bot');
     if(partnerProfileDetails.isMemeCreator) earnedBadges.push('meme_creator');
     if(partnerProfileDetails.isBetaTester) earnedBadges.push('beta_tester');
+    if (partnerProfileDetails.isPioneer) earnedBadges.push('pioneer');
+    if (partnerProfileDetails.isPatron) earnedBadges.push('patron');
 
-    const badgeDisplayOrder = partnerProfileDetails.badgeOrder?.length ? partnerProfileDetails.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
+
+    const badgeDisplayOrder = partnerProfileDetails.badgeOrder?.length ? partnerProfileDetails.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester', 'pioneer', 'patron'];
     return badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 }, [partnerProfileDetails]);
 
@@ -668,8 +660,10 @@ const orderedBadges = useMemo(() => {
         </div>
       </div>
 
-      <div className="flex-1 relative overflow-y-auto">
-        <ScrollArea className="absolute inset-0 p-3 md:p-4" viewportRef={scrollViewportRef}>
+      <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
+        <div
+            className="flex flex-col-reverse gap-2 p-4 overflow-y-auto"
+        >
            {loadingMessages && (
                <div className="flex flex-col justify-center items-center h-full text-center p-4">
                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -713,8 +707,8 @@ const orderedBadges = useMemo(() => {
                 />
              )
            })}
-        </ScrollArea>
-      </div>
+        </div>
+      </ScrollArea>
 
       {isChattingWithBot && isBotTyping && (
         <div className="px-3 md:px-4 pb-1 pt-1 text-left flex items-center gap-2 shrink-0">

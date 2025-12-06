@@ -1,3 +1,4 @@
+
 // src/components/dev/gift-badge-dialog.tsx
 'use client';
 
@@ -15,7 +16,7 @@ import {
 import { Loader2, Gift, Crown, Bot, Wrench, SmilePlus, FlaskConical, Clock, Search, User as UserIcon, UserCheck, AlertCircle, Rocket, Gem } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
-import { findUserByDisplayUid, type UserProfile, getUserProfile, logGift } from '@/services/firestore';
+import { findUserByDisplayUid, type UserProfile, giftBadge } from '@/services/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -55,14 +56,14 @@ const giftableBadges: { value: BadgeType, label: string }[] = [
 ];
 
 export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) {
-  const { user: currentUser, userProfile: currentUserProfile, updateUserProfile } = useAuth();
+  const { user: currentUser, userProfile: currentUserProfile } = useAuth();
   const { toast } = useToast();
   
   const [recipientUid, setRecipientUid] = useState('');
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isFindingUser, setIsFindingUser] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<BadgeType | null>(null);
-  const [giftDuration, setGiftDuration] = useState<'lifetime' | 'trial'>('lifetime');
+  const [giftDuration, setGiftDuration] = useState<'lifetime' | '7' | '30'>('lifetime');
   const [isGifting, setIsGifting] = useState(false);
   
   const handleFindUser = async () => {
@@ -94,44 +95,12 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
     setIsGifting(true);
 
     try {
-        const badgeKey = `is${selectedBadge.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('')}` as keyof UserProfile;
-        
-        let expiryTimestamp: number | null = null;
-        if (giftDuration === 'trial') {
-            expiryTimestamp = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days from now
-        }
-        
-        const recipientProfile = await getUserProfile(selectedUser.uid);
-        if (!recipientProfile) {
-            throw new Error("Could not find the recipient's profile to update.");
-        }
-
-        const newBadgeExpiry = { ...recipientProfile.badgeExpiry };
-        if (expiryTimestamp === null) {
-            // Use null for lifetime, ensuring no 'undefined' is passed
-            newBadgeExpiry[selectedBadge] = null;
-        } else {
-            newBadgeExpiry[selectedBadge] = expiryTimestamp;
-        }
-
-        await updateUserProfile({ 
-            [badgeKey]: true,
-            badgeExpiry: newBadgeExpiry,
-            giftedByUid: currentUserProfile.uid,
-            hasNewGift: true,
-            lastGiftedBadge: selectedBadge,
-        });
-
-        await logGift({
-            senderId: currentUserProfile.uid,
-            receiverId: selectedUser.uid,
-            giftType: 'badge',
-            badgeType: selectedBadge,
-        });
+        const durationInDays = giftDuration === 'lifetime' ? null : parseInt(giftDuration, 10);
+        await giftBadge(currentUserProfile.uid, selectedUser.uid, selectedBadge, durationInDays);
 
         toast({
             title: 'Badge Gifted!',
-            description: `You have gifted the ${giftableBadges.find(b => b.value === selectedBadge)?.label || 'new'} badge to ${selectedUser.name} (${giftDuration}).`,
+            description: `You have gifted the ${giftableBadges.find(b => b.value === selectedBadge)?.label || 'new'} badge to ${selectedUser.name} (${giftDuration} days).`,
             duration: 6000,
         });
 
@@ -237,7 +206,7 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
             
              <div className="space-y-2">
                 <Label>Gift Duration</Label>
-                 <RadioGroup defaultValue="lifetime" value={giftDuration} onValueChange={(value) => setGiftDuration(value as 'trial' | 'lifetime')} className="flex gap-4 pt-1" disabled={isGifting}>
+                 <RadioGroup defaultValue="lifetime" value={giftDuration} onValueChange={(value) => setGiftDuration(value as 'lifetime' | '7' | '30')} className="flex gap-4 pt-1" disabled={isGifting}>
                     <div className="flex items-center space-x-2">
                         <RadioGroupItem value="lifetime" id="lifetime-gift" />
                         <Label htmlFor="lifetime-gift" className="flex items-center gap-1.5 cursor-pointer">
@@ -245,9 +214,15 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
                         </Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="trial" id="trial-gift" />
-                        <Label htmlFor="trial-gift" className="flex items-center gap-1.5 cursor-pointer">
-                            <Clock className="h-4 w-4" /> Trial (7 Days)
+                        <RadioGroupItem value="7" id="trial-7-gift" />
+                        <Label htmlFor="trial-7-gift" className="flex items-center gap-1.5 cursor-pointer">
+                            <Clock className="h-4 w-4" /> 7 Days
+                        </Label>
+                    </div>
+                     <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="30" id="trial-30-gift" />
+                        <Label htmlFor="trial-30-gift" className="flex items-center gap-1.5 cursor-pointer">
+                            <Clock className="h-4 w-4" /> 30 Days
                         </Label>
                     </div>
                 </RadioGroup>

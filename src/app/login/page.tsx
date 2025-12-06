@@ -1,4 +1,3 @@
-
 // src/app/login/page.tsx
 'use client';
 
@@ -17,7 +16,7 @@ import { useAuth } from '@/context/auth-context';
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { login, loading: authLoadingState, user } = useAuth();
+  const { login, sendPasswordReset, loading: authLoadingState, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -78,17 +77,26 @@ export default function LoginPage() {
       if (!email) {
           toast({
               title: "Email Required",
-              description: "Please enter your email address to reset password.",
+              description: "Please enter your email address in the email field to receive a password reset link.",
               variant: "destructive",
+              duration: 5000,
           });
           return;
       }
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      toast({
+      const { success, message } = await sendPasswordReset(email);
+      if (success) {
+        toast({
           title: "Password Reset Email Sent",
-          description: `If an account for ${email} exists, a reset link has been sent.`,
-      });
+          description: message,
+        });
+      } else {
+        toast({
+          title: "Password Reset Failed",
+          description: message,
+          variant: "destructive",
+        });
+      }
       setIsLoading(false);
   };
 

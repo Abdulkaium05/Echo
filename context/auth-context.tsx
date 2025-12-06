@@ -8,6 +8,9 @@ import {
   signOut, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  reload,
   type User 
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, Timestamp, updateDoc, deleteField } from 'firebase/firestore';
@@ -45,6 +48,9 @@ interface AuthContextProps {
   login: (email: string, pass: string) => Promise<{ success: boolean; message: string }>;
   signup: (email: string, pass: string) => Promise<{ success: boolean; message: string; user: User | null, userProfile: UserProfile | null }>;
   logout: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<{ success: boolean; message: string }>;
+  sendVerificationEmail: () => Promise<void>;
+  reloadUser: () => Promise<void>;
   updateUserProfile: (data: Partial<UserProfile>) => Promise<void>;
   auth: Auth;
   firestore: Firestore;
@@ -102,18 +108,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             needsServerUpdate = true;
         }
 
-        // Handle gifts silently now
-        if (localProfile.hasNewGift) {
-            updatedProfileData = { 
-                ...updatedProfileData, 
-                hasNewGift: false, 
-                giftedByUid: deleteField(), 
-                lastGiftedBadge: deleteField() 
-            };
-            needsServerUpdate = true;
+        if (localProfile.hasNewGift && localProfile.giftedByUid && localProfile.lastGiftedBadge) {
+          const gifterProfile = await getUserProfile(localProfile.giftedByUid);
+          if (gifterProfile) {
+            setGiftInfo({ gifterProfile, giftedBadge: localProfile.lastGiftedBadge });
+          }
+          updatedProfileData = { 
+              ...updatedProfileData, 
+              hasNewGift: false, 
+              giftedByUid: deleteField(), 
+              lastGiftedBadge: deleteField() 
+          };
+          needsServerUpdate = true;
         }
 
-        if (localProfile.hasNewPointsGift) {
+        if (localProfile.hasNewPointsGift && localProfile.pointsGifterUid && localProfile.lastGiftedPointsAmount) {
+            const gifterProfile = await getUserProfile(localProfile.pointsGifterUid);
+            if (gifterProfile) {
+              setPointsGiftInfo({ gifterProfile, giftedPointsAmount: localProfile.lastGiftedPointsAmount });
+            }
             updatedProfileData = { 
                 ...updatedProfileData, 
                 hasNewPointsGift: false, 
@@ -158,7 +171,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
         setIsUserProfileLoading(false);
     }
-  }, []);
+  }, [setGiftInfo, setPointsGiftInfo]);
 
   useEffect(() => {
     if (!firebaseAuth) {
@@ -207,6 +220,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, pass);
       const newUser = userCredential.user;
       
+      await sendEmailVerification(newUser);
+
       const username = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').substring(0, 15) || 'newuser';
       
       const profile: UserProfile = {
@@ -236,7 +251,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(newUser);
       setUserProfile(profile);
 
-      return { success: true, message: 'Signup complete!', user: newUser, userProfile: profile };
+      return { success: true, message: 'Signup complete! Check your email for verification.', user: newUser, userProfile: profile };
       
     } catch (err: any) {
       return { success: false, message: err.message || 'Signup failed', user: null, userProfile: null };
@@ -256,6 +271,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUserProfile(null);
     setLoading(false);
   };
+  
+  const sendPasswordReset = async (email: string): Promise<{ success: boolean; message: string }> => {
+    if (!firebaseAuth) return { success: false, message: "Firebase not configured." };
+    try {
+      await sendPasswordResetEmail(firebaseAuth, email);
+      return { success: true, message: `Password reset email sent to ${email}.` };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Failed to send password reset email.' };
+    }
+  };
+
+  const sendVerificationEmail = async (): Promise<void> => {
+    const currentUser = firebaseAuth.currentUser;
+    if (!currentUser) throw new Error("Not logged in.");
+    if (currentUser.emailVerified) throw new Error("Email is already verified.");
+    await sendEmailVerification(currentUser);
+  };
+
+  const reloadUser = async (): Promise<void> => {
+    const currentUser = firebaseAuth.currentUser;
+    if (!currentUser) return;
+    await reload(currentUser);
+    // After reload, get the fresh user instance from the auth service and update state
+    if (firebaseAuth.currentUser) {
+       setUser(firebaseAuth.currentUser);
+    }
+  };
 
   const value: AuthContextProps = {
     user,
@@ -269,6 +311,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     login,
     signup,
     logout,
+    sendPasswordReset,
+    sendVerificationEmail,
+    reloadUser,
     updateUserProfile,
     auth: firebaseAuth,
     firestore: firebaseFirestore,

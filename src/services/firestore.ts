@@ -1,5 +1,4 @@
 
-
 // src/services/firestore.ts
 import { 
     doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp,
@@ -185,6 +184,13 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfile>)
       }));
     });
 };
+
+export const getNewestUsers = async (count: number): Promise<UserProfile[]> => {
+    const usersRef = collection(firestore, 'users');
+    const q = query(usersRef, orderBy('createdAt', 'desc'), limit(count));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => doc.data() as UserProfile);
+}
 
 // ---------------------------------
 // Chat and Message Functions
@@ -449,6 +455,31 @@ export const updateVIPStatus = async (uid: string, isVIP: boolean, vipPack?: str
 
     await updateUserProfile(uid, profileUpdate);
 };
+
+export const giftBadge = async (senderUid: string, recipientUid: string, badge: BadgeType, durationDays: number | null) => {
+    const recipientRef = doc(firestore, 'users', recipientUid);
+    
+    const badgeKey = `is${badge.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('')}` as keyof UserProfile;
+    
+    const expiryTimestamp = durationDays ? Date.now() + durationDays * 24 * 60 * 60 * 1000 : null;
+
+    const updateData = {
+        [badgeKey]: true,
+        hasNewGift: true,
+        giftedByUid: senderUid,
+        lastGiftedBadge: badge,
+        [`badgeExpiry.${badge}`]: expiryTimestamp,
+    };
+    
+    updateDoc(recipientRef, updateData).catch(error => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: recipientRef.path,
+        operation: 'update',
+        requestResourceData: updateData
+      }));
+    });
+};
+
 
 export const logGift = async (giftData: Omit<Gift, 'id' | 'timestamp'>) => {
     const giftWithTimestamp = {

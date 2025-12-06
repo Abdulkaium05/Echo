@@ -2,29 +2,46 @@
 // src/components/chat/notification-popover.tsx
 'use client';
 
+import { useState, useEffect } from 'react';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Bell, CheckCheck, Inbox } from 'lucide-react';
+import { Bell, CheckCheck, Inbox, Megaphone } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-// This component now relies on a mock implementation since the service was removed.
-// In a real app, this would come from a context.
-
-const mockNotifications: any[] = [];
+import {
+  subscribeToNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  type Notification,
+} from '@/services/notificationService';
+import { AnnouncementDialog } from './announcement-dialog';
 
 export function NotificationPopover() {
-  const notifications = mockNotifications;
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Notification | null>(null);
 
-  // Mock functions
-  const markAsRead = (id: string) => console.log('Marking as read:', id);
-  const markAllAsRead = () => console.log('Marking all as read');
+  useEffect(() => {
+    const unsubscribe = subscribeToNotifications((newNotifications) => {
+      setNotifications(newNotifications);
+      setUnreadCount(newNotifications.filter(n => !n.isRead).length);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleNotificationClick = (notification: Notification) => {
+    markNotificationAsRead(notification.id);
+    if (notification.type === 'announcement' && notification.personaMessages) {
+        setSelectedAnnouncement(notification);
+    }
+  };
 
   return (
+    <>
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
@@ -42,7 +59,7 @@ export function NotificationPopover() {
         <div className="flex items-center justify-between p-3 border-b">
           <h3 className="text-sm font-medium">Notifications</h3>
           {notifications.length > 0 && unreadCount > 0 && (
-            <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={markAllAsRead}>
+            <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={markAllNotificationsAsRead}>
               <CheckCheck className="mr-1 h-3.5 w-3.5" />
               Mark all as read
             </Button>
@@ -64,15 +81,20 @@ export function NotificationPopover() {
                     'p-3 flex items-start gap-3 transition-colors hover:bg-accent/50 cursor-pointer',
                     !notif.isRead && 'bg-primary/5'
                   )}
-                  onClick={() => markAsRead(notif.id)}
+                  onClick={() => handleNotificationClick(notif)}
                 >
-                  {!notif.isRead && (
-                    <div className="h-2 w-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
-                  )}
-                  <div className={cn('flex-1', notif.isRead && 'pl-5')}>
-                    <p className="text-sm font-medium">{notif.title}</p>
+                  <div className="pt-1">
+                      {!notif.isRead && (
+                        <div className="h-2 w-2 rounded-full bg-primary shrink-0"></div>
+                      )}
+                  </div>
+                  <div className={cn('flex-1 -mt-1')}>
+                     <p className="text-sm font-semibold flex items-center gap-1.5">
+                        {notif.type === 'announcement' && <Megaphone className="h-4 w-4 text-primary" />}
+                        {notif.title}
+                     </p>
                     <p className="text-xs text-muted-foreground">{notif.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{new Date(notif.timestamp).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{new Date(notif.timestamp).toLocaleDateString()}</p>
                   </div>
                 </div>
               ))}
@@ -81,5 +103,12 @@ export function NotificationPopover() {
         </ScrollArea>
       </PopoverContent>
     </Popover>
+
+    <AnnouncementDialog
+      isOpen={!!selectedAnnouncement}
+      onOpenChange={() => setSelectedAnnouncement(null)}
+      announcement={selectedAnnouncement}
+    />
+    </>
   );
 }

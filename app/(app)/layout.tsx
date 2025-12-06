@@ -1,5 +1,7 @@
 
 
+
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -29,7 +31,7 @@ import { EchoOldDialog } from '@/components/echo-old-dialog';
 import { Toaster } from '@/components/ui/toaster';
 import { GiftHistoryDialog } from '@/components/profile/gift-history-dialog';
 
-export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester';
+export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester' | 'pioneer' | 'patron';
 export type BadgeColor = 'sky-blue' | 'light-green' | 'red' | 'orange' | 'yellow' | 'purple' | 'pink' | 'indigo' | 'teal' | 'white' | 'black';
 
 const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
@@ -40,6 +42,8 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     bot: ({className}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} />,
     meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
     beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
+    pioneer: ({ className }) => <Rocket className={cn("h-4 w-4 text-slate-500", className)} />,
+    patron: ({ className }) => <Gem className={cn("h-4 w-4 text-rose-500", className)} />,
 };
 
 
@@ -66,8 +70,10 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    if(user.isBot) earnedBadges.push('bot');
    if(user.isMemeCreator) earnedBadges.push('meme_creator');
    if(user.isBetaTester) earnedBadges.push('beta_tester');
+   if(user.isPioneer) earnedBadges.push('pioneer');
+   if(user.isPatron) earnedBadges.push('patron');
 
-   const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
+   const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : allPossibleBadges;
    const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
    const isDev = user.isDevTeam;
@@ -165,6 +171,8 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    );
 }
 
+const allPossibleBadges: BadgeType[] = ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester', 'pioneer', 'patron'];
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -232,12 +240,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
    };
 
   useEffect(() => {
-    if (!authLoading && !currentUser && !isUserProfileLoading) {
-      router.replace('/login');
+    if (!authLoading && !isUserProfileLoading) {
+      if (!currentUser) {
+        router.replace('/login');
+      } else if (!currentUser.emailVerified) {
+        router.replace('/verify-email');
+      }
     }
-  }, [authLoading, currentUser, isUserProfileLoading, router]);
+  }, [authLoading, isUserProfileLoading, currentUser, router]);
 
-  const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isAuthPage = ['/login', '/signup', '/verify-email'].includes(pathname);
 
   if (isAuthPage) {
     return <>{children}</>;
@@ -252,11 +264,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
        );
    }
 
-    if (!currentUser) {
+    if (!currentUser || !currentUser.emailVerified) {
          return (
              <div className="flex h-screen w-full items-center justify-center bg-background">
                  <Loader2 className="h-8 w-8 animate-spin text-destructive" />
-                 <p className="ml-2 text-destructive">Redirecting to login...</p>
+                 <p className="ml-2 text-destructive">Redirecting...</p>
              </div>
          );
     }

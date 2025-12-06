@@ -1,9 +1,10 @@
+
 // src/components/chat/message-bubble.tsx
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { Message, formatTimestamp } from '@/services/firestore';
-import { Trash2, Smile, CornerUpLeft, FileText, CheckCheck, Play, Pause, Reply } from 'lucide-react';
+import { Trash2, Smile, CornerUpLeft, FileText, CheckCheck, Play, Pause, Reply, Image as ImageIcon } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -417,6 +418,32 @@ export function MessageBubble({
   const renderAttachment = () => {
     if (!attachmentUrl || isDeleted) return null;
 
+    if (attachmentType === 'image') {
+        const isGeneratedByAI = attachmentName === 'generated-image.png';
+        const hint = isGeneratedByAI ? 'ai generated' : 'chat image';
+        return (
+          <div 
+              className="mt-1.5 max-w-xs h-auto relative cursor-pointer" 
+              data-ai-hint={hint}
+              onClick={() => onImageClick?.(attachmentUrl)}
+          >
+            <Image
+              src={attachmentUrl}
+              alt={attachmentName || "Sent image"}
+              width={300}
+              height={300} // Set a square aspect ratio for consistency
+              className="rounded-md object-cover"
+              style={{ maxWidth: '100%', height: 'auto' }}
+            />
+             {isGeneratedByAI && (
+                <div className="absolute bottom-1 right-1 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm flex items-center gap-1">
+                    <ImageIcon className="h-2.5 w-2.5"/> AI Generated
+                </div>
+            )}
+          </div>
+        );
+      }
+
     if (attachmentType === 'audio') {
         return (
             <div className="mt-1.5" data-ai-hint="audio message">
@@ -425,24 +452,6 @@ export function MessageBubble({
         );
     }
 
-    if (attachmentType === 'image') {
-      return (
-        <div 
-            className="mt-1.5 max-w-xs h-auto relative cursor-pointer" 
-            data-ai-hint="chat image"
-            onClick={() => onImageClick?.(attachmentUrl)}
-        >
-          <Image
-            src={attachmentUrl}
-            alt={attachmentName || "Sent image"}
-            width={300}
-            height={200}
-            className="rounded-md object-contain"
-            style={{ maxWidth: '100%', height: 'auto' }}
-          />
-        </div>
-      );
-    }
     if (attachmentType === 'video') {
       return (
         <div className="mt-1.5 max-w-xs rounded-md overflow-hidden" data-ai-hint="chat video">
@@ -656,3 +665,6 @@ export function MessageBubble({
    </>
   );
 }
+
+
+    

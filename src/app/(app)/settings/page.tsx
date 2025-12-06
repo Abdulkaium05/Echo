@@ -133,7 +133,7 @@ export default function SettingsPage() {
   const { isVIP, vipPack } = useVIP();
   const { toast } = useToast();
   const { soundEnabled, setSoundEnabled } = useSound();
-  const { userProfile } = useAuth();
+  const { userProfile, sendPasswordReset, user } = useAuth();
   
   const [notificationPermission, setNotificationPermission] = useState('default');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -269,6 +269,30 @@ export default function SettingsPage() {
     toast({ title: "Music Changed", description: `Now playing: ${song.name}`});
   };
 
+  const handleChangePassword = async () => {
+    if (!user?.email) {
+      toast({
+        title: "Error",
+        description: "Could not find your email address to send a reset link.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const { success, message } = await sendPasswordReset(user.email);
+    if (success) {
+      toast({
+        title: "Password Reset Email Sent",
+        description: message,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  };
+
 
   return (
     <>
@@ -317,7 +341,7 @@ export default function SettingsPage() {
              <CardDescription>Manage password, linked accounts, etc.</CardDescription>
            </CardHeader>
            <CardContent className="space-y-4">
-             <Button variant="outline" onClick={() => toast({title: "Feature In Development", description: "Changing password will be available soon."})}>Change Password</Button>
+             <Button variant="outline" onClick={handleChangePassword}>Change Password</Button>
              <Button variant="outline" onClick={() => toast({title: "Feature In Development", description: "Managing linked accounts will be available soon."})}>Manage Linked Accounts</Button>
            </CardContent>
          </Card>

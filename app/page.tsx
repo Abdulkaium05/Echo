@@ -1,3 +1,4 @@
+
 // src/app/page.tsx
 'use client';
 
@@ -12,10 +13,12 @@ export default function Home() {
 
   useEffect(() => {
     if (!loading) {
-      if (user) {
-        router.replace('/chat');
-      } else {
+      if (!user) {
         router.replace('/login');
+      } else if (!user.emailVerified) {
+        router.replace('/verify-email');
+      } else {
+        router.replace('/chat');
       }
     }
   }, [user, loading, router]);
