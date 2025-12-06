@@ -77,7 +77,7 @@ service cloud.firestore {
     // Users Collection
     // =====================================================
     match /users/{userId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() || isDevTeam(); // Allow dev team to read profiles
       allow list: if isSignedIn();
       allow create: if request.auth.uid == userId;
       
@@ -126,6 +126,16 @@ service cloud.firestore {
         allow create: if (isChatParticipant(chatId) && request.resource.data.senderId == request.auth.uid) || request.resource.data.senderId == 'blue_bird_ai_uid';
         allow update, delete: if isChatParticipant(chatId) && resource.data.senderId == request.auth.uid;
       }
+    }
+    
+    // =====================================================
+    // Feature Suggestions Collection
+    // =====================================================
+    match /feature_suggestions/{suggestionId} {
+      // Any signed-in user can submit an idea.
+      allow create: if isSignedIn();
+      // Only the dev team can view, approve, or delete suggestions.
+      allow read, update, delete: if isDevTeam();
     }
 
     // =====================================================

@@ -1,5 +1,4 @@
 
-// src/services/notificationService.ts
 'use client';
 import { produce } from 'immer';
 
@@ -21,8 +20,20 @@ export interface Notification {
   };
 }
 
-// Add a default announcement
 const defaultAnnouncements: Notification[] = [
+    {
+        id: 'announcement-suggest-feature-1',
+        type: 'announcement',
+        title: "Your Idea, Your Impact!",
+        message: "Suggest a feature and earn the exclusive Creator badge if we build it!",
+        timestamp: new Date('2025-10-16T09:00:00Z').getTime(),
+        isRead: false,
+        personaMessages: {
+            'blue-bird': "Got a brilliant idea for Echo Message? Now's your chance to share it! We've just launched a 'Suggest a Feature' page, accessible from your user menu. Submit your concept for a new feature, and if developer Abdul-Kaium builds it, you'll be awarded the exclusive Creator ('C') badge as a thank you for your contribution to the app's evolution!",
+            'green-leaf': "The forest of ideas is now open. A new path, 'Suggest a Feature,' has appeared in your menu. Share a seed of inspiration for how this space might grow. If your idea is chosen to take root and blossom within the app, our creator, Abdul-Kaium, will honor you with the Creator's emblem, a mark of your wisdom in nurturing our shared world.",
+            'echo-bot': "[System Update: Feature Suggestion Protocol Activated] A new input channel, 'Suggest a Feature,' is now available in the main user menu. Users may submit proposals for new application functionalities. If a submitted proposal is selected for implementation by developer Abdul-Kaium, the originating user unit will be designated with 'Creator' status. Submit your data for a chance to influence future operational parameters."
+        }
+    },
     {
         id: 'announcement-pioneer-gift-1',
         type: 'announcement',
@@ -31,8 +42,8 @@ const defaultAnnouncements: Notification[] = [
         timestamp: new Date('2025-10-14T09:00:00Z').getTime(),
         isRead: false,
         personaMessages: {
-            'blue-bird': "Huge news from the developer's nest! To celebrate our launch, Abdul-Kaium is giving an exclusive welcome package to our first 10 users. If you're one of the first, you'll receive the rare Beta Tester badge, a bonus of 10,000 points, AND a Verified checkmark for 30 days! This is the only time the Beta badge will be available, so it's a true original. Welcome to the flock!",
-            'green-leaf': "A message of gratitude blossoms from our creator, Abdul-Kaium. For the first 10 seeds of this new ecosystem, a special gift awaits. You will receive a Beta Tester badge to mark your early presence, 10,000 points to help you flourish, and the mark of Verification for 30 suns. This is the only season the Beta badge will sprout, making it a rare gift indeed.",
+            'blue-bird': "Huge news from the developer's nest! To celebrate our launch, Abdul-Kaium is giving an exclusive welcome package to our first 10 users. If you're one of them, you'll receive the rare Beta Tester badge—this is the only time it will ever be available! You'll also get a bonus of 10,000 points AND a Verified checkmark for 30 days. Welcome to the flock!",
+            'green-leaf': "A message of gratitude blossoms from our creator, Abdul-Kaium. For the first 10 seeds of this new ecosystem, a special gift awaits. You will receive a Beta Tester badge to mark your early presence, a unique treasure that will not be offered again. You will also be gifted 10,000 points to help you flourish, and the mark of Verification for 30 suns. Thank you for being the first to grow with us.",
             'echo-bot': "[System Directive: Genesis User Reward Protocol] Initiated by developer Abdul-Kaium. Objective: Reward foundational user base. Target: First (10) registered accounts. Reward Package: [1x] 'Beta Tester' status badge (Terminal Distribution), [1x] 'Verified' status (30-day duration), [10,000] user points. End of directive."
         }
     },
@@ -56,14 +67,14 @@ let listeners: Array<(notifications: Notification[]) => void> = [];
 
 const notifyListeners = () => {
   for (const listener of listeners) {
-    listener([...mockNotifications]);
+    listener([...mockNotifications].sort((a, b) => b.timestamp - a.timestamp));
   }
 };
 
 export const subscribeToNotifications = (callback: (notifications: Notification[]) => void): (() => void) => {
   listeners.push(callback);
-  // Immediately call with current notifications
-  callback([...mockNotifications]);
+  // Immediately call with current notifications, sorted
+  callback([...mockNotifications].sort((a, b) => b.timestamp - a.timestamp));
 
   // Return unsubscribe function
   return () => {
@@ -79,7 +90,7 @@ export const addNotification = (notification: Omit<Notification, 'id' | 'timesta
     isRead: false,
   };
   mockNotifications = produce(mockNotifications, draft => {
-    draft.unshift(newNotification);
+    draft.push(newNotification);
   });
   notifyListeners();
   return newNotification;

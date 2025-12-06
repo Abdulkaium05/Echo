@@ -121,21 +121,6 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
     }
 
   useEffect(() => {
-    if (loadingMessages) return;
-
-    // This ensures that we scroll to the bottom only once after the initial message load.
-    const timer = setTimeout(() => {
-        const viewport = scrollViewportRef.current;
-        if (viewport) {
-            viewport.scrollTop = viewport.scrollHeight;
-        }
-    }, 0); // A timeout of 0ms defers the execution until after the next repaint.
-
-    return () => clearTimeout(timer);
-  }, [loadingMessages]);
-
-
-  useEffect(() => {
     // This effect ensures the component re-renders when transparent mode or theme is toggled globally.
     if (typeof window === 'undefined') return;
 
@@ -217,6 +202,11 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
     return () => clearInterval(intervalId);
   }, [chatPartnerId]);
 
+  const scrollToBottom = useCallback(() => {
+    if (scrollViewportRef.current) {
+        scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
+    }
+  }, []);
 
    const fetchAndSetMessages = useCallback(() => {
      if (!chatId || !currentUser?.uid) {
@@ -249,6 +239,7 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
          if (processedMessages.length > 0 && processedMessages[processedMessages.length - 1].senderId === BOT_UID) {
            setIsBotTyping(false);
          }
+         scrollToBottom();
        },
        (error) => {
          console.error("ChatWindow: Error fetching messages:", error);
@@ -258,12 +249,18 @@ export function ChatWindow({ chatId, chatPartnerId, chatName: initialChatName, c
        }
      );
      return unsubscribe;
-   }, [chatId, currentUser?.uid]);
+   }, [chatId, currentUser?.uid, scrollToBottom]);
 
    useEffect(() => {
      const unsubscribe = fetchAndSetMessages();
      return () => { if (unsubscribe) unsubscribe()};
    }, [fetchAndSetMessages, chatId]);
+
+  useEffect(() => {
+    if (!loadingMessages) {
+        scrollToBottom();
+    }
+  }, [loadingMessages, scrollToBottom]);
 
   const handleSendMessage = async (
     newMessageText: string, 
@@ -661,9 +658,7 @@ const orderedBadges = useMemo(() => {
       </div>
 
       <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
-        <div
-            className="flex flex-col-reverse gap-2 p-4 overflow-y-auto"
-        >
+        <div className="p-4">
            {loadingMessages && (
                <div className="flex flex-col justify-center items-center h-full text-center p-4">
                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -687,26 +682,31 @@ const orderedBadges = useMemo(() => {
                   <p className="text-xs">Start the conversation!</p>
               </div>
           )}
-          {!loadingMessages && !errorMessages && messages.map((msg, index) => {
-             const partnerId = chatPartnerId;
-             const isLastMessage = index === messages.length - 1;
-             const isSeen = isLastMessage && msg.isSentByCurrentUser && msg.seenBy?.includes(partnerId);
+          {!loadingMessages && !errorMessages && (
+            <div className="flex flex-col gap-2">
+              {messages.map((msg, index) => {
+                 const partnerId = chatPartnerId;
+                 const isLastMessage = index === messages.length - 1;
+                 const isSentByCurrentUser = msg.senderId === currentUser?.uid;
+                 const isSeen = isLastMessage && isSentByCurrentUser && msg.seenBy?.includes(partnerId);
 
-             return (
-                <MessageBubble
-                  key={msg.id || `msg-${msg.senderId}-${msg.timestamp?.seconds}-${msg.timestamp?.nanoseconds}`}
-                  message={{...msg, isSentByCurrentUser: msg.senderId === currentUser?.uid}}
-                  currentUserId={currentUser?.uid}
-                  isSeen={!!isSeen}
-                  onDeleteMessage={handleDeleteMessage}
-                  onReplyToMessage={handleReplyToMessage}
-                  onToggleReaction={handleToggleReaction}
-                  onImageClick={handleImageClick}
-                  customBubbleColor={customBubbleColor}
-                  isTransparentMode={isTransparentMode}
-                />
-             )
-           })}
+                 return (
+                    <MessageBubble
+                      key={msg.id || `msg-${msg.senderId}-${msg.timestamp?.seconds}-${msg.timestamp?.nanoseconds}`}
+                      message={{...msg, isSentByCurrentUser: isSentByCurrentUser}}
+                      currentUserId={currentUser?.uid}
+                      isSeen={!!isSeen}
+                      onDeleteMessage={handleDeleteMessage}
+                      onReplyToMessage={handleReplyToMessage}
+                      onToggleReaction={handleToggleReaction}
+                      onImageClick={handleImageClick}
+                      customBubbleColor={customBubbleColor}
+                      isTransparentMode={isTransparentMode}
+                    />
+                 )
+               })}
+             </div>
+          )}
         </div>
       </ScrollArea>
 

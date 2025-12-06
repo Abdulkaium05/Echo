@@ -1,9 +1,9 @@
-// src/app/dev-tools/page.tsx
+
 'use client';
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Code, Gift, QrCode, History, Coins, Users } from 'lucide-react';
+import { Code, Gift, QrCode, History, Coins, Users, Lightbulb } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VipCodeGeneratorTab } from '@/components/dev/tools/vip-code-generator';
@@ -11,12 +11,12 @@ import { BadgeQrGeneratorTab } from '@/components/dev/tools/badge-qr-generator';
 import { PointsCodeGeneratorTab } from '@/components/dev/tools/points-code-generator';
 import { CodeHistoryTab } from '@/components/dev/tools/code-history';
 import { NewUsersTab } from '@/components/dev/tools/new-users-tab';
+import { SuggestionsTab } from '@/components/dev/tools/suggestions-tab';
 
 
 export default function DevToolsPage() {
   const { userProfile, loading } = useAuth();
 
-  // Re-enable the check for the dev team user.
   const isDevTeamUser = userProfile?.isDevTeam === true;
 
   if (loading) {
@@ -50,7 +50,7 @@ export default function DevToolsPage() {
         </div>
 
         <Tabs defaultValue="promo" className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="promo">
                     <Gift className="mr-2 h-4 w-4" />
                     VIP Code
@@ -71,6 +71,10 @@ export default function DevToolsPage() {
                     <Users className="mr-2 h-4 w-4" />
                     New Users
                 </TabsTrigger>
+                 <TabsTrigger value="suggestions">
+                    <Lightbulb className="mr-2 h-4 w-4" />
+                    Suggestions
+                </TabsTrigger>
             </TabsList>
             
             <TabsContent value="promo" className="flex-1 mt-6">
@@ -87,6 +91,9 @@ export default function DevToolsPage() {
             </TabsContent>
             <TabsContent value="users" className="flex-1 mt-6">
                 <NewUsersTab />
+            </TabsContent>
+            <TabsContent value="suggestions" className="flex-1 mt-6">
+                <SuggestionsTab />
             </TabsContent>
         </Tabs>
     </div>

@@ -1,7 +1,5 @@
 
 
-
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -10,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Rocket, Gem, Code, Gift } from 'lucide-react';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Rocket, Gem, Code, Gift, Lightbulb } from 'lucide-react';
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
@@ -30,8 +28,9 @@ import { CompleteProfileDialog } from '@/components/auth/complete-profile-dialog
 import { EchoOldDialog } from '@/components/echo-old-dialog';
 import { Toaster } from '@/components/ui/toaster';
 import { GiftHistoryDialog } from '@/components/profile/gift-history-dialog';
+import { SuggestionApprovedDialog } from '@/components/profile/suggestion-approved-dialog';
 
-export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester' | 'pioneer' | 'patron';
+export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester' | 'pioneer' | 'patron' | 'feature_suggestion_approved';
 export type BadgeColor = 'sky-blue' | 'light-green' | 'red' | 'orange' | 'yellow' | 'purple' | 'pink' | 'indigo' | 'teal' | 'white' | 'black';
 
 const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
@@ -44,6 +43,7 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
     pioneer: ({ className }) => <Rocket className={cn("h-4 w-4 text-slate-500", className)} />,
     patron: ({ className }) => <Gem className={cn("h-4 w-4 text-rose-500", className)} />,
+    feature_suggestion_approved: ({className}) => <Lightbulb className={cn("h-4 w-4 text-primary", className)} />,
 };
 
 
@@ -124,6 +124,10 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
                <Crown className="mr-2 h-4 w-4 text-yellow-500" />
                <span>{user.isVIP ? 'Manage VIP' : 'Get VIP'}</span>
            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/suggest-feature')}>
+                <Lightbulb className="mr-2 h-4 w-4" />
+                <span>Suggest a Feature</span>
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={onOpenScanQrDialog}>
                 <Camera className="mr-2 h-4 w-4" />
                 <span>Scan QR Code</span>

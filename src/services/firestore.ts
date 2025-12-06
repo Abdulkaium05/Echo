@@ -62,11 +62,24 @@ export interface Gift {
     id: string;
     senderId: string;
     receiverId: string;
-    giftType: 'badge' | 'points';
+    giftType: 'badge' | 'points' | 'feature_suggestion_approved';
     badgeType?: BadgeType;
     pointsAmount?: number;
     timestamp: Timestamp;
 }
+
+export interface FeatureSuggestion {
+    id: string;
+    suggesterUid: string;
+    suggesterName: string;
+    title: string;
+    description: string;
+    imageUrl?: string;
+    linkUrl?: string;
+    status: 'submitted' | 'approved';
+    createdAt: Timestamp;
+}
+
 
 export const mapChatToChatItem = async (chat: Chat, currentUserId: string): Promise<ChatItemProps> => {
     const partnerId = chat.participants.find(p => p !== currentUserId);
@@ -170,8 +183,6 @@ export const findUserByDisplayUid = async (displayUid: string): Promise<UserProf
 
 export const updateUserProfile = async (uid: string, data: Partial<UserProfile>): Promise<void> => {
     const userRef = doc(firestore, 'users', uid);
-    // This is the fix. The data being sent to updateDoc must not include the timestamp object directly
-    // when using serverTimestamp(). Instead, the timestamp should be part of the update payload.
     const updateData = {
         ...data,
         lastSeen: serverTimestamp()
@@ -271,14 +282,12 @@ export const sendMessage = async (
     const messagesRef = collection(firestore, 'chats', chatId, 'messages');
     const chatRef = doc(firestore, 'chats', chatId);
 
-    // Using a batch to ensure atomicity
     const batch = writeBatch(firestore);
-    const newMessageRef = doc(messagesRef); // Create a new doc ref with a unique ID
+    const newMessageRef = doc(messagesRef); 
 
     batch.set(newMessageRef, newMessageData);
     batch.update(chatRef, { lastMessage: { ...newMessageData, id: newMessageRef.id } });
 
-    // Use .catch for error handling to enable detailed permission error reporting
     return batch.commit().catch(error => {
         console.error("Error sending message:", error);
         const permissionError = new FirestorePermissionError({
@@ -287,14 +296,12 @@ export const sendMessage = async (
             requestResourceData: isBotMessage ? { lastMessage: newMessageData } : newMessageData
         });
         errorEmitter.emit('permission-error', permissionError);
-        // Re-throw to allow the calling component to handle the failure state
         throw permissionError;
     });
 };
 
 export const findChatBetweenUsers = async (userId1: string, userId2: string): Promise<string | null> => {
     const chatsRef = collection(firestore, 'chats');
-    // Firestore doesn't support array-contains-all, so we query for one user and filter in the client
     const q = query(chatsRef, where('participants', 'array-contains', userId1));
     const querySnapshot = await getDocs(q);
 
@@ -445,7 +452,6 @@ export const updateVIPStatus = async (uid: string, isVIP: boolean, vipPack?: str
             vipExpiryTimestamp: expiryTimestamp,
         };
     } else {
-        // When expiring, we just clear the fields.
         profileUpdate = {
             isVIP: false,
             vipPack: deleteField() as any,
@@ -503,8 +509,7 @@ export const getGiftHistory = (userId: string, callback: (gifts: Gift[]) => void
     return onSnapshot(q, async (querySnapshot) => {
         const enrichedGifts = await Promise.all(querySnapshot.docs.map(async (doc) => {
             const gift = { id: doc.id, ...doc.data() } as Gift;
-            const senderProfile = await getUserProfile(gift.senderId);
-            return { ...gift, senderProfile };
+            return gift;
         }));
         callback(enrichedGifts);
     }, (error) => {
@@ -645,21 +650,17 @@ export const giftPoints = async (senderUid: string, recipientUid: string, amount
     const recipientRef = doc(firestore, 'users', recipientUid);
     const batch = writeBatch(firestore);
 
-    // Get sender's data to verify points
     const senderSnap = await getDoc(senderRef);
     if (!senderSnap.exists()) throw new Error("Sender not found.");
     const sender = senderSnap.data() as UserProfile;
     if ((sender.points || 0) < amount) throw new Error("Insufficient points.");
 
-    // Update sender's points
     batch.update(senderRef, { points: (sender.points || 0) - amount });
 
-    // Get recipient's data to update points
     const recipientSnap = await getDoc(recipientRef);
     if (!recipientSnap.exists()) throw new Error("Recipient not found.");
     const recipient = recipientSnap.data() as UserProfile;
 
-    // Update recipient's points and gift status
     batch.update(recipientRef, { 
         points: (recipient.points || 0) + amount,
         hasNewPointsGift: true,
@@ -669,8 +670,6 @@ export const giftPoints = async (senderUid: string, recipientUid: string, amount
     
     await batch.commit().catch(error => {
         console.error("Batch write failed in giftPoints:", error);
-        // We only need to emit a permission error if the rule itself fails.
-        // Let's create a specific error for the recipient update part.
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: `users/${recipientUid}`,
             operation: 'update',
@@ -710,5 +709,31 @@ export const getVerifiedUsers = async (): Promise<UserProfile[]> => {
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => doc.data() as UserProfile);
 };
-    
-    
+
+// Feature Suggestions
+export const submitFeatureSuggestion = async (data: Omit<FeatureSuggestion, 'id' | 'createdAt' | 'status'>) => {
+    const suggestionsRef = collection(firestore, 'feature_suggestions');
+    const newSuggestion = {
+        ...data,
+        status: 'submitted',
+        createdAt: serverTimestamp(),
+    };
+    return await addDoc(suggestionsRef, newSuggestion);
+};
+
+export const getFeatureSuggestions = async (): Promise<FeatureSuggestion[]> => {
+    const suggestionsRef = collection(firestore, 'feature_suggestions');
+    const q = query(suggestionsRef, orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FeatureSuggestion));
+};
+
+export const updateFeatureSuggestionStatus = async (suggestionId: string, status: 'approved') => {
+    const suggestionRef = doc(firestore, 'feature_suggestions', suggestionId);
+    return await updateDoc(suggestionRef, { status });
+};
+
+export const grantCreatorBadge = async (userId: string) => {
+    const userRef = doc(firestore, 'users', userId);
+    return await updateDoc(userRef, { isCreator: true });
+};
