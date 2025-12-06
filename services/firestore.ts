@@ -1,4 +1,3 @@
-
 // src/services/firestore.ts
 import { 
     doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp,
@@ -718,7 +717,14 @@ export const submitFeatureSuggestion = async (data: Omit<FeatureSuggestion, 'id'
         status: 'submitted',
         createdAt: serverTimestamp(),
     };
-    return await addDoc(suggestionsRef, newSuggestion);
+    addDoc(suggestionsRef, newSuggestion).catch(error => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'feature_suggestions',
+            operation: 'create',
+            requestResourceData: newSuggestion,
+        }));
+        throw error;
+    });
 };
 
 export const getFeatureSuggestions = async (): Promise<FeatureSuggestion[]> => {
@@ -733,7 +739,13 @@ export const updateFeatureSuggestionStatus = async (suggestionId: string, status
     return await updateDoc(suggestionRef, { status });
 };
 
-export const grantCreatorBadge = async (userId: string) => {
+export const grantCreatorBadge = async (userId: string, devId: string) => {
     const userRef = doc(firestore, 'users', userId);
-    return await updateDoc(userRef, { isCreator: true });
+    const updateData = {
+        isCreator: true,
+        hasNewGift: true,
+        lastGiftedBadge: 'creator' as BadgeType,
+        giftedByUid: devId,
+    };
+    return await updateDoc(userRef, updateData);
 };

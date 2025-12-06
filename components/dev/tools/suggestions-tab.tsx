@@ -66,15 +66,15 @@ export function SuggestionsTab() {
     }
     setIsUpdating(suggestion.id);
     try {
-        // First, grant the badge
-        await grantCreatorBadge(suggestion.suggesterUid);
+        // First, grant the badge and the gift notification flags
+        await grantCreatorBadge(suggestion.suggesterUid, devProfile.uid);
         
         // Then, grant the points
         const suggesterProfile = await getUserProfile(suggestion.suggesterUid);
         const currentPoints = suggesterProfile?.points || 0;
         await updateUserProfile(suggestion.suggesterUid, { points: currentPoints + 10000 });
 
-        // Log this as a special gift
+        // Log this as a special gift in the user's gift history
         await logGift({
             senderId: devProfile.uid,
             receiverId: suggestion.suggesterUid,
@@ -83,7 +83,7 @@ export function SuggestionsTab() {
             pointsAmount: 10000, // The points that were granted
         });
 
-        // Finally, update the status of the suggestion
+        // Finally, update the status of the suggestion itself
         await updateFeatureSuggestionStatus(suggestion.id, 'approved');
 
         toast({
@@ -114,7 +114,7 @@ export function SuggestionsTab() {
           Feature Suggestions
         </CardTitle>
         <CardDescription>
-          Review and approve user-submitted feature ideas. Approving an idea grants the user a Creator badge.
+          Review and approve user-submitted feature ideas. Approving an idea grants the user a Creator badge and 10,000 points.
         </CardDescription>
       </CardHeader>
       <CardContent>
