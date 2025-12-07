@@ -1,3 +1,4 @@
+
 // src/components/chat/chat-window.tsx
 'use client';
 
@@ -60,6 +61,7 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
     pioneer: (props) => <Rocket {...props} />,
     patron: (props) => <Gem {...props} />,
+    feature_suggestion_approved: (props) => <Gem {...props} />,
 };
 
 
@@ -618,13 +620,18 @@ const orderedBadges = useMemo(() => {
                         <DropdownMenuSeparator />
                     </>
                 )}
+                
                 <DropdownMenuSub>
                     <DropdownMenuSubTrigger disabled={!hasVipAccess} onClick={ hasVipAccess ? undefined : () => toast({ title: 'VIP Feature', description: 'Purchase a VIP plan to unlock custom bubble colors.'}) }>
                         <Palette className="mr-2 h-4 w-4" />
-                        <span>Change Bubble Color</span>
+                        <span>Bubble Color</span>
                         {!hasVipAccess && <Crown className="ml-auto h-4 w-4 text-yellow-500" />}
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
+                        <DropdownMenuItem onClick={() => handleBubbleColorChange(null)}>
+                            Reset to Default
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator/>
                         <ColorOption colorValue="sky-blue" colorClass="bg-sky-500" name="Sky Blue" onSelect={handleBubbleColorChange} />
                         <ColorOption colorValue="light-green" colorClass="bg-green-500" name="Light Green" onSelect={handleBubbleColorChange} />
                         <ColorOption colorValue="red" colorClass="bg-red-500" name="Red" onSelect={handleBubbleColorChange} />
@@ -636,17 +643,22 @@ const orderedBadges = useMemo(() => {
                         <ColorOption colorValue="teal" colorClass="bg-teal-500" name="Teal" onSelect={handleBubbleColorChange} />
                         <ColorOption colorValue="white" colorClass="bg-white" name="White" onSelect={handleBubbleColorChange} />
                         <ColorOption colorValue="black" colorClass="bg-black" name="Black" onSelect={handleBubbleColorChange} />
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleBubbleColorChange(null)}>
-                            Reset to Default
-                        </DropdownMenuItem>
                     </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleBlockUser} className="text-destructive focus:text-destructive">
-                    <UserX className="mr-2 h-4 w-4" />
-                    <span>Block User</span>
-                </DropdownMenuItem>
+
+                {iHaveBlockedPartner ? (
+                    <DropdownMenuItem onClick={handleUnblockUser}>
+                        <UserCheck className="mr-2 h-4 w-4" />
+                        <span>Unblock User</span>
+                    </DropdownMenuItem>
+                ) : (
+                    <DropdownMenuItem onClick={handleBlockUser} className="text-destructive focus:text-destructive">
+                        <UserX className="mr-2 h-4 w-4" />
+                        <span>Block User</span>
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={handleDeleteChat} className="text-destructive focus:text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
                     <span>Delete Conversation</span>
@@ -683,10 +695,10 @@ const orderedBadges = useMemo(() => {
               </div>
           )}
           {!loadingMessages && !errorMessages && (
-            <div className="flex flex-col gap-2">
-              {messages.map((msg, index) => {
+            <div className="flex flex-col-reverse gap-2">
+              {messages.slice().reverse().map((msg, index) => {
                  const partnerId = chatPartnerId;
-                 const isLastMessage = index === messages.length - 1;
+                 const isLastMessage = index === 0;
                  const isSentByCurrentUser = msg.senderId === currentUser?.uid;
                  const isSeen = isLastMessage && isSentByCurrentUser && msg.seenBy?.includes(partnerId);
 

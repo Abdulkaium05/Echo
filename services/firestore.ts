@@ -251,7 +251,7 @@ export const sendMessage = async (
     chatId: string, 
     senderId: string, 
     text: string, 
-    attachmentData?: { dataUri: string, name: string, type: 'image' | 'video' | 'document' | 'audio' | 'other', duration?: number },
+    attachmentData?: { dataUri: string, name: string, type: 'image' | 'video' | 'audio' | 'document' | 'other', duration?: number },
     replyingTo?: Message['replyingTo'],
     isBotMessage: boolean = false
 ): Promise<void> => {

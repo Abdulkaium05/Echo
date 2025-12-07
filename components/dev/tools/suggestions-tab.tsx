@@ -23,17 +23,7 @@ import {
 } from "@/components/ui/accordion"
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/context/auth-context';
 
 export function SuggestionsTab() {
@@ -136,10 +126,14 @@ export function SuggestionsTab() {
                         <Badge className={cn("text-white", statusColors[suggestion.status as keyof typeof statusColors])}>
                             {suggestion.status}
                         </Badge>
-                        <span className="font-semibold">{suggestion.title}</span>
+                        <div className="flex flex-col text-left">
+                            <span className="font-semibold">{suggestion.suggesterName}</span>
+                            <span className="text-xs text-muted-foreground">Submitted a new idea</span>
+                        </div>
                     </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-2 pb-4 space-y-4">
+                  <h4 className="font-semibold text-base">{suggestion.title}</h4>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">{suggestion.description}</p>
                   
                   {suggestion.imageUrl && (
@@ -159,7 +153,7 @@ export function SuggestionsTab() {
                      </Button>
                   )}
                   <div className="text-xs text-muted-foreground pt-2 border-t">
-                    Submitted by {suggestion.suggesterName}
+                    Submitted by {suggestion.suggesterName} on {new Date(suggestion.createdAt.seconds * 1000).toLocaleDateString()}
                   </div>
                   
                   {suggestion.status === 'submitted' && (

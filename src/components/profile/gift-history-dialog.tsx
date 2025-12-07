@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { History, Inbox, Loader2, Gift, Crown, Coins, SmilePlus, FlaskConical, Bot, Wrench, Rocket, Gem, Lightbulb } from "lucide-react";
+import { History, Inbox, Loader2, Gift, Crown, Coins, SmilePlus, FlaskConical, Bot, Wrench, Rocket, Gem, Lightbulb, Mail } from "lucide-react";
 import { useAuth, type UserProfile, type GiftInfo, type PointsGiftInfo } from '@/context/auth-context';
 import { getGiftHistory, type Gift, getUserProfile } from '@/services/firestore';
 import { cn } from '@/lib/utils';
@@ -38,7 +38,7 @@ const badgeComponentMap: Record<string, React.FC<{className?: string}>> = {
   beta_tester: (props) => <FlaskConical {...props} />,
   pioneer: (props) => <Rocket {...props} />,
   patron: (props) => <Gem {...props} />,
-  feature_suggestion_approved: (props) => <Lightbulb {...props} />,
+  feature_suggestion_approved: (props) => <Mail {...props} />,
 };
 
 const badgeLabelMap: Record<string, string> = {
@@ -51,6 +51,7 @@ const badgeLabelMap: Record<string, string> = {
   beta_tester: "Beta Tester",
   pioneer: "Pioneer",
   patron: "Patron",
+  feature_suggestion_approved: "Feature Suggestion Approved",
 };
 
 interface EnrichedGift extends Gift {
@@ -139,7 +140,7 @@ export function GiftHistoryDialog({ isOpen, onOpenChange }: GiftHistoryDialogPro
                       
                       let message;
                       if (gift.giftType === 'feature_suggestion_approved') {
-                          message = <><span className="font-semibold">Your feature suggestion was approved!</span> You received a Creator badge and 10,000 points.</>;
+                          message = <><span className="font-semibold">Your feature suggestion was approved!</span> You received the <span className="font-semibold text-primary">{badgeLabelMap[gift.badgeType!]} badge</span> and <span className="font-semibold text-primary">{gift.pointsAmount} points</span>.</>;
                       } else {
                           message = <>
                             <span className="font-semibold">{gift.senderProfile?.name || 'Someone'}</span> sent you{' '}
@@ -165,6 +166,7 @@ export function GiftHistoryDialog({ isOpen, onOpenChange }: GiftHistoryDialogPro
                                <div className="absolute -bottom-1 -right-1 bg-background p-0.5 rounded-full shadow">
                                   <GiftIcon className={cn("h-4 w-4", 
                                       gift.giftType === 'points' && "text-yellow-500",
+                                      gift.giftType === 'badge' && 'text-pink-500',
                                       gift.giftType === 'feature_suggestion_approved' && "text-primary"
                                   )} />
                                </div>

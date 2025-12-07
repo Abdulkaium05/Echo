@@ -36,12 +36,6 @@ export function NewUsersTab() {
     setSelectedUser(user);
   };
 
-  const handleCopyId = (e: React.MouseEvent, displayUid: string) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(displayUid);
-    toast({ title: "Copied!", description: "User ID copied to clipboard." });
-  }
-
   const formatDate = (timestamp: any) => {
     if (!timestamp || !timestamp.toDate) return 'N/A';
     return timestamp.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -87,12 +81,6 @@ export function NewUsersTab() {
                       Joined: {formatDate(user.createdAt)}
                     </p>
                   </div>
-                   {user.displayUid && (
-                     <Button variant="ghost" size="sm" onClick={(e) => handleCopyId(e, user.displayUid!)}>
-                       <Copy className="mr-2 h-4 w-4" />
-                       {user.displayUid}
-                     </Button>
-                   )}
                 </div>
               ))}
             </div>

@@ -1,4 +1,3 @@
-
 // src/app/verify-email/page.tsx
 'use client';
 
@@ -16,6 +15,7 @@ export default function VerifyEmailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSending, setIsSending] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Redirect if user is verified, logged out, or still loading
@@ -52,9 +52,25 @@ export default function VerifyEmailPage() {
   };
 
   const handleManualCheck = async () => {
-    await reloadUser();
-    // The useEffect will handle redirection if the user is now verified.
-    toast({ title: 'Status Checked', description: 'Checking for email verification status...'});
+    setIsChecking(true);
+    const refreshedUser = await reloadUser(); // This now returns the reloaded user object
+
+    // After reloading, check the new status directly
+    if (refreshedUser?.emailVerified) {
+        toast({
+            title: "Verification Success!",
+            description: "Your email has been verified. Redirecting...",
+            action: <MailCheck className="h-5 w-5 text-green-500"/>
+        });
+        router.push('/chat'); // Manually redirect
+    } else {
+        toast({
+            title: "Not Verified Yet",
+            description: "Please check your inbox and click the verification link.",
+            variant: "destructive"
+        });
+    }
+    setIsChecking(false);
   }
 
   const handleLogout = async () => {
@@ -94,8 +110,9 @@ export default function VerifyEmailPage() {
             Please click the link in that email to continue. You can close this tab after verifying.
           </p>
 
-           <Button onClick={handleManualCheck} className="w-full">
-            I've Verified My Email
+           <Button onClick={handleManualCheck} className="w-full" disabled={isChecking}>
+                {isChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                I've Verified My Email
           </Button>
 
           <div className="text-sm text-muted-foreground">

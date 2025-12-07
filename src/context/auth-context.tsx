@@ -50,7 +50,7 @@ interface AuthContextProps {
   logout: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<{ success: boolean; message: string }>;
   sendVerificationEmail: () => Promise<void>;
-  reloadUser: () => Promise<void>;
+  reloadUser: () => Promise<User | null>;
   updateUserProfile: (data: Partial<UserProfile>) => Promise<void>;
   auth: Auth;
   firestore: Firestore;
@@ -289,14 +289,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await sendEmailVerification(currentUser);
   };
 
-  const reloadUser = async (): Promise<void> => {
+  const reloadUser = async (): Promise<User | null> => {
     const currentUser = firebaseAuth.currentUser;
-    if (!currentUser) return;
+    if (!currentUser) return null;
+    
     await reload(currentUser);
-    // After reload, get the fresh user instance from the auth service and update state
-    if (firebaseAuth.currentUser) {
-       setUser(firebaseAuth.currentUser);
+    const refreshedUser = firebaseAuth.currentUser;
+    
+    if (refreshedUser) {
+      setUser(refreshedUser);
     }
+    return refreshedUser;
   };
 
   const value: AuthContextProps = {

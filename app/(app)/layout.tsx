@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Rocket, Gem, Code, Gift, Lightbulb } from 'lucide-react';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Rocket, Gem, Code, Gift, Lightbulb, Badge } from 'lucide-react';
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
@@ -148,7 +148,7 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
                   <span>Developer Tools</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onOpenGiftBadgeDialog}>
-                  <Gift className="mr-2 h-4 w-4" />
+                  <Badge className="mr-2 h-4 w-4" />
                   <span>Gift a Badge</span>
                 </DropdownMenuItem>
               </>

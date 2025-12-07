@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Bell, CheckCheck, Inbox, Megaphone } from 'lucide-react';
+import { Bell, CheckCheck, Inbox, Megaphone, Leaf } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import {
@@ -19,6 +19,7 @@ import {
   type Notification,
 } from '@/services/notificationService';
 import { AnnouncementDialog } from './announcement-dialog';
+import { OutlineBirdIcon } from './bot-icons';
 
 export function NotificationPopover() {
   const [notifications, setNotifications] = useState<Notification[]>([]);

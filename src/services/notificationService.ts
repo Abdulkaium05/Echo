@@ -29,9 +29,9 @@ const defaultAnnouncements: Notification[] = [
         timestamp: new Date('2025-10-16T09:00:00Z').getTime(),
         isRead: false,
         personaMessages: {
-            'blue-bird': "Got a brilliant idea for Echo Message? Now's your chance to share it! We've just launched a 'Suggest a Feature' page, accessible from your user menu. Submit your concept for a new feature, and if developer Abdul-Kaium builds it, you'll be awarded the exclusive Creator ('C') badge as a thank you for your contribution to the app's evolution!",
-            'green-leaf': "The forest of ideas is now open. A new path, 'Suggest a Feature,' has appeared in your menu. Share a seed of inspiration for how this space might grow. If your idea is chosen to take root and blossom within the app, our creator, Abdul-Kaium, will honor you with the Creator's emblem, a mark of your wisdom in nurturing our shared world.",
-            'echo-bot': "[System Update: Feature Suggestion Protocol Activated] A new input channel, 'Suggest a Feature,' is now available in the main user menu. Users may submit proposals for new application functionalities. If a submitted proposal is selected for implementation by developer Abdul-Kaium, the originating user unit will be designated with 'Creator' status. Submit your data for a chance to influence future operational parameters."
+            'blue-bird': "Got a brilliant idea for Echo Message? Now's your chance to share it! We've just launched a 'Suggest a Feature' page, accessible from your user menu. Submit your concept, and if developer Abdul-Kaium builds it, you'll be awarded the exclusive Creator badge and 10,000 points as a thank you!",
+            'green-leaf': "The forest of ideas is now open. A new path, 'Suggest a Feature,' has appeared in your menu. Share a seed of inspiration for how this space might grow. If your idea is chosen to take root and blossom, our creator, Abdul-Kaium, will honor you with the Creator's emblem and a gift of 10,000 points.",
+            'echo-bot': "[System Update: Feature Suggestion Protocol Activated] A new input channel is available in the user menu. Submit proposals for new application functionalities. If a proposal is implemented by developer Abdul-Kaium, the originating user unit will be designated with 'Creator' status and awarded 10,000 points. Submit your data for a chance to influence future operational parameters."
         }
     },
     {

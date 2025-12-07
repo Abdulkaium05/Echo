@@ -42,16 +42,13 @@ export function AnnouncementDialog({ isOpen, onOpenChange, announcement }: Annou
         <Tabs defaultValue="blue-bird" className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="blue-bird">
-              <OutlineBirdIcon className="mr-2 h-4 w-4 text-sky-500"/>
-              Blue Bird
+              <OutlineBirdIcon className="h-5 w-5 text-sky-500"/>
             </TabsTrigger>
             <TabsTrigger value="green-leaf">
-              <Leaf className="mr-2 h-4 w-4 text-green-500"/>
-              Green Leaf
+              <Leaf className="h-5 w-5 text-green-500"/>
             </TabsTrigger>
             <TabsTrigger value="echo-bot">
-              <Bot className="mr-2 h-4 w-4 text-foreground/70"/>
-              Echo Bot
+              <Bot className="h-5 w-5 text-foreground/70"/>
             </TabsTrigger>
           </TabsList>
 
