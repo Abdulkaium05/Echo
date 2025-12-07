@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './message-bubble';
 import { MessageInput, type MessageInputHandle } from './message-input';
 import { VerifiedBadge } from '@/components/verified-badge';
-import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban, Trash2, UserX, UserCheck, Leaf, SmilePlus, FlaskConical, Bot, Rocket, Gem } from 'lucide-react';
+import { ArrowLeft, Phone, Video, Loader2, ShieldAlert, RefreshCw, Wrench, Crown, MoreVertical, Palette, X, Ban, Trash2, UserX, UserCheck, Leaf, SmilePlus, FlaskConical, Bot } from 'lucide-react';
 import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import {
@@ -51,7 +51,7 @@ import { useTrash } from '@/context/trash-context';
 import { useRouter } from 'next/navigation';
 import type { BadgeType } from '@/app/(app)/layout';
 
-const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
+const BadgeComponents: Record<Exclude<BadgeType, 'feature_suggestion_approved'>, React.FC<{className?: string}>> = {
     creator: ({className}) => <CreatorLetterCBBadgeIcon className={cn("h-4 w-4", className)} />,
     vip: ({className}) => <Crown className={cn("h-4 w-4 text-yellow-500", className)} />,
     verified: ({className}) => <VerifiedBadge className={cn("h-4 w-4", className)} />,
@@ -59,9 +59,6 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     bot: ({className}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} />,
     meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
     beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
-    pioneer: (props) => <Rocket {...props} />,
-    patron: (props) => <Gem {...props} />,
-    feature_suggestion_approved: (props) => <Gem {...props} />,
 };
 
 
@@ -533,11 +530,9 @@ const orderedBadges = useMemo(() => {
     if(partnerProfileDetails.isBot) earnedBadges.push('bot');
     if(partnerProfileDetails.isMemeCreator) earnedBadges.push('meme_creator');
     if(partnerProfileDetails.isBetaTester) earnedBadges.push('beta_tester');
-    if (partnerProfileDetails.isPioneer) earnedBadges.push('pioneer');
-    if (partnerProfileDetails.isPatron) earnedBadges.push('patron');
 
 
-    const badgeDisplayOrder = partnerProfileDetails.badgeOrder?.length ? partnerProfileDetails.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester', 'pioneer', 'patron'];
+    const badgeDisplayOrder = partnerProfileDetails.badgeOrder?.length ? partnerProfileDetails.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
     return badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 }, [partnerProfileDetails]);
 

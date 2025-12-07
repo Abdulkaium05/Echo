@@ -24,12 +24,10 @@ const giftableBadges: { value: BadgeType, label: string }[] = [
     { value: 'beta_tester', label: 'Beta Tester Badge' },
 ];
 
-const badgeComponentMap: Record<BadgeType, React.FC<{className?: string}>> = {
+const badgeComponentMap: Record<Exclude<BadgeType, 'pioneer' | 'patron' | 'dev' | 'bot' | 'feature_suggestion_approved'>, React.FC<{className?: string}>> = {
   creator: CreatorLetterCBBadgeIcon,
   vip: (props) => <Crown {...props} />,
   verified: VerifiedBadge,
-  dev: () => null,
-  bot: () => null,
   meme_creator: (props) => <SmilePlus {...props} />,
   beta_tester: (props) => <FlaskConical {...props} />,
 };
@@ -100,7 +98,7 @@ export function BadgeQrGeneratorTab() {
   };
   
   const renderBadgeSelectItem = (badge: { value: BadgeType, label: string }) => {
-    const BadgeIcon = badgeComponentMap[badge.value];
+    const BadgeIcon = badgeComponentMap[badge.value as Exclude<BadgeType, 'pioneer' | 'patron' | 'dev' | 'bot' | 'feature_suggestion_approved'>];
     return (
         <div className="flex items-center gap-2">
             <BadgeIcon className={cn("h-4 w-4", badge.value === 'vip' && 'text-yellow-500', badge.value === 'meme_creator' && 'text-green-500', badge.value === 'beta_tester' && 'text-orange-500')} />

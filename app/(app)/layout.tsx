@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Rocket, Gem, Code, Gift, Lightbulb, Badge } from 'lucide-react';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Gem, Code, Gift, Lightbulb, Badge } from 'lucide-react';
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
@@ -25,12 +25,11 @@ import { GiftReceivedDialog } from '@/components/dev/gift-received-dialog';
 import { ScanQrDialog } from '@/components/chat/scan-qr-dialog';
 import { PointsReceivedDialog } from '@/components/dev/points-received-dialog';
 import { CompleteProfileDialog } from '@/components/auth/complete-profile-dialog';
-import { EchoOldDialog } from '@/components/echo-old-dialog';
 import { Toaster } from '@/components/ui/toaster';
 import { GiftHistoryDialog } from '@/components/profile/gift-history-dialog';
 import { SuggestionApprovedDialog } from '@/components/profile/suggestion-approved-dialog';
 
-export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester' | 'pioneer' | 'patron' | 'feature_suggestion_approved';
+export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester' | 'feature_suggestion_approved';
 export type BadgeColor = 'sky-blue' | 'light-green' | 'red' | 'orange' | 'yellow' | 'purple' | 'pink' | 'indigo' | 'teal' | 'white' | 'black';
 
 const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
@@ -41,13 +40,11 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     bot: ({className}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} />,
     meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
     beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
-    pioneer: ({ className }) => <Rocket className={cn("h-4 w-4 text-slate-500", className)} />,
-    patron: ({ className }) => <Gem className={cn("h-4 w-4 text-rose-500", className)} />,
     feature_suggestion_approved: ({className}) => <Lightbulb className={cn("h-4 w-4 text-primary", className)} />,
 };
 
 
-function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenGiftBadgeDialog, onOpenScanQrDialog, onOpenEchoOldDialog, onOpenGiftHistoryDialog }: { 
+function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenGiftBadgeDialog, onOpenScanQrDialog, onOpenGiftHistoryDialog }: { 
     user: UserProfile, 
     onLogout: () => void, 
     onOpenProfileSettings: () => void,
@@ -56,7 +53,6 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
     onOpenShareProfileDialog: () => void;
     onOpenGiftBadgeDialog: () => void;
     onOpenScanQrDialog: () => void;
-    onOpenEchoOldDialog: () => void;
     onOpenGiftHistoryDialog: () => void;
 }) {
    const router = useRouter();
@@ -70,8 +66,6 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    if(user.isBot) earnedBadges.push('bot');
    if(user.isMemeCreator) earnedBadges.push('meme_creator');
    if(user.isBetaTester) earnedBadges.push('beta_tester');
-   if(user.isPioneer) earnedBadges.push('pioneer');
-   if(user.isPatron) earnedBadges.push('patron');
 
    const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : allPossibleBadges;
    const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
@@ -162,10 +156,6 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
              <Info className="mr-2 h-4 w-4" />
              <span>About</span>
            </DropdownMenuItem>
-           <DropdownMenuItem onClick={onOpenEchoOldDialog}>
-              <History className="mr-2 h-4 w-4" />
-              <span>Echo-Old</span>
-          </DropdownMenuItem>
          <DropdownMenuItem onClick={onLogout}>
            <LogOut className="mr-2 h-4 w-4" />
            <span>Log out</span>
@@ -175,7 +165,7 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    );
 }
 
-const allPossibleBadges: BadgeType[] = ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester', 'pioneer', 'patron'];
+const allPossibleBadges: BadgeType[] = ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -191,7 +181,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isPointsReceivedDialogOpen, setIsPointsReceivedDialogOpen] = useState(false);
   const [isScanQrDialogOpen, setIsScanQrDialogOpen] = useState(false);
   const [isCompleteProfileOpen, setIsCompleteProfileOpen] = useState(false);
-  const [isEchoOldDialogOpen, setIsEchoOldDialogOpen] = useState(false);
   const [isGiftHistoryDialogOpen, setIsGiftHistoryDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -309,7 +298,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
                         onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
                         onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
-                        onOpenEchoOldDialog={() => setIsEchoOldDialogOpen(true)}
                         onOpenGiftHistoryDialog={() => setIsGiftHistoryDialogOpen(true)}
                     />
                   )}
@@ -334,7 +322,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
                     onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
                     onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
-                    onOpenEchoOldDialog={() => setIsEchoOldDialogOpen(true)}
                     onOpenGiftHistoryDialog={() => setIsGiftHistoryDialogOpen(true)}
                 />
               )}
@@ -410,10 +397,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <ScanQrDialog
                 isOpen={isScanQrDialogOpen}
                 onOpenChange={setIsScanQrDialogOpen}
-            />
-             <EchoOldDialog
-              isOpen={isEchoOldDialogOpen}
-              onOpenChange={setIsEchoOldDialogOpen}
             />
             <GiftHistoryDialog
               isOpen={isGiftHistoryDialogOpen}

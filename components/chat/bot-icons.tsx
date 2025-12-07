@@ -28,7 +28,7 @@ export const SquareBotBadgeIcon = ({ className, ...props }: React.SVGProps<SVGSV
   />
 );
 
-// Updated Creator "C" Badge Icon based on user-provided SVG
+// New Creator "C" Badge Icon
 export const CreatorLetterCBBadgeIcon = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
     <svg 
       width="22" 
@@ -42,11 +42,11 @@ export const CreatorLetterCBBadgeIcon = ({ className, ...props }: React.SVGProps
       <circle cx="11" cy="11" r="10" fill="#A78BFA" stroke="#6D28D9" strokeWidth="2"/>
       <text 
         x="11" 
-        y="14.5" 
+        y="15.5" 
         textAnchor="middle" 
         fontFamily="Arial, Helvetica, sans-serif" 
-        fontSize="13" 
-        fontWeight="700" 
+        fontSize="14" 
+        fontWeight="bold" 
         fill="white"
       >
         C

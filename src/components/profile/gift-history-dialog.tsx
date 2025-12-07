@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { History, Inbox, Loader2, Gift, Crown, Coins, SmilePlus, FlaskConical, Bot, Wrench, Rocket, Gem, Lightbulb, Mail } from "lucide-react";
+import { History, Inbox, Loader2, Gift, Crown, Coins, SmilePlus, FlaskConical, Bot, Wrench, Lightbulb, Mail } from "lucide-react";
 import { useAuth, type UserProfile, type GiftInfo, type PointsGiftInfo } from '@/context/auth-context';
 import { getGiftHistory, type Gift, getUserProfile } from '@/services/firestore';
 import { cn } from '@/lib/utils';
@@ -36,8 +36,6 @@ const badgeComponentMap: Record<string, React.FC<{className?: string}>> = {
   bot: (props) => <Bot {...props} />,
   meme_creator: (props) => <SmilePlus {...props} />,
   beta_tester: (props) => <FlaskConical {...props} />,
-  pioneer: (props) => <Rocket {...props} />,
-  patron: (props) => <Gem {...props} />,
   feature_suggestion_approved: (props) => <Mail {...props} />,
 };
 
@@ -49,8 +47,6 @@ const badgeLabelMap: Record<string, string> = {
   bot: "Bot",
   meme_creator: "Meme Creator",
   beta_tester: "Beta Tester",
-  pioneer: "Pioneer",
-  patron: "Patron",
   feature_suggestion_approved: "Feature Suggestion Approved",
 };
 

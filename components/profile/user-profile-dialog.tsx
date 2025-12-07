@@ -13,7 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { UserProfile } from "@/context/auth-context";
-import { Crown, Mail, MessageSquare, Loader2, Wrench, Bot, Cake, Clock, UserCircle2, SmilePlus, FlaskConical, Coins, Rocket, Gem } from "lucide-react";
+import { Crown, Mail, MessageSquare, Loader2, Wrench, Bot, Cake, Clock, UserCircle2, SmilePlus, FlaskConical, Coins } from "lucide-react";
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
 import { useRouter } from "next/navigation";
 import { findChatBetweenUsers, createChat, formatLastSeen } from '@/services/firestore';
@@ -30,7 +30,7 @@ interface UserProfileDialogProps {
   profile: UserProfile | null;
 }
 
-const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
+const BadgeComponents: Record<Exclude<BadgeType, 'feature_suggestion_approved'>, React.FC<{className?: string}>> = {
     creator: ({className}) => <CreatorLetterCBBadgeIcon className={cn("h-5 w-5", className)} />,
     vip: ({className}) => <Crown className={cn("h-5 w-5 text-yellow-500", className)} />,
     verified: ({className}) => <VerifiedBadge className={cn("h-5 w-5", className)} />,

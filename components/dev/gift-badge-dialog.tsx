@@ -13,7 +13,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Loader2, Gift, Crown, Bot, Wrench, SmilePlus, FlaskConical, Clock, Search, User as UserIcon, UserCheck, AlertCircle, Rocket, Gem } from "lucide-react";
+import { Loader2, Gift, Crown, Bot, Wrench, SmilePlus, FlaskConical, Clock, Search, User as UserIcon, UserCheck, AlertCircle } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { findUserByDisplayUid, type UserProfile, giftBadge } from '@/services/firestore';
@@ -33,7 +33,7 @@ interface GiftBadgeDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const badgeComponentMap: Record<BadgeType, React.FC<{className?: string}>> = {
+const badgeComponentMap: Record<Exclude<BadgeType, 'pioneer' | 'patron' | 'feature_suggestion_approved'>, React.FC<{className?: string}>> = {
   creator: CreatorLetterCBBadgeIcon,
   vip: (props) => <Crown {...props} />,
   verified: VerifiedBadge,
@@ -41,8 +41,6 @@ const badgeComponentMap: Record<BadgeType, React.FC<{className?: string}>> = {
   bot: (props) => <Bot {...props} />,
   meme_creator: (props) => <SmilePlus {...props} />,
   beta_tester: (props) => <FlaskConical {...props} />,
-  pioneer: (props) => <Rocket {...props} />,
-  patron: (props) => <Gem {...props} />,
 };
 
 const giftableBadges: { value: BadgeType, label: string }[] = [
@@ -51,8 +49,6 @@ const giftableBadges: { value: BadgeType, label: string }[] = [
     { value: 'verified', label: 'Verified Badge' },
     { value: 'meme_creator', label: 'Meme Creator Badge' },
     { value: 'beta_tester', label: 'Beta Tester Badge' },
-    { value: 'pioneer', label: 'Pioneer Badge' },
-    { value: 'patron', label: 'Patron Badge' },
 ];
 
 export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) {
@@ -124,15 +120,13 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
   const isSubmitDisabled = isGifting || isFindingUser || !selectedUser || !selectedBadge;
 
   const renderBadgeSelectItem = (badge: { value: BadgeType, label: string }) => {
-    const BadgeIcon = badgeComponentMap[badge.value];
+    const BadgeIcon = badgeComponentMap[badge.value as Exclude<BadgeType, 'pioneer' | 'patron' | 'feature_suggestion_approved'>];
     return (
         <div className="flex items-center gap-2">
             <BadgeIcon className={cn("h-4 w-4", 
                 badge.value === 'vip' && 'text-yellow-500', 
                 badge.value === 'meme_creator' && 'text-green-500', 
-                badge.value === 'beta_tester' && 'text-orange-500',
-                badge.value === 'pioneer' && 'text-slate-500',
-                badge.value === 'patron' && 'text-rose-500'
+                badge.value === 'beta_tester' && 'text-orange-500'
             )} />
             <span>{badge.label}</span>
         </div>

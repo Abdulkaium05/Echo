@@ -20,8 +20,6 @@ export interface UserProfile {
   isCreator?: boolean; 
   isMemeCreator?: boolean; // New badge property
   isBetaTester?: boolean;  // New badge property
-  isPioneer?: boolean; // New Pioneer badge
-  isPatron?: boolean; // New Patron badge
   lastSeen?: Timestamp; 
   blockedUsers?: string[]; // List of UIDs this user has blocked
   

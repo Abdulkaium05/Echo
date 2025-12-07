@@ -11,7 +11,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Check, Crown, Bot, Wrench, SmilePlus, FlaskConical, Lock, Rocket, Gem } from "lucide-react";
+import { Check, Crown, Bot, Wrench, SmilePlus, FlaskConical, Lock } from "lucide-react";
 import { useAuth, type UserProfile } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
 import { CreatorLetterCBBadgeIcon } from '../chat/bot-icons';
@@ -25,9 +25,9 @@ interface SelectBadgesDialogProps {
   onSave: (newOrder: BadgeType[]) => void;
 }
 
-const allPossibleBadges: BadgeType[] = ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester', 'pioneer', 'patron'];
+const allPossibleBadges: BadgeType[] = ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
 
-const badgeComponentMap: Record<BadgeType, React.FC<{className?: string}>> = {
+const badgeComponentMap: Record<Exclude<BadgeType, 'feature_suggestion_approved'>, React.FC<{className?: string}>> = {
   creator: CreatorLetterCBBadgeIcon,
   vip: (props) => <Crown {...props} />,
   verified: VerifiedBadge,
@@ -35,8 +35,6 @@ const badgeComponentMap: Record<BadgeType, React.FC<{className?: string}>> = {
   bot: (props) => <Bot {...props} />,
   meme_creator: (props) => <SmilePlus {...props} />,
   beta_tester: (props) => <FlaskConical {...props} />,
-  pioneer: (props) => <Rocket {...props} />,
-  patron: (props) => <Gem {...props} />,
 };
 
 const badgeLabelMap: Record<BadgeType, string> = {
@@ -47,8 +45,7 @@ const badgeLabelMap: Record<BadgeType, string> = {
   bot: "Bot",
   meme_creator: "Meme Creator",
   beta_tester: "Beta Tester",
-  pioneer: "Pioneer",
-  patron: "Patron",
+  feature_suggestion_approved: "Suggestion Approved",
 };
 
 
@@ -61,8 +58,6 @@ const EarnedBadges = (userProfile: UserProfile) => {
     if (userProfile.isBot) badges.add('bot');
     if (userProfile.isMemeCreator) badges.add('meme_creator');
     if (userProfile.isBetaTester) badges.add('beta_tester');
-    if (userProfile.isPioneer) badges.add('pioneer');
-    if (userProfile.isPatron) badges.add('patron');
     return badges;
 };
 
@@ -108,7 +103,8 @@ export function SelectBadgesDialog({ isOpen, onOpenChange, userProfile, onSave }
 
         <div className="grid grid-cols-3 gap-3 py-4">
           {allPossibleBadges.map((badgeKey) => {
-            const BadgeIcon = badgeComponentMap[badgeKey];
+            const BadgeIcon = badgeComponentMap[badgeKey as Exclude<BadgeType, 'feature_suggestion_approved'>];
+            if (!BadgeIcon) return null;
             const hasBadge = earnedBadges.has(badgeKey);
             const isSelected = selectedBadges.includes(badgeKey);
             const selectionNumber = isSelected ? selectedBadges.indexOf(badgeKey) + 1 : null;
@@ -145,9 +141,7 @@ export function SelectBadgesDialog({ isOpen, onOpenChange, userProfile, onSave }
                     badgeKey === 'dev' && 'text-blue-600', 
                     badgeKey === 'bot' && 'text-sky-500', 
                     badgeKey === 'meme_creator' && 'text-green-500', 
-                    badgeKey === 'beta_tester' && 'text-orange-500',
-                    badgeKey === 'pioneer' && 'text-slate-500',
-                    badgeKey === 'patron' && 'text-rose-500'
+                    badgeKey === 'beta_tester' && 'text-orange-500'
                   )} />
                   <span className="mt-2 text-center text-xs font-medium">{badgeLabelMap[badgeKey]}</span>
                   

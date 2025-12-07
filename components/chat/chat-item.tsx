@@ -54,7 +54,7 @@ const DevTeamIcon = () => (
 );
 
 
-const BadgeComponents: Record<BadgeType, React.FC<{className?: string, style?: React.CSSProperties}>> = {
+const BadgeComponents: Record<Exclude<BadgeType, 'feature_suggestion_approved'>, React.FC<{className?: string, style?: React.CSSProperties}>> = {
     creator: ({className, style}) => <CreatorLetterCBBadgeIcon className={cn("h-4 w-4", className)} style={style} />,
     vip: ({className, style}) => <Crown className={cn("h-4 w-4 text-yellow-500", className)} style={style} />,
     verified: ({className, style}) => <VerifiedBadge className={cn("h-4 w-4", className)} style={style} />,
