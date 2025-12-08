@@ -43,4 +43,7 @@ export interface UserProfile {
   pointsGifterUid?: string;
   hasNewPointsGift?: boolean;
   lastGiftedPointsAmount?: number;
+
+  // FCM Tokens
+  fcmTokens?: string[];
 }

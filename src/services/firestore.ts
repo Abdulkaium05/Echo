@@ -1,3 +1,4 @@
+
 // src/services/firestore.ts
 import { 
     doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp,
@@ -79,6 +80,57 @@ export interface FeatureSuggestion {
     createdAt: Timestamp;
 }
 
+const sendPushNotification = async (sender: UserProfile, recipient: UserProfile, messageText: string, chatId: string) => {
+    if (!recipient.fcmTokens || recipient.fcmTokens.length === 0) {
+        console.log(`Push notification not sent: Recipient ${recipient.name} has no FCM tokens.`);
+        return;
+    }
+
+    // Check if user is online (last seen within last 5 minutes)
+    const isOnline = recipient.lastSeen && (Date.now() - recipient.lastSeen.toDate().getTime()) < 5 * 60 * 1000;
+    if (isOnline) {
+        console.log(`Push notification not sent: Recipient ${recipient.name} is currently online.`);
+        return;
+    }
+
+    const serverKey = process.env.NEXT_PUBLIC_FCM_SERVER_KEY;
+    if (!serverKey) {
+        console.error("Push notification not sent: NEXT_PUBLIC_FCM_SERVER_KEY is not set.");
+        return;
+    }
+
+    const notificationPayload = {
+        notification: {
+            title: sender.name,
+            body: messageText,
+            icon: sender.avatarUrl || '/icon.png',
+        },
+        data: {
+            url: `/chat/${sender.uid}`, // URL to open when notification is clicked
+        },
+    };
+    
+    console.log(`Sending push notification to ${recipient.name}'s ${recipient.fcmTokens.length} devices.`);
+
+    for (const token of recipient.fcmTokens) {
+        try {
+            await fetch('https://fcm.googleapis.com/fcm/send', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `key=${serverKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    to: token,
+                    ...notificationPayload
+                }),
+            });
+        } catch (error) {
+            console.error(`Failed to send push notification to token ${token}:`, error);
+        }
+    }
+};
+
 
 export const mapChatToChatItem = async (chat: Chat, currentUserId: string): Promise<ChatItemProps> => {
     const partnerId = chat.participants.find(p => p !== currentUserId);
@@ -136,8 +188,6 @@ export const mapChatToChatItem = async (chat: Chat, currentUserId: string): Prom
       isCreator: partnerProfile.isCreator,
       isMemeCreator: partnerProfile.isMemeCreator,
       isBetaTester: partnerProfile.isBetaTester,
-      isPioneer: partnerProfile.isPioneer,
-      isPatron: partnerProfile.isPatron,
       badgeOrder: partnerProfile.badgeOrder,
       href: `/chat/${partnerId}`,
       iconIdentifier: partnerProfile.avatarUrl,
@@ -162,6 +212,7 @@ export const getUserProfile = async (uid: string): Promise<UserProfile | null> =
         avatarUrl: 'outline-bird-avatar',
         isBot: true,
         lastSeen: Timestamp.now(),
+        fcmTokens: [],
     };
   }
 
@@ -287,7 +338,7 @@ export const sendMessage = async (
     batch.set(newMessageRef, newMessageData);
     batch.update(chatRef, { lastMessage: { ...newMessageData, id: newMessageRef.id } });
 
-    return batch.commit().catch(error => {
+    await batch.commit().catch(error => {
         console.error("Error sending message:", error);
         const permissionError = new FirestorePermissionError({
             path: isBotMessage ? chatRef.path : newMessageRef.path,
@@ -297,6 +348,19 @@ export const sendMessage = async (
         errorEmitter.emit('permission-error', permissionError);
         throw permissionError;
     });
+
+    if (!isBotMessage) {
+      const chatDoc = await getDoc(chatRef);
+      const chatData = chatDoc.data() as Chat;
+      const recipientId = chatData.participants.find(p => p !== senderId);
+      if (recipientId) {
+        const recipientProfile = await getUserProfile(recipientId);
+        if (recipientProfile) {
+          const messageContent = text || `Sent an ${attachmentData?.type || 'attachment'}`;
+          await sendPushNotification(senderProfile, recipientProfile, messageContent, chatId);
+        }
+      }
+    }
 };
 
 export const findChatBetweenUsers = async (userId1: string, userId2: string): Promise<string | null> => {
@@ -734,7 +798,7 @@ export const getFeatureSuggestions = async (): Promise<FeatureSuggestion[]> => {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FeatureSuggestion));
 };
 
-export const updateFeatureSuggestionStatus = async (suggestionId: string, status: 'approved') => {
+export const updateUserSuggestionStatus = async (suggestionId: string, status: 'approved') => {
     const suggestionRef = doc(firestore, 'feature_suggestions', suggestionId);
     return await updateDoc(suggestionRef, { status });
 };

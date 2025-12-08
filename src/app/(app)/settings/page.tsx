@@ -1,3 +1,4 @@
+
 // src/app/settings/page.tsx
 'use client';
 
@@ -18,6 +19,9 @@ import { useSound } from '@/context/sound-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-context';
 import type { BadgeType } from '@/app/(app)/layout';
+import { getMessaging, getToken } from 'firebase/messaging';
+import { initializeFirebase } from '@/firebase';
+import { arrayUnion } from 'firebase/firestore';
 
 const AudioVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
     return (
@@ -133,7 +137,7 @@ export default function SettingsPage() {
   const { isVIP, vipPack } = useVIP();
   const { toast } = useToast();
   const { soundEnabled, setSoundEnabled } = useSound();
-  const { userProfile, sendPasswordReset, user } = useAuth();
+  const { userProfile, sendPasswordReset, user, updateUserProfile } = useAuth();
   
   const [notificationPermission, setNotificationPermission] = useState('default');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -180,8 +184,8 @@ export default function SettingsPage() {
   }, [url, savedSongs, isClient]);
 
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
-        toast({ title: "Unsupported Browser", description: "This browser does not support desktop notifications.", variant: "destructive"});
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+        toast({ title: "Unsupported Browser", description: "This browser does not support push notifications.", variant: "destructive"});
         return;
     }
 
@@ -203,7 +207,20 @@ export default function SettingsPage() {
         if (permission === 'granted') {
             setNotificationsEnabled(true);
             toast({ title: "Permissions Granted!", description: "You will now receive notifications.", action: <CheckCircle className="h-5 w-5 text-green-500"/> });
-            new Notification("Echo Message", { body: "Notifications are now enabled!" });
+            
+            // Get token
+            const { messaging } = initializeFirebase();
+            const fcmToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY });
+
+            if (fcmToken && user?.uid) {
+                console.log("FCM Token:", fcmToken);
+                await updateUserProfile({ fcmTokens: arrayUnion(fcmToken) as any });
+                toast({ title: "Device Registered", description: "This device will now receive push notifications." });
+            } else {
+                console.error("Could not get FCM token.");
+                toast({ title: "Registration Failed", description: "Could not register this device for notifications.", variant: "destructive" });
+            }
+
         } else {
             setNotificationsEnabled(false);
             toast({ title: "Permissions Denied", description: "You won't receive notifications.", variant: "destructive" });
@@ -258,6 +275,7 @@ export default function SettingsPage() {
   
   const sendTestNotification = () => {
       if (notificationsEnabled) {
+          new Notification("Echo Message", { body: "This is a test notification!" });
           toast({ title: 'Test Sent', description: 'Check your notifications panel or system alerts.'});
       } else {
           toast({ title: 'Notifications Disabled', description: 'Please enable notifications to receive a test.', variant: 'destructive'});
@@ -319,7 +337,7 @@ export default function SettingsPage() {
                         requestNotificationPermission();
                     } else {
                         setNotificationsEnabled(false);
-                        toast({ title: 'Notifications Disabled', description: "You will no longer receive system notifications."});
+                        toast({ title: 'Notifications Disabled', description: "To re-enable, you'll need to use your browser's site settings.", duration: 7000, });
                     }
                 }}
               />

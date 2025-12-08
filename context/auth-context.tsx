@@ -81,10 +81,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     []
   );
   
-    const processLogin = useCallback(async (firebaseUser: User) => {
+  const processLogin = useCallback(async (firebaseUser: User) => {
     setIsUserProfileLoading(true);
     try {
-        await updateUserInFirestore(firebaseUser.uid, { lastSeen: serverTimestamp() as Timestamp });
         const profile = await getUserProfile(firebaseUser.uid);
         if (!profile) {
             console.error('User profile missing for UID:', firebaseUser.uid);
@@ -161,8 +160,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUserProfile(localProfile);
 
         if (needsServerUpdate) {
-            const userDocRef = doc(firebaseFirestore, 'users', firebaseUser.uid);
-            await updateDoc(userDocRef, updatedProfileData);
+            await updateUserInFirestore(firebaseUser.uid, updatedProfileData);
         }
 
     } catch (error) {
@@ -183,14 +181,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
       setLoading(true);
+      setUser(firebaseUser);
+
       if (firebaseUser) {
-        setUser(firebaseUser);
         await processLogin(firebaseUser);
       } else {
-        setUser(null);
         setUserProfile(null);
         setIsUserProfileLoading(false);
       }
+      
       setLoading(false);
     });
 
@@ -243,6 +242,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         badgeExpiry: {},
         chatColorPreferences: {},
         hasCompletedOnboarding: false,
+        fcmTokens: [],
       };
       
       await setDoc(doc(firebaseFirestore, 'users', newUser.uid), profile);
@@ -267,9 +267,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await updateUserInFirestore(user.uid, { lastSeen: serverTimestamp() as Timestamp });
       await signOut(firebaseAuth);
     }
-    setUser(null);
-    setUserProfile(null);
-    setLoading(false);
+    // onAuthStateChanged will handle setting user/profile to null
   };
   
   const sendPasswordReset = async (email: string): Promise<{ success: boolean; message: string }> => {

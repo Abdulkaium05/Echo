@@ -1,4 +1,3 @@
-
 // src/app/settings/page.tsx
 'use client';
 
@@ -19,7 +18,7 @@ import { useSound } from '@/context/sound-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-context';
 import type { BadgeType } from '@/app/(app)/layout';
-import { getMessaging, getToken } from 'firebase/messaging';
+import { getToken } from 'firebase/messaging';
 import { initializeFirebase } from '@/firebase';
 import { arrayUnion } from 'firebase/firestore';
 
@@ -115,6 +114,12 @@ const TrialBadgeTimer = ({ badgeType, expiryTimestamp }: { badgeType: BadgeType,
     const badgeInfo = {
         meme_creator: { icon: SmilePlus, label: "Meme Creator", color: "text-green-500" },
         beta_tester: { icon: FlaskConical, label: "Beta Tester", color: "text-orange-500" },
+        feature_suggestion_approved: { icon: FlaskConical, label: "Suggestion Approved", color: "text-orange-500" },
+        creator: { icon: FlaskConical, label: "Creator", color: "text-orange-500" },
+        dev: { icon: FlaskConical, label: "Developer", color: "text-orange-500" },
+        bot: { icon: FlaskConical, label: "Bot", color: "text-orange-500" },
+        vip: { icon: FlaskConical, label: "VIP", color: "text-orange-500" },
+        verified: { icon: FlaskConical, label: "Verified", color: "text-orange-500" },
     };
 
     const info = badgeInfo[badgeType as keyof typeof badgeInfo];
@@ -184,7 +189,7 @@ export default function SettingsPage() {
   }, [url, savedSongs, isClient]);
 
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
         toast({ title: "Unsupported Browser", description: "This browser does not support push notifications.", variant: "destructive"});
         return;
     }
@@ -210,6 +215,11 @@ export default function SettingsPage() {
             
             // Get token
             const { messaging } = initializeFirebase();
+            if (!messaging) {
+              console.error("Firebase Messaging is not available.");
+              toast({ title: "Registration Failed", description: "Could not initialize messaging service.", variant: "destructive" });
+              return;
+            }
             const fcmToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY });
 
             if (fcmToken && user?.uid) {
