@@ -164,13 +164,13 @@ export default function SuggestFeaturePage() {
               <FormItem>
                 <FormLabel>Optional Image</FormLabel>
                 <FormControl>
-                  <>
+                  <div>
                     <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
                     <Button type="button" variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()}>
                       <Upload className="mr-2 h-4 w-4" />
                       Upload a Mockup or Example Image
                     </Button>
-                  </>
+                  </div>
                 </FormControl>
                 {imagePreview && (
                   <div className="mt-2 relative w-32 h-32">

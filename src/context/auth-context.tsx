@@ -81,8 +81,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     []
   );
   
-  const processLogin = useCallback(async (firebaseUser: User) => {
-    setIsUserProfileLoading(true);
+    const processLogin = useCallback(async (firebaseUser: User) => {
+    // This now only handles profile fetching and processing. Loading state is managed by the effect.
     try {
         const profile = await getUserProfile(firebaseUser.uid);
         if (!profile) {
@@ -166,8 +166,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
         console.error("Error during login processing:", error);
         setUserProfile(null);
-    } finally {
-        setIsUserProfileLoading(false);
     }
   }, [setGiftInfo, setPointsGiftInfo]);
 
@@ -181,15 +179,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
       setLoading(true);
+      setIsUserProfileLoading(true);
       setUser(firebaseUser);
 
       if (firebaseUser) {
         await processLogin(firebaseUser);
       } else {
         setUserProfile(null);
-        setIsUserProfileLoading(false);
       }
       
+      // Only finish loading after all checks are done.
+      setIsUserProfileLoading(false);
       setLoading(false);
     });
 
@@ -242,7 +242,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         badgeExpiry: {},
         chatColorPreferences: {},
         hasCompletedOnboarding: false,
-        fcmTokens: [],
       };
       
       await setDoc(doc(firebaseFirestore, 'users', newUser.uid), profile);

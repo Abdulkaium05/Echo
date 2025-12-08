@@ -1,4 +1,3 @@
-
 // src/services/firestore.ts
 import { 
     doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp,
@@ -798,7 +797,7 @@ export const getFeatureSuggestions = async (): Promise<FeatureSuggestion[]> => {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FeatureSuggestion));
 };
 
-export const updateUserSuggestionStatus = async (suggestionId: string, status: 'approved') => {
+export const updateFeatureSuggestionStatus = async (suggestionId: string, status: 'approved') => {
     const suggestionRef = doc(firestore, 'feature_suggestions', suggestionId);
     return await updateDoc(suggestionRef, { status });
 };

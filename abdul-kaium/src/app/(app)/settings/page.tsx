@@ -18,9 +18,6 @@ import { useSound } from '@/context/sound-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-context';
 import type { BadgeType } from '@/app/(app)/layout';
-import { getToken } from 'firebase/messaging';
-import { initializeFirebase } from '@/firebase';
-import { arrayUnion } from 'firebase/firestore';
 
 const AudioVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
     return (
@@ -114,12 +111,6 @@ const TrialBadgeTimer = ({ badgeType, expiryTimestamp }: { badgeType: BadgeType,
     const badgeInfo = {
         meme_creator: { icon: SmilePlus, label: "Meme Creator", color: "text-green-500" },
         beta_tester: { icon: FlaskConical, label: "Beta Tester", color: "text-orange-500" },
-        feature_suggestion_approved: { icon: FlaskConical, label: "Suggestion Approved", color: "text-orange-500" },
-        creator: { icon: FlaskConical, label: "Creator", color: "text-orange-500" },
-        dev: { icon: FlaskConical, label: "Developer", color: "text-orange-500" },
-        bot: { icon: FlaskConical, label: "Bot", color: "text-orange-500" },
-        vip: { icon: FlaskConical, label: "VIP", color: "text-orange-500" },
-        verified: { icon: FlaskConical, label: "Verified", color: "text-orange-500" },
     };
 
     const info = badgeInfo[badgeType as keyof typeof badgeInfo];
@@ -142,7 +133,7 @@ export default function SettingsPage() {
   const { isVIP, vipPack } = useVIP();
   const { toast } = useToast();
   const { soundEnabled, setSoundEnabled } = useSound();
-  const { userProfile, sendPasswordReset, user, updateUserProfile } = useAuth();
+  const { userProfile, sendPasswordReset, user } = useAuth();
   
   const [notificationPermission, setNotificationPermission] = useState('default');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -189,8 +180,8 @@ export default function SettingsPage() {
   }, [url, savedSongs, isClient]);
 
   const requestNotificationPermission = async () => {
-    if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-        toast({ title: "Unsupported Browser", description: "This browser does not support push notifications.", variant: "destructive"});
+    if (!('Notification' in window)) {
+        toast({ title: "Unsupported Browser", description: "This browser does not support desktop notifications.", variant: "destructive"});
         return;
     }
 
@@ -212,25 +203,7 @@ export default function SettingsPage() {
         if (permission === 'granted') {
             setNotificationsEnabled(true);
             toast({ title: "Permissions Granted!", description: "You will now receive notifications.", action: <CheckCircle className="h-5 w-5 text-green-500"/> });
-            
-            // Get token
-            const { messaging } = initializeFirebase();
-            if (!messaging) {
-              console.error("Firebase Messaging is not available.");
-              toast({ title: "Registration Failed", description: "Could not initialize messaging service.", variant: "destructive" });
-              return;
-            }
-            const fcmToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY });
-
-            if (fcmToken && user?.uid) {
-                console.log("FCM Token:", fcmToken);
-                await updateUserProfile({ fcmTokens: arrayUnion(fcmToken) as any });
-                toast({ title: "Device Registered", description: "This device will now receive push notifications." });
-            } else {
-                console.error("Could not get FCM token.");
-                toast({ title: "Registration Failed", description: "Could not register this device for notifications.", variant: "destructive" });
-            }
-
+            new Notification("Echo Message", { body: "Notifications are now enabled!" });
         } else {
             setNotificationsEnabled(false);
             toast({ title: "Permissions Denied", description: "You won't receive notifications.", variant: "destructive" });
@@ -285,8 +258,8 @@ export default function SettingsPage() {
   
   const sendTestNotification = () => {
       if (notificationsEnabled) {
-          new Notification("Echo Message", { body: "This is a test notification!" });
           toast({ title: 'Test Sent', description: 'Check your notifications panel or system alerts.'});
+           new Notification("Echo Message", { body: "This is a test notification!" });
       } else {
           toast({ title: 'Notifications Disabled', description: 'Please enable notifications to receive a test.', variant: 'destructive'});
       }

@@ -1,4 +1,3 @@
-
 // src/app/settings/page.tsx
 'use client';
 
@@ -19,9 +18,11 @@ import { useSound } from '@/context/sound-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-context';
 import type { BadgeType } from '@/app/(app)/layout';
-import { getMessaging, getToken } from 'firebase/messaging';
+import { getMessaging, getToken, isSupported } from 'firebase/messaging';
 import { initializeFirebase } from '@/firebase';
-import { arrayUnion } from 'firebase/firestore';
+import { arrayUnion, updateDoc, doc } from 'firebase/firestore';
+
+const { firestore } = initializeFirebase();
 
 const AudioVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
     return (
@@ -137,7 +138,7 @@ export default function SettingsPage() {
   const { isVIP, vipPack } = useVIP();
   const { toast } = useToast();
   const { soundEnabled, setSoundEnabled } = useSound();
-  const { userProfile, sendPasswordReset, user, updateUserProfile } = useAuth();
+  const { userProfile, sendPasswordReset, user } = useAuth();
   
   const [notificationPermission, setNotificationPermission] = useState('default');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -183,21 +184,15 @@ export default function SettingsPage() {
     }
   }, [url, savedSongs, isClient]);
 
-  const requestNotificationPermission = async () => {
-    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+ const requestNotificationPermission = async () => {
+    if (!user) {
+        toast({ title: "Not logged in", description: "You must be logged in to enable notifications.", variant: "destructive"});
+        return;
+    }
+    
+    const supported = await isSupported();
+    if (!supported) {
         toast({ title: "Unsupported Browser", description: "This browser does not support push notifications.", variant: "destructive"});
-        return;
-    }
-
-    if (notificationPermission === 'granted') {
-        setNotificationsEnabled(true);
-        toast({ title: "Permissions Already Granted", description: "You can already receive notifications." });
-        return;
-    }
-
-    if (notificationPermission === 'denied') {
-        toast({ title: "Permissions Blocked", description: "You have blocked notifications. Please enable them in your browser settings.", variant: "destructive" });
-        setNotificationsEnabled(false);
         return;
     }
 
@@ -206,28 +201,33 @@ export default function SettingsPage() {
         setNotificationPermission(permission);
         if (permission === 'granted') {
             setNotificationsEnabled(true);
-            toast({ title: "Permissions Granted!", description: "You will now receive notifications.", action: <CheckCircle className="h-5 w-5 text-green-500"/> });
+            toast({ title: "Permissions Granted!", description: "You will now receive push notifications.", action: <CheckCircle className="h-5 w-5 text-green-500"/> });
             
             // Get token
             const { messaging } = initializeFirebase();
-            const fcmToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY });
-
-            if (fcmToken && user?.uid) {
-                console.log("FCM Token:", fcmToken);
-                await updateUserProfile({ fcmTokens: arrayUnion(fcmToken) as any });
-                toast({ title: "Device Registered", description: "This device will now receive push notifications." });
-            } else {
-                console.error("Could not get FCM token.");
-                toast({ title: "Registration Failed", description: "Could not register this device for notifications.", variant: "destructive" });
+            if (!messaging) {
+              console.error("Firebase Messaging not initialized.");
+              return;
             }
-
+            const fcmToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY });
+            
+            if (fcmToken) {
+                // Save the token to the user's profile
+                const userDocRef = doc(firestore, 'users', user.uid);
+                await updateDoc(userDocRef, {
+                    fcmTokens: arrayUnion(fcmToken)
+                });
+                console.log("FCM Token saved:", fcmToken);
+            } else {
+                console.log('No registration token available. Request permission to generate one.');
+            }
         } else {
             setNotificationsEnabled(false);
             toast({ title: "Permissions Denied", description: "You won't receive notifications.", variant: "destructive" });
         }
     } catch (error) {
-        console.error("Error requesting notification permission:", error);
-        toast({ title: "Error", description: "Something went wrong while requesting permissions.", variant: "destructive" });
+        console.error("Error requesting notification permission or getting token:", error);
+        toast({ title: "Error", description: "Could not enable notifications.", variant: "destructive" });
     }
   };
 
@@ -275,8 +275,8 @@ export default function SettingsPage() {
   
   const sendTestNotification = () => {
       if (notificationsEnabled) {
-          new Notification("Echo Message", { body: "This is a test notification!" });
           toast({ title: 'Test Sent', description: 'Check your notifications panel or system alerts.'});
+           new Notification("Echo Message", { body: "This is a test notification!" });
       } else {
           toast({ title: 'Notifications Disabled', description: 'Please enable notifications to receive a test.', variant: 'destructive'});
       }
@@ -337,7 +337,7 @@ export default function SettingsPage() {
                         requestNotificationPermission();
                     } else {
                         setNotificationsEnabled(false);
-                        toast({ title: 'Notifications Disabled', description: "To re-enable, you'll need to use your browser's site settings.", duration: 7000, });
+                        toast({ title: 'Notifications Disabled', description: "You will no longer receive system notifications."});
                     }
                 }}
               />
