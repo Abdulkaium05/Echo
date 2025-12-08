@@ -10,6 +10,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import type { UserProfile } from '@/types/user';
 import type { ChatItemProps } from '@/components/chat/chat-item';
 import type { BadgeType } from '@/app/(app)/layout';
+import { sendPushNotification } from '@/ai/flows/sendPushNotificationFlow';
 
 const { firestore } = initializeFirebase();
 
@@ -78,58 +79,6 @@ export interface FeatureSuggestion {
     status: 'submitted' | 'approved';
     createdAt: Timestamp;
 }
-
-const sendPushNotification = async (sender: UserProfile, recipient: UserProfile, messageText: string, chatId: string) => {
-    if (!recipient.fcmTokens || recipient.fcmTokens.length === 0) {
-        console.log(`Push notification not sent: Recipient ${recipient.name} has no FCM tokens.`);
-        return;
-    }
-
-    // Check if user is online (last seen within last 5 minutes)
-    const isOnline = recipient.lastSeen && (Date.now() - recipient.lastSeen.toDate().getTime()) < 5 * 60 * 1000;
-    if (isOnline) {
-        console.log(`Push notification not sent: Recipient ${recipient.name} is currently online.`);
-        return;
-    }
-
-    const serverKey = process.env.NEXT_PUBLIC_FCM_SERVER_KEY;
-    if (!serverKey) {
-        console.error("Push notification not sent: NEXT_PUBLIC_FCM_SERVER_KEY is not set.");
-        return;
-    }
-
-    const notificationPayload = {
-        notification: {
-            title: sender.name,
-            body: messageText,
-            icon: sender.avatarUrl || '/icon.png',
-        },
-        data: {
-            url: `/chat/${sender.uid}`, // URL to open when notification is clicked
-        },
-    };
-    
-    console.log(`Sending push notification to ${recipient.name}'s ${recipient.fcmTokens.length} devices.`);
-
-    for (const token of recipient.fcmTokens) {
-        try {
-            await fetch('https://fcm.googleapis.com/fcm/send', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `key=${serverKey}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    to: token,
-                    ...notificationPayload
-                }),
-            });
-        } catch (error) {
-            console.error(`Failed to send push notification to token ${token}:`, error);
-        }
-    }
-};
-
 
 export const mapChatToChatItem = async (chat: Chat, currentUserId: string): Promise<ChatItemProps> => {
     const partnerId = chat.participants.find(p => p !== currentUserId);
@@ -355,8 +304,18 @@ export const sendMessage = async (
       if (recipientId) {
         const recipientProfile = await getUserProfile(recipientId);
         if (recipientProfile) {
-          const messageContent = text || `Sent an ${attachmentData?.type || 'attachment'}`;
-          await sendPushNotification(senderProfile, recipientProfile, messageContent, chatId);
+          const isOnline = recipientProfile.lastSeen && (Date.now() - recipientProfile.lastSeen.toDate().getTime()) < 5 * 60 * 1000;
+          if (!isOnline && recipientProfile.fcmTokens && recipientProfile.fcmTokens.length > 0) {
+            const messageContent = text || `Sent an ${attachmentData?.type || 'attachment'}`;
+            // Call the Genkit flow to send the notification
+            await sendPushNotification({
+                senderName: senderProfile.name,
+                senderAvatar: senderProfile.avatarUrl || '/icon.png',
+                recipientTokens: recipientProfile.fcmTokens,
+                messageText: messageContent,
+                chatId: chatId,
+            });
+          }
         }
       }
     }

@@ -1,18 +1,19 @@
-// public/firebase-messaging-sw.js
-// This file must be in the public directory
-self.importScripts('https://www.gstatic.com/firebasejs/11.7.0/firebase-app-compat.js');
-self.importScripts('https://www.gstatic.com/firebasejs/11.7.0/firebase-messaging-compat.js');
+// /public/firebase-messaging-sw.js
 
-// IMPORTANT: This config will be populated by the VITE_APP_FIREBASE_CONFIG environment variable during build.
-// You must set this variable in your deployment environment.
+// This file must be in the public folder.
+
+importScripts("https://www.gstatic.com/firebasejs/9.2.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/9.2.0/firebase-messaging-compat.js");
+
+// Replace with your Firebase project's configuration
 const firebaseConfig = {
-  "projectId": "echob-87513860-76a14",
-  "appId": "1:584611986272:web:32e120f23534b5d58b7c05",
-  "storageBucket": "echob-87513860-76a14.appspot.com",
-  "apiKey": "AIzaSyDCzNKo-F2BJGgk0qgvo0kp2Bst-IiXWVI",
-  "authDomain": "echob-87513860-76a14.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "584611986272"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+  measurementId: "YOUR_MEASUREMENT_ID"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -21,36 +22,26 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
     icon: payload.notification.icon || '/icon.png',
+    badge: payload.notification.badge || '/badge.png', // Custom badge
+    image: payload.notification.image, // Sender's avatar
     data: {
-        url: payload.data.url // Pass the URL to open
+        url: payload.data.url // The URL to open on click
     }
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+
 self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
+    event.notification.close(); // Close the notification
     const urlToOpen = event.notification.data.url;
     if (urlToOpen) {
-        event.waitUntil(
-            clients.matchAll({ type: 'window' }).then((windowClients) => {
-                // If a window is already open, focus it.
-                for (let i = 0; i < windowClients.length; i++) {
-                    const client = windowClients[i];
-                    if (client.url === urlToOpen && 'focus' in client) {
-                        return client.focus();
-                    }
-                }
-                // Otherwise, open a new window.
-                if (clients.openWindow) {
-                    return clients.openWindow(urlToOpen);
-                }
-            })
-        );
+        event.waitUntil(clients.openWindow(urlToOpen));
     }
 });
