@@ -38,7 +38,7 @@ const sendPushNotificationFlow = ai.defineFlow(
     const { recipientTokens, senderName, senderAvatar, messageText, chatId } = input;
     
     const serverKey = process.env.FCM_SERVER_KEY;
-    if (!serverKey) {
+    if (!serverKey || serverKey === 'YOUR_FCM_SERVER_KEY_HERE') {
         console.error("FCM Server Key is not configured. Cannot send push notification.");
         return;
     }
@@ -55,7 +55,7 @@ const sendPushNotificationFlow = ai.defineFlow(
         body: `${senderName}: ${messageText}`, // Body shows sender and message
         icon: '/icon.png', // Main app icon
         badge: '/icon.png', // Custom badge for Android
-        image: '/icon.png', // Image to show in notification
+        image: senderAvatar, // Image to show in notification is the sender's avatar
       },
       data: {
         url: `/chat/${chatId}`, // URL to open when notification is clicked

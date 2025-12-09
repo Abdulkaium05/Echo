@@ -1,4 +1,3 @@
-
 // src/components/dev/gift-received-dialog.tsx
 'use client';
 
@@ -13,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { UserProfile } from "@/context/auth-context";
 import { Crown, Bot, Wrench, SmilePlus, FlaskConical, PartyPopper, Check, Gift } from "lucide-react";
-import { CreatorLetterCBBadgeIcon } from '@/components/chat/bot-icons';
+import { CreatorLetterCBBadgeIcon, PioneerBadgeIcon, PatronBadgeIcon } from '@/components/chat/bot-icons';
 import { VerifiedBadge } from "@/components/verified-badge";
 import { cn } from "@/lib/utils";
 import type { BadgeType } from "@/app/(app)/layout";
@@ -33,6 +32,8 @@ const badgeComponentMap: Record<string, React.FC<{className?: string}>> = {
   bot: (props) => <Bot {...props} />,
   meme_creator: (props) => <SmilePlus {...props} />,
   beta_tester: (props) => <FlaskConical {...props} />,
+  pioneer: PioneerBadgeIcon,
+  patron: PatronBadgeIcon,
 };
 
 const badgeLabelMap: Record<string, string> = {
@@ -43,6 +44,8 @@ const badgeLabelMap: Record<string, string> = {
   bot: "Bot",
   meme_creator: "Meme Creator",
   beta_tester: "Beta Tester",
+  pioneer: "Developer 2.0",
+  patron: "Verified 2.0",
 };
 
 
@@ -50,7 +53,7 @@ export function GiftReceivedDialog({ isOpen, onOpenChange, gifterProfile, gifted
 
   if (!gifterProfile || !giftedBadge) return null;
 
-  const GifterBadgeIcon = badgeComponentMap[gifterProfile.badgeOrder?.[0] || 'dev'];
+  const GifterBadgeIcon = gifterProfile.badgeOrder?.[0] ? badgeComponentMap[gifterProfile.badgeOrder[0]] : null;
   const GiftedBadgeIcon = badgeComponentMap[giftedBadge];
   
   const gifterFallback = gifterProfile.name.substring(0, 2).toUpperCase();

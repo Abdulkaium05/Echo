@@ -5,7 +5,7 @@ import { VerifiedBadge } from '@/components/verified-badge';
 import { cn } from '@/lib/utils';
 import { Crown, Wrench, User as UserIcon, UserX, Trash2, UserCheck, SmilePlus, FlaskConical, Leaf, Bot } from 'lucide-react';
 import type { UserProfile } from '@/services/firestore';
-import { OutlineBirdIcon, SquareBotBadgeIcon, CreatorLetterCBBadgeIcon } from './bot-icons';
+import { OutlineBirdIcon, SquareBotBadgeIcon, CreatorLetterCBBadgeIcon, PioneerBadgeIcon, PatronBadgeIcon, CreatorLv2BadgeIcon, MemeCreatorLv2BadgeIcon, BetaTesterLv2BadgeIcon } from './bot-icons';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -32,6 +32,11 @@ export interface ChatItemProps {
   isCreator?: boolean;
   isMemeCreator?: boolean;
   isBetaTester?: boolean;
+  isPioneer?: boolean;
+  isPatron?: boolean;
+  isCreatorLv2?: boolean;
+  isMemeCreatorLv2?: boolean;
+  isBetaTesterLv2?: boolean;
   badgeOrder?: BadgeType[];
   isActive?: boolean;
   href: string;
@@ -54,7 +59,7 @@ const DevTeamIcon = () => (
 );
 
 
-const BadgeComponents: Record<Exclude<BadgeType, 'feature_suggestion_approved'>, React.FC<{className?: string, style?: React.CSSProperties}>> = {
+const BadgeComponents: Record<string, React.FC<{className?: string, style?: React.CSSProperties}>> = {
     creator: ({className, style}) => <CreatorLetterCBBadgeIcon className={cn("h-4 w-4", className)} style={style} />,
     vip: ({className, style}) => <Crown className={cn("h-4 w-4 text-yellow-500", className)} style={style} />,
     verified: ({className, style}) => <VerifiedBadge className={cn("h-4 w-4", className)} style={style} />,
@@ -62,6 +67,11 @@ const BadgeComponents: Record<Exclude<BadgeType, 'feature_suggestion_approved'>,
     bot: ({className, style}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} style={style} />,
     meme_creator: ({className, style}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} style={style} />,
     beta_tester: ({className, style}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} style={style} />,
+    pioneer: ({className, style}) => <PioneerBadgeIcon className={cn("h-4 w-4", className)} style={style} />,
+    patron: ({className, style}) => <PatronBadgeIcon className={cn("h-4 w-4", className)} style={style} />,
+    creator_lv2: ({className, style}) => <CreatorLv2BadgeIcon className={cn("h-4 w-4", className)} style={style} />,
+    meme_creator_lv2: ({className, style}) => <MemeCreatorLv2BadgeIcon className={cn("h-4 w-4", className)} style={style} />,
+    beta_tester_lv2: ({className, style}) => <BetaTesterLv2BadgeIcon className={cn("h-4 w-4", className)} style={style} />,
 };
 
 
@@ -81,6 +91,11 @@ export function ChatItem(props: ChatItemProps) {
     isCreator,
     isMemeCreator,
     isBetaTester,
+    isPioneer,
+    isPatron,
+    isCreatorLv2,
+    isMemeCreatorLv2,
+    isBetaTesterLv2,
     badgeOrder,
     isActive,
     href,
@@ -104,15 +119,20 @@ export function ChatItem(props: ChatItemProps) {
   const fallbackInitials = name.substring(0, 2).toUpperCase();
 
   const earnedBadges: BadgeType[] = [];
-  if(isCreator) earnedBadges.push('creator');
+  if(isCreatorLv2) earnedBadges.push('creator_lv2');
+  else if(isCreator) earnedBadges.push('creator');
   if(isContactVIP) earnedBadges.push('vip');
-  if(isVerified) earnedBadges.push('verified');
-  if(isDevTeam) earnedBadges.push('dev');
+  if(isPatron) earnedBadges.push('patron');
+  else if(isVerified) earnedBadges.push('verified');
+  if(isPioneer) earnedBadges.push('pioneer');
+  else if(isDevTeam) earnedBadges.push('dev');
   if(isBot) earnedBadges.push('bot');
-  if(isMemeCreator) earnedBadges.push('meme_creator');
-  if(isBetaTester) earnedBadges.push('beta_tester');
+  if(isMemeCreatorLv2) earnedBadges.push('meme_creator_lv2');
+  else if(isMemeCreator) earnedBadges.push('meme_creator');
+  if(isBetaTesterLv2) earnedBadges.push('beta_tester_lv2');
+  else if(isBetaTester) earnedBadges.push('beta_tester');
 
-  const badgeDisplayOrder = badgeOrder?.length ? badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
+  const badgeDisplayOrder = badgeOrder?.length ? badgeOrder : ['pioneer', 'patron', 'creator_lv2', 'creator', 'dev', 'verified', 'vip', 'bot', 'meme_creator_lv2', 'meme_creator', 'beta_tester_lv2', 'beta_tester'];
   const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
 
@@ -269,5 +289,3 @@ export function ChatItem(props: ChatItemProps) {
     </ContextMenu>
   );
 }
-
-    

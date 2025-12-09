@@ -23,50 +23,6 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isDevTeam == true;
     }
     
-    function isGiftingPoints() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasAll(['points', 'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount'])
-             && request.resource.data.hasNewPointsGift == true
-             && request.resource.data.points > resource.data.points;
-    }
-    
-    function isSpendingPoints() {
-        // Allow updating points only if the new value is less than the old one.
-        return request.resource.data.points < resource.data.points;
-    }
-    
-    function isGiftingBadge() {
-       return isDevTeam() && request.resource.data.diff(resource.data).hasAny([
-          'isVerified', 'isCreator', 'isVIP', 'isMemeCreator', 'isBetaTester', 'badgeExpiry', 
-          'hasNewGift', 'giftedByUid', 'lastGiftedBadge'
-        ]);
-    }
-    
-    function isUpdatingLastSeen() {
-        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeen']);
-    }
-
-    function isClearingExpiredVip() {
-      // A user can clear their own expired VIP status.
-      // This is safe because they can only go from true to false.
-      return resource.data.isVIP == true && request.resource.data.isVIP == false;
-    }
-    
-    function isClearingGiftNotification() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'hasNewGift', 'giftedByUid', 'lastGiftedBadge',
-        'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount'
-      ]);
-    }
-    
-    function isUpdatingOwnProfileSafely() {
-      // User can change their own profile, BUT cannot change protected fields.
-      // This is a "deny list" approach.
-      return isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'isVerified', 'isCreator', 'isDevTeam', 'isBot', 'points', 'isVIP',
-        'isMemeCreator', 'isBetaTester'
-      ]);
-    }
-    
     function isBot() {
       // The bot sends messages from the server, so it has no auth object.
       // We identify it by checking for a specific UID in the message data.
@@ -77,32 +33,26 @@ service cloud.firestore {
     // Users Collection
     // =====================================================
     match /users/{userId} {
-      allow read: if isSignedIn() || isDevTeam(); // Allow dev team to read profiles
+      allow read: if isSignedIn() || isDevTeam(); 
       allow list: if isSignedIn();
       allow create: if request.auth.uid == userId;
       
-      // Allow updates by the owner or for specific gift-related actions.
       allow update: if 
-            // Case 1: A user is updating their own profile (name, avatar, badgeOrder, etc).
-            isUpdatingOwnProfileSafely()
-            ||
-            // Case 2: The owner is spending points (e.g., buying VIP).
-            (isOwner(userId) && isSpendingPoints())
-            ||
-            // Case 3: The owner is updating their online status
-            (isOwner(userId) && isUpdatingLastSeen())
-            ||
-            // Case 4: Owner is clearing gift notifications after viewing them.
-            (isOwner(userId) && isClearingGiftNotification())
-            ||
-            // Case 5: Another user is gifting points to this user.
-            (isSignedIn() && isGiftingPoints())
-            ||
-            // Case 6: A dev team member is gifting a badge.
-            (isGiftingBadge())
-            ||
-            // Case 7: The user's own VIP plan has expired, and the app is clearing it.
-            (isOwner(userId) && isClearingExpiredVip());
+        // A user can update their own profile with safe fields.
+        (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'avatarUrl', 'badgeOrder', 'lastSeen', 'hasCompletedOnboarding', 
+            'chatColorPreferences', 'hasNewGift', 'giftedByUid', 'lastGiftedBadge', 
+            'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount', 'points', 'isVIP',
+            'vipPack', 'vipExpiryTimestamp', 'starGems', 'isCreatorLv2', 'isPatron',
+            'isPioneer', 'isMemeCreatorLv2', 'isBetaTesterLv2'
+        ]))
+        ||
+        // Another user can gift points or badges.
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            'points', 'hasNewPointsGift', 'pointsGifterUid', 'lastGiftedPointsAmount',
+            'isVerified', 'isCreator', 'isVIP', 'isMemeCreator', 'isBetaTester', 'badgeExpiry', 
+            'hasNewGift', 'giftedByUid', 'lastGiftedBadge'
+        ]));
 
       // Gift History Subcollection
       match /gifts/{giftId} {

@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { UserProfile } from "@/context/auth-context";
 import { Crown, Mail, MessageSquare, Loader2, Wrench, Bot, Cake, Clock, UserCircle2, SmilePlus, FlaskConical, Coins } from "lucide-react";
-import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
+import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon, PioneerBadgeIcon, PatronBadgeIcon, CreatorLv2BadgeIcon, MemeCreatorLv2BadgeIcon, BetaTesterLv2BadgeIcon } from '@/components/chat/bot-icons';
 import { useRouter } from "next/navigation";
 import { findChatBetweenUsers, createChat, formatLastSeen } from '@/services/firestore';
 import { useAuth } from '@/context/auth-context';
@@ -30,7 +30,7 @@ interface UserProfileDialogProps {
   profile: UserProfile | null;
 }
 
-const BadgeComponents: Record<Exclude<BadgeType, 'feature_suggestion_approved'>, React.FC<{className?: string}>> = {
+const BadgeComponents: Record<string, React.FC<{className?: string}>> = {
     creator: ({className}) => <CreatorLetterCBBadgeIcon className={cn("h-5 w-5", className)} />,
     vip: ({className}) => <Crown className={cn("h-5 w-5 text-yellow-500", className)} />,
     verified: ({className}) => <VerifiedBadge className={cn("h-5 w-5", className)} />,
@@ -38,6 +38,11 @@ const BadgeComponents: Record<Exclude<BadgeType, 'feature_suggestion_approved'>,
     bot: ({className}) => <SquareBotBadgeIcon className={cn("h-5 w-5", className)} />,
     meme_creator: ({className}) => <SmilePlus className={cn("h-5 w-5 text-green-500", className)} />,
     beta_tester: ({className}) => <FlaskConical className={cn("h-5 w-5 text-orange-500", className)} />,
+    pioneer: ({className}) => <PioneerBadgeIcon className={cn("h-5 w-5", className)} />,
+    patron: ({className}) => <PatronBadgeIcon className={cn("h-5 w-5", className)} />,
+    creator_lv2: ({className}) => <CreatorLv2BadgeIcon className={cn("h-5 w-5", className)} />,
+    meme_creator_lv2: ({className}) => <MemeCreatorLv2BadgeIcon className={cn("h-5 w-5", className)} />,
+    beta_tester_lv2: ({className}) => <BetaTesterLv2BadgeIcon className={cn("h-5 w-5", className)} />,
 };
 
 export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfileDialogProps) {
@@ -86,7 +91,9 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
 
   const getProfileStatus = () => {
     if (profile.isBot) return "Automated Assistant";
+    if (profile.isPioneer) return "Developer 2.0";
     if (profile.isDevTeam) return "Developer";
+    if (profile.isPatron) return "Verified 2.0";
     if (profile.isCreator && profile.isVIP) return "VIP Creator";
     if (profile.isCreator) return "Content Creator";
     if (profile.isVIP && profile.isVerified) return "VIP & Verified User";
@@ -100,16 +107,26 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
   const joinDate = isClient && profile.createdAt ? new Date(profile.createdAt.seconds * 1000).toLocaleDateString() : '...';
 
   const earnedBadges: BadgeType[] = [];
-  if(profile.isCreator) earnedBadges.push('creator');
+  if(profile.isCreatorLv2) earnedBadges.push('creator_lv2');
+  else if(profile.isCreator) earnedBadges.push('creator');
+  
   if(profile.isVIP) earnedBadges.push('vip');
-  if(profile.isVerified) earnedBadges.push('verified');
-  if(profile.isDevTeam) earnedBadges.push('dev');
+  
+  if(profile.isPatron) earnedBadges.push('patron');
+  else if(profile.isVerified) earnedBadges.push('verified');
+  
+  if(profile.isPioneer) earnedBadges.push('pioneer');
+  else if(profile.isDevTeam) earnedBadges.push('dev');
+  
+  if(profile.isMemeCreatorLv2) earnedBadges.push('meme_creator_lv2');
+  else if(profile.isMemeCreator) earnedBadges.push('meme_creator');
+  
+  if(profile.isBetaTesterLv2) earnedBadges.push('beta_tester_lv2');
+  else if(profile.isBetaTester) earnedBadges.push('beta_tester');
+
   if(profile.isBot) earnedBadges.push('bot');
-  if(profile.isMemeCreator) earnedBadges.push('meme_creator');
-  if(profile.isBetaTester) earnedBadges.push('beta_tester');
 
-
-  const badgeDisplayOrder = profile.badgeOrder?.length ? profile.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
+  const badgeDisplayOrder = profile.badgeOrder?.length ? profile.badgeOrder : ['pioneer', 'patron', 'creator_lv2', 'creator', 'dev', 'verified', 'vip', 'bot', 'meme_creator_lv2', 'meme_creator', 'beta_tester_lv2', 'beta_tester'];
   const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
   return (
@@ -118,7 +135,10 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
          <div className="relative">
              <div className={cn(
                 "h-24 bg-gradient-to-br rounded-t-lg",
-                profile.isDevTeam ? "from-indigo-400/80 to-blue-300/60" : (profile.isCreator ? "from-purple-400/80 to-purple-300/60" : (profile.isVIP ? "from-primary/30 to-primary/20" : "from-secondary to-muted"))
+                profile.isPioneer || profile.isPatron ? "from-yellow-400/80 to-amber-300/60" :
+                profile.isDevTeam ? "from-indigo-400/80 to-blue-300/60" : 
+                (profile.isCreator ? "from-purple-400/80 to-purple-300/60" : 
+                (profile.isVIP ? "from-primary/30 to-primary/20" : "from-secondary to-muted"))
               )}>
               {/* Header background */}
             </div>
@@ -202,5 +222,3 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
     </Dialog>
   );
 }
-
-    

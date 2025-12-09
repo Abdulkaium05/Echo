@@ -9,6 +9,7 @@ export interface UserProfile {
   email: string | null;
   avatarUrl?: string; 
   points?: number; // User's points balance
+  starGems?: number; // New currency for upgrades
   isVIP?: boolean;
   vipPack?: string;
   vipExpiryTimestamp?: number; // Unix timestamp in milliseconds for VIP expiry
@@ -17,8 +18,13 @@ export interface UserProfile {
   isVerified?: boolean;
   isDevTeam?: boolean;
   isCreator?: boolean; 
-  isMemeCreator?: boolean; // New badge property
-  isBetaTester?: boolean;  // New badge property
+  isCreatorLv2?: boolean;
+  isMemeCreator?: boolean;
+  isMemeCreatorLv2?: boolean;
+  isBetaTester?: boolean;
+  isBetaTesterLv2?: boolean;
+  isPioneer?: boolean; // Lvl 2 Dev
+  isPatron?: boolean;  // Lvl 2 Verified
   lastSeen?: Timestamp; 
   blockedUsers?: string[]; // List of UIDs this user has blocked
   

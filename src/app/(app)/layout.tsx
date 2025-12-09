@@ -1,5 +1,4 @@
-
-
+// src/app/(app)/layout.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,8 +7,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Gem, Code, Gift, Lightbulb, Badge } from 'lucide-react';
-import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon } from '@/components/chat/bot-icons';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Gem, Code, Gift, Lightbulb, Badge, Star } from 'lucide-react';
+import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon, PioneerBadgeIcon, PatronBadgeIcon, CreatorLv2BadgeIcon, MemeCreatorLv2BadgeIcon, BetaTesterLv2BadgeIcon, BotLv2BadgeIcon, PioneerLv3BadgeIcon, PatronLv3BadgeIcon, CreatorLv3BadgeIcon, VipLv3BadgeIcon, MemeCreatorLv3BadgeIcon, BetaTesterLv3BadgeIcon, BotLv3BadgeIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
 import { ProfileSettingsDialog } from '@/components/settings/profile-settings-dialog';
@@ -29,7 +28,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { GiftHistoryDialog } from '@/components/profile/gift-history-dialog';
 import { SuggestionApprovedDialog } from '@/components/profile/suggestion-approved-dialog';
 
-export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester' | 'feature_suggestion_approved';
+export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester' | 'feature_suggestion_approved' | 'pioneer' | 'patron' | 'creator_lv2' | 'meme_creator_lv2' | 'beta_tester_lv2';
 export type BadgeColor = 'sky-blue' | 'light-green' | 'red' | 'orange' | 'yellow' | 'purple' | 'pink' | 'indigo' | 'teal' | 'white' | 'black';
 
 const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
@@ -41,6 +40,11 @@ const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
     meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
     beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
     feature_suggestion_approved: ({className}) => <Lightbulb className={cn("h-4 w-4 text-primary", className)} />,
+    pioneer: ({className}) => <PioneerBadgeIcon className={cn("h-4 w-4", className)} />,
+    patron: ({className}) => <PatronBadgeIcon className={cn("h-4 w-4", className)} />,
+    creator_lv2: ({className}) => <CreatorLv2BadgeIcon className={cn("h-4 w-4", className)} />,
+    meme_creator_lv2: ({className}) => <MemeCreatorLv2BadgeIcon className={cn("h-4 w-4", className)} />,
+    beta_tester_lv2: ({className}) => <BetaTesterLv2BadgeIcon className={cn("h-4 w-4", className)} />,
 };
 
 
@@ -59,13 +63,24 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    const fallbackInitials = user.name ? user.name.substring(0, 2).toUpperCase() : '??';
 
    const earnedBadges: BadgeType[] = [];
-   if(user.isCreator) earnedBadges.push('creator');
+   if(user.isCreatorLv2) earnedBadges.push('creator_lv2');
+   else if(user.isCreator) earnedBadges.push('creator');
+   
    if(user.isVIP) earnedBadges.push('vip');
-   if(user.isVerified) earnedBadges.push('verified');
-   if(user.isDevTeam) earnedBadges.push('dev');
+
+   if(user.isPatron) earnedBadges.push('patron');
+   else if(user.isVerified) earnedBadges.push('verified');
+   
+   if(user.isPioneer) earnedBadges.push('pioneer');
+   else if(user.isDevTeam) earnedBadges.push('dev');
+
+   if(user.isMemeCreatorLv2) earnedBadges.push('meme_creator_lv2');
+   else if(user.isMemeCreator) earnedBadges.push('meme_creator');
+
+   if(user.isBetaTesterLv2) earnedBadges.push('beta_tester_lv2');
+   else if(user.isBetaTester) earnedBadges.push('beta_tester');
+
    if(user.isBot) earnedBadges.push('bot');
-   if(user.isMemeCreator) earnedBadges.push('meme_creator');
-   if(user.isBetaTester) earnedBadges.push('beta_tester');
 
    const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : allPossibleBadges;
    const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
@@ -118,6 +133,10 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
                <Crown className="mr-2 h-4 w-4 text-yellow-500" />
                <span>{user.isVIP ? 'Manage VIP' : 'Get VIP'}</span>
            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/badge-upgrade')}>
+                <Star className="mr-2 h-4 w-4 text-purple-500" />
+                <span>Upgrade Badges</span>
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push('/suggest-feature')}>
                 <Lightbulb className="mr-2 h-4 w-4" />
                 <span>Suggest a Feature</span>
@@ -165,7 +184,7 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    );
 }
 
-const allPossibleBadges: BadgeType[] = ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
+const allPossibleBadges: BadgeType[] = ['pioneer', 'patron', 'creator_lv2', 'creator', 'dev', 'verified', 'vip', 'bot', 'meme_creator_lv2', 'meme_creator', 'beta_tester_lv2', 'beta_tester'];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

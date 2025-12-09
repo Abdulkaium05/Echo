@@ -1,4 +1,4 @@
-
+// src/components/about-dialog.tsx
 'use client';
 
 import {
@@ -13,19 +13,110 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Logo } from "./logo";
-import { Info, Code, Heart, Instagram, Facebook, Shield, FileText, History } from "lucide-react";
+import { Info, Code, Heart, Instagram, Facebook, Shield, FileText, History, Star, Crown, Wrench, SmilePlus, FlaskConical, Bot as BotIcon, Leaf } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import {
+    OutlineBirdIcon,
+    SquareBotBadgeIcon,
+    CreatorLetterCBBadgeIcon,
+    PioneerBadgeIcon,
+    PatronBadgeIcon,
+    CreatorLv2BadgeIcon,
+    MemeCreatorLv2BadgeIcon,
+    BetaTesterLv2BadgeIcon,
+    CreatorLv3BadgeIcon,
+    VipLv3BadgeIcon,
+    PatronLv3BadgeIcon,
+    PioneerLv3BadgeIcon,
+    MemeCreatorLv3BadgeIcon,
+    BetaTesterLv3BadgeIcon,
+    BotLv3BadgeIcon,
+    RubyIcon,
+    RubyCreatorIcon, RubyVipIcon, RubyVerifiedIcon, RubyDeveloperIcon, RubyMemeCreatorIcon, RubyBetaTesterIcon, RubyBotIcon,
+    EmeraldIcon,
+    EmeraldCreatorIcon, EmeraldVipIcon, EmeraldVerifiedIcon, EmeraldDeveloperIcon, EmeraldMemeCreatorIcon, EmeraldBetaTesterIcon, EmeraldBotIcon,
+} from './chat/bot-icons';
+import { ScrollArea } from "./ui/scroll-area";
+import { VerifiedBadge } from "./verified-badge";
 
 interface AboutDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+// Colored wrappers for Lucide icons
+const ColoredCrown = (props: any) => <Crown {...props} className={cn(props.className, "text-yellow-500")} />;
+const ColoredWrench = (props: any) => <Wrench {...props} className={cn(props.className, "text-blue-600")} />;
+const ColoredBotIcon = (props: any) => <BotIcon {...props} className={cn(props.className, "text-sky-500")} />;
+const ColoredSmilePlus = (props: any) => <SmilePlus {...props} className={cn(props.className, "text-green-500")} />;
+const ColoredFlaskConical = (props: any) => <FlaskConical {...props} className={cn(props.className, "text-orange-500")} />;
+const ColoredLeaf = (props: any) => <Leaf {...props} className={cn(props.className, "text-green-500")} />;
+
+
+const iconGroups = {
+    "Base Badges": [
+        { name: 'Creator', Icon: CreatorLetterCBBadgeIcon },
+        { name: 'VIP', Icon: ColoredCrown },
+        { name: 'Verified', Icon: VerifiedBadge },
+        { name: 'Developer', Icon: ColoredWrench },
+        { name: 'Bot', Icon: ColoredBotIcon },
+        { name: 'Meme Creator', Icon: ColoredSmilePlus },
+        { name: 'Beta Tester', Icon: ColoredFlaskConical },
+    ],
+    "Level 2 Badges": [
+        { name: 'Developer 2.0', Icon: PioneerBadgeIcon },
+        { name: 'Verified 2.0', Icon: PatronBadgeIcon },
+        { name: 'Creator Lvl 2', Icon: CreatorLv2BadgeIcon },
+        { name: 'Meme Creator Lvl 2', Icon: MemeCreatorLv2BadgeIcon },
+        { name: 'Beta Tester Lvl 2', Icon: BetaTesterLv2BadgeIcon },
+    ],
+    "Level 3 (Diamond)": [
+        { name: 'Creator Lvl 3', Icon: CreatorLv3BadgeIcon },
+        { name: 'VIP 3.0', Icon: VipLv3BadgeIcon },
+        { name: 'Verified 3.0', Icon: PatronLv3BadgeIcon },
+        { name: 'Developer 3.0', Icon: PioneerLv3BadgeIcon },
+        { name: 'Meme Creator Lvl 3', Icon: MemeCreatorLv3BadgeIcon },
+        { name: 'Beta Tester Lvl 3', Icon: BetaTesterLv3BadgeIcon },
+        { name: 'Bot Lvl 3', Icon: BotLv3BadgeIcon },
+    ],
+    "Level 4 (Ruby)": [
+        { name: 'Ruby Creator', Icon: RubyCreatorIcon },
+        { name: 'Ruby VIP', Icon: RubyVipIcon },
+        { name: 'Ruby Verified', Icon: RubyVerifiedIcon },
+        { name: 'Ruby Developer', Icon: RubyDeveloperIcon },
+        { name: 'Ruby Meme Creator', Icon: RubyMemeCreatorIcon },
+        { name: 'Ruby Beta Tester', Icon: RubyBetaTesterIcon },
+        { name: 'Ruby Bot', Icon: RubyBotIcon },
+    ],
+     "Level 5 (Emerald)": [
+        { name: 'Emerald Creator', Icon: EmeraldCreatorIcon },
+        { name: 'Emerald VIP', Icon: EmeraldVipIcon },
+        { name: 'Emerald Verified', Icon: EmeraldVerifiedIcon },
+        { name: 'Emerald Developer', Icon: EmeraldDeveloperIcon },
+        { name: 'Emerald Meme Creator', Icon: EmeraldMemeCreatorIcon },
+        { name: 'Emerald Beta Tester', Icon: EmeraldBetaTesterIcon },
+        { name: 'Emerald Bot', Icon: EmeraldBotIcon },
+    ],
+    "Special Icons": [
+        { name: 'Blue Bird', Icon: OutlineBirdIcon },
+        { name: 'Green Leaf', Icon: ColoredLeaf },
+        { name: 'Bot Badge', Icon: SquareBotBadgeIcon },
+    ]
+}
+
+const IconCard = ({ name, Icon }: { name: string, Icon: React.FC<any> }) => (
+    <div className="flex flex-col items-center justify-center gap-2 p-3 border rounded-lg bg-secondary/50">
+        <Icon className="h-8 w-8" />
+        <span className="text-xs text-muted-foreground text-center">{name}</span>
+    </div>
+);
+
+
 export function AboutDialog({ isOpen, onOpenChange }: AboutDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
         <DialogHeader className="p-6 pb-4 items-center text-center bg-gradient-to-br from-primary/10 to-accent/20 border-b">
           <div className="p-3 rounded-full bg-background/50 border shadow-sm mb-2">
             <Logo className="h-10" />
@@ -38,7 +129,7 @@ export function AboutDialog({ isOpen, onOpenChange }: AboutDialogProps) {
 
         <Tabs defaultValue="about" className="w-full">
           <div className="px-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="about">
                 <Info className="mr-2 h-4 w-4" /> About
               </TabsTrigger>
@@ -47,6 +138,9 @@ export function AboutDialog({ isOpen, onOpenChange }: AboutDialogProps) {
               </TabsTrigger>
               <TabsTrigger value="history">
                 <History className="mr-2 h-4 w-4" /> History
+              </TabsTrigger>
+              <TabsTrigger value="icons">
+                <Star className="mr-2 h-4 w-4" /> Icons
               </TabsTrigger>
             </TabsList>
           </div>
@@ -97,6 +191,22 @@ export function AboutDialog({ isOpen, onOpenChange }: AboutDialogProps) {
                   Visit the Original Echo
                 </a>
             </div>
+          </TabsContent>
+          <TabsContent value="icons" className="px-6 py-4">
+             <ScrollArea className="h-64">
+                <div className="space-y-4">
+                    {Object.entries(iconGroups).map(([groupName, icons]) => (
+                        <div key={groupName}>
+                            <h3 className="text-sm font-semibold text-foreground mb-2">{groupName}</h3>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                {icons.map((icon, index) => (
+                                    <IconCard key={index} name={icon.name} Icon={icon.Icon} />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+             </ScrollArea>
           </TabsContent>
         </Tabs>
         

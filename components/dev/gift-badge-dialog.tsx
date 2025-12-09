@@ -1,4 +1,3 @@
-
 // src/components/dev/gift-badge-dialog.tsx
 'use client';
 
@@ -21,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import type { BadgeType } from '@/app/(app)/layout';
-import { CreatorLetterCBBadgeIcon } from '../chat/bot-icons';
+import { CreatorLetterCBBadgeIcon, PioneerBadgeIcon, PatronBadgeIcon } from '../chat/bot-icons';
 import { VerifiedBadge } from '../verified-badge';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
@@ -33,7 +32,7 @@ interface GiftBadgeDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const badgeComponentMap: Record<Exclude<BadgeType, 'pioneer' | 'patron' | 'feature_suggestion_approved'>, React.FC<{className?: string}>> = {
+const badgeComponentMap: Record<string, React.FC<{className?: string}>> = {
   creator: CreatorLetterCBBadgeIcon,
   vip: (props) => <Crown {...props} />,
   verified: VerifiedBadge,
@@ -41,9 +40,13 @@ const badgeComponentMap: Record<Exclude<BadgeType, 'pioneer' | 'patron' | 'featu
   bot: (props) => <Bot {...props} />,
   meme_creator: (props) => <SmilePlus {...props} />,
   beta_tester: (props) => <FlaskConical {...props} />,
+  pioneer: PioneerBadgeIcon,
+  patron: PatronBadgeIcon,
 };
 
 const giftableBadges: { value: BadgeType, label: string }[] = [
+    { value: 'pioneer', label: 'Developer 2.0' },
+    { value: 'patron', label: 'Verified 2.0' },
     { value: 'creator', label: 'Creator Badge' },
     { value: 'vip', label: 'VIP Badge' },
     { value: 'verified', label: 'Verified Badge' },
@@ -120,14 +123,14 @@ export function GiftBadgeDialog({ isOpen, onOpenChange }: GiftBadgeDialogProps) 
   const isSubmitDisabled = isGifting || isFindingUser || !selectedUser || !selectedBadge;
 
   const renderBadgeSelectItem = (badge: { value: BadgeType, label: string }) => {
-    const BadgeIcon = badgeComponentMap[badge.value as Exclude<BadgeType, 'pioneer' | 'patron' | 'feature_suggestion_approved'>];
+    const BadgeIcon = badgeComponentMap[badge.value as keyof typeof badgeComponentMap];
     return (
         <div className="flex items-center gap-2">
-            <BadgeIcon className={cn("h-4 w-4", 
+            {BadgeIcon && <BadgeIcon className={cn("h-4 w-4", 
                 badge.value === 'vip' && 'text-yellow-500', 
                 badge.value === 'meme_creator' && 'text-green-500', 
                 badge.value === 'beta_tester' && 'text-orange-500'
-            )} />
+            )} />}
             <span>{badge.label}</span>
         </div>
     );

@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -27,6 +28,25 @@
         "isVerified": {
           "type": "boolean",
           "description": "Indicates if the user is a verified user."
+        },
+        "starGems": {
+            "type": "number",
+            "description": "A special currency used for upgrading cosmetic items like badges."
+        },
+        "isCreatorLv2": {
+          "type": "boolean"
+        },
+        "isMemeCreatorLv2": {
+          "type": "boolean"
+        },
+        "isBetaTesterLv2": {
+          "type": "boolean"
+        },
+        "isPioneer": {
+          "type": "boolean"
+        },
+        "isPatron": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -130,7 +150,8 @@
           "type": "string",
           "enum": [
             "badge",
-            "points"
+            "points",
+            "starGems"
           ]
         },
         "badgeType": {
@@ -140,6 +161,10 @@
         "pointsAmount": {
           "type": "number",
           "description": "The amount of points, if the gift was points."
+        },
+        "starGemsAmount": {
+            "type": "number",
+            "description": "The amount of star gems, if the gift was star gems."
         },
         "timestamp": {
           "type": "string",
@@ -256,4 +281,3 @@
     "reasoning": "This Firestore structure prioritizes authorization independence and clarity for the ConnectVIP application, focusing on secure messaging and subscription management. It leverages path-based ownership for user data and denormalization for collaborative data access.\n\n*   **Users (Private Data):** User profiles are stored under `/users/{userId}`. This structure provides a clear ownership model. No denormalization is needed because access is based solely on `request.auth.uid == userId`.\n*   **Subscriptions (User-Owned Data):** Subscriptions are stored as subcollections under `/users/{userId}/subscriptions/{subscriptionId}`. This continues the path-based ownership, ensuring that only the user can manage their subscriptions.  No denormalization is needed because access is based solely on `request.auth.uid == userId`.\n*   **Messages (Collaborative Data):** Messages are stored in a `/messages` collection.  Each message includes `senderId` and `receiverId`. Security rules will enforce that only the sender or receiver can read the message. While it might be tempting to create subcollections under users, flattening into a single `messages` collection avoids complex fan-out writes when a user has a large number of messages and simplifies queries.\n*   **Verified Users (Global Roles):**  A dedicated collection `/verified_users/{userId}` stores IDs of verified users. The *existence* of a document in this collection grants verified status.  This is much better than storing a `verified` boolean in the user document since it allows admins to easily manage the status without modifying the user document itself. Security rules will check for the existence of this document to grant access to VIP features.\n\n**Authorization Independence (CRITICAL):**  All authorization checks rely on `request.auth.uid` and data within the document being accessed.  There are NO `get()` calls to parent documents to determine access.  The membership map pattern in messages ensures users can only read messages they are a part of without needing to check user roles.\n\n**QAPs Support:**\n*   Secure List operations are enabled because collections are segregated based on access needs.  Listing users, for example, does not require filtering based on roles.\n*   The existence check pattern used for `/verified_users` allows for secure `list` operations. Admins can list verified users, and the rules will ensure that only admins have read access to this collection."
   }
 }
-    

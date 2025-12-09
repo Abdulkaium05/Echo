@@ -1,3 +1,4 @@
+
 // src/services/firestore.ts
 import { 
     doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp,
@@ -62,9 +63,10 @@ export interface Gift {
     id: string;
     senderId: string;
     receiverId: string;
-    giftType: 'badge' | 'points' | 'feature_suggestion_approved';
+    giftType: 'badge' | 'points' | 'starGems' | 'feature_suggestion_approved';
     badgeType?: BadgeType;
     pointsAmount?: number;
+    starGemsAmount?: number;
     timestamp: Timestamp;
 }
 
@@ -185,13 +187,17 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfile>)
         ...data,
         lastSeen: serverTimestamp()
     };
-    updateDoc(userRef, updateData).catch(error => {
+    try {
+        await updateDoc(userRef, updateData);
+    } catch (error) {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: userRef.path,
         operation: 'update',
         requestResourceData: updateData
       }));
-    });
+      // Re-throw the error so the calling function knows the update failed
+      throw error;
+    }
 };
 
 export const getNewestUsers = async (count: number): Promise<UserProfile[]> => {
@@ -490,21 +496,35 @@ export const giftBadge = async (senderUid: string, recipientUid: string, badge: 
     
     const expiryTimestamp = durationDays ? Date.now() + durationDays * 24 * 60 * 60 * 1000 : null;
 
-    const updateData = {
+    const updateData: Partial<UserProfile> & { [key: string]: any } = {
         [badgeKey]: true,
         hasNewGift: true,
         giftedByUid: senderUid,
         lastGiftedBadge: badge,
-        [`badgeExpiry.${badge}`]: expiryTimestamp,
     };
     
-    updateDoc(recipientRef, updateData).catch(error => {
+    if (expiryTimestamp !== null) {
+        updateData.badgeExpiry = {
+            ...((await getUserProfile(recipientUid))?.badgeExpiry || {}),
+            [badge]: expiryTimestamp,
+        };
+    } else {
+         updateData.badgeExpiry = {
+            ...((await getUserProfile(recipientUid))?.badgeExpiry || {}),
+            [badge]: null, // Explicitly set to null for lifetime
+        };
+    }
+
+    try {
+        await updateDoc(recipientRef, updateData);
+    } catch (error) {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: recipientRef.path,
         operation: 'update',
         requestResourceData: updateData
       }));
-    });
+      throw error;
+    }
 };
 
 
@@ -628,13 +648,15 @@ export const redeemBadgeGiftCode = async (uid: string, code: string): Promise<{ 
     if (userProfile) {
         const badgeKey = `is${promo.badgeType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('')}` as keyof UserProfile;
         const expiryTimestamp = Date.now() + promo.durationDays * 24 * 60 * 60 * 1000;
-        await updateUserProfile(uid, { 
+        
+        const updateData: Partial<UserProfile> = { 
             [badgeKey]: true,
             badgeExpiry: {
                 ...userProfile.badgeExpiry,
                 [promo.badgeType]: expiryTimestamp,
             },
-        });
+        };
+        await updateUserProfile(uid, updateData);
         await updateDoc(promoRef, { [`claimedBy.${uid}`]: (promo.claimedBy[uid] || 0) + 1 });
     }
     return { badgeType: promo.badgeType, durationDays: promo.durationDays };
@@ -704,6 +726,41 @@ export const giftPoints = async (senderUid: string, recipientUid: string, amount
         throw new Error("Failed to commit points transaction due to permissions.");
     });
 }
+
+export const giftStarGems = async (senderUid: string, recipientUid: string, amount: number) => {
+    const senderRef = doc(firestore, 'users', senderUid);
+    const recipientRef = doc(firestore, 'users', recipientUid);
+    const batch = writeBatch(firestore);
+
+    const senderSnap = await getDoc(senderRef);
+    if (!senderSnap.exists()) throw new Error("Sender not found.");
+    const sender = senderSnap.data() as UserProfile;
+    if ((sender.starGems || 0) < amount) throw new Error("Insufficient Star Gems.");
+
+    batch.update(senderRef, { starGems: (sender.starGems || 0) - amount });
+
+    const recipientSnap = await getDoc(recipientRef);
+    if (!recipientSnap.exists()) throw new Error("Recipient not found.");
+    const recipient = recipientSnap.data() as UserProfile;
+
+    batch.update(recipientRef, { 
+        starGems: (recipient.starGems || 0) + amount,
+        // We can reuse the points gift notification system for star gems if we want, or create a new one.
+        // For now, let's just update the balance.
+    });
+    
+    await batch.commit().catch(error => {
+        console.error("Batch write failed in giftStarGems:", error);
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: `users/${recipientUid}`,
+            operation: 'update',
+            requestResourceData: { 
+                starGems: (recipient.starGems || 0) + amount,
+            }
+        }));
+        throw new Error("Failed to commit star gems transaction due to permissions.");
+    });
+};
 
 export const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
   if (!timestamp || typeof timestamp.toDate !== 'function') return '';

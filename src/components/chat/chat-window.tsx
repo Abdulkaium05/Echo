@@ -1,4 +1,3 @@
-
 // src/components/chat/chat-window.tsx
 'use client';
 
@@ -41,7 +40,7 @@ import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { UserProfileDialog } from '@/components/profile/user-profile-dialog';
 import { cn } from "@/lib/utils";
-import { OutlineBirdIcon, SquareBotBadgeIcon, CreatorLetterCBBadgeIcon } from './bot-icons'; // Changed import
+import { OutlineBirdIcon, SquareBotBadgeIcon, CreatorLetterCBBadgeIcon, CreatorLv2BadgeIcon, MemeCreatorLv2BadgeIcon, BetaTesterLv2BadgeIcon } from './bot-icons'; // Changed import
 import { useMusicPlayer, type SavedSong } from '@/context/music-player-context';
 import { AudioCallDialog } from './audio-call-dialog'; // Import the new component
 import { useSound } from '@/context/sound-context';
@@ -51,7 +50,7 @@ import { useTrash } from '@/context/trash-context';
 import { useRouter } from 'next/navigation';
 import type { BadgeType } from '@/app/(app)/layout';
 
-const BadgeComponents: Record<Exclude<BadgeType, 'feature_suggestion_approved'>, React.FC<{className?: string}>> = {
+const BadgeComponents: Record<string, React.FC<{className?: string}>> = {
     creator: ({className}) => <CreatorLetterCBBadgeIcon className={cn("h-4 w-4", className)} />,
     vip: ({className}) => <Crown className={cn("h-4 w-4 text-yellow-500", className)} />,
     verified: ({className}) => <VerifiedBadge className={cn("h-4 w-4", className)} />,
@@ -59,6 +58,9 @@ const BadgeComponents: Record<Exclude<BadgeType, 'feature_suggestion_approved'>,
     bot: ({className}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} />,
     meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
     beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
+    creator_lv2: ({className}) => <CreatorLv2BadgeIcon className={cn("h-4 w-4", className)} />,
+    meme_creator_lv2: ({className}) => <MemeCreatorLv2BadgeIcon className={cn("h-4 w-4", className)} />,
+    beta_tester_lv2: ({className}) => <BetaTesterLv2BadgeIcon className={cn("h-4 w-4", className)} />,
 };
 
 
@@ -523,16 +525,21 @@ const orderedBadges = useMemo(() => {
     if (!partnerProfileDetails) return [];
     
     const earnedBadges: BadgeType[] = [];
-    if(partnerProfileDetails.isCreator) earnedBadges.push('creator');
+    if(partnerProfileDetails.isCreatorLv2) earnedBadges.push('creator_lv2');
+    else if(partnerProfileDetails.isCreator) earnedBadges.push('creator');
     if(partnerProfileDetails.isVIP) earnedBadges.push('vip');
-    if(partnerProfileDetails.isVerified) earnedBadges.push('verified');
-    if(partnerProfileDetails.isDevTeam) earnedBadges.push('dev');
+    if(partnerProfileDetails.isPatron) earnedBadges.push('patron');
+    else if(partnerProfileDetails.isVerified) earnedBadges.push('verified');
+    if(partnerProfileDetails.isPioneer) earnedBadges.push('pioneer');
+    else if(partnerProfileDetails.isDevTeam) earnedBadges.push('dev');
     if(partnerProfileDetails.isBot) earnedBadges.push('bot');
-    if(partnerProfileDetails.isMemeCreator) earnedBadges.push('meme_creator');
-    if(partnerProfileDetails.isBetaTester) earnedBadges.push('beta_tester');
+    if(partnerProfileDetails.isMemeCreatorLv2) earnedBadges.push('meme_creator_lv2');
+    else if(partnerProfileDetails.isMemeCreator) earnedBadges.push('meme_creator');
+    if(partnerProfileDetails.isBetaTesterLv2) earnedBadges.push('beta_tester_lv2');
+    else if(partnerProfileDetails.isBetaTester) earnedBadges.push('beta_tester');
 
 
-    const badgeDisplayOrder = partnerProfileDetails.badgeOrder?.length ? partnerProfileDetails.badgeOrder : ['creator', 'vip', 'verified', 'dev', 'bot', 'meme_creator', 'beta_tester'];
+    const badgeDisplayOrder = partnerProfileDetails.badgeOrder?.length ? partnerProfileDetails.badgeOrder : ['pioneer', 'patron', 'creator_lv2', 'creator', 'dev', 'verified', 'vip', 'bot', 'meme_creator_lv2', 'meme_creator', 'beta_tester_lv2', 'beta_tester'];
     return badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 }, [partnerProfileDetails]);
 

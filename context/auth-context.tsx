@@ -230,6 +230,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email,
         avatarUrl: 'default-avatar',
         points: 0,
+        starGems: 0,
         isVIP: false,
         isVerified: false,
         isCreator: false,

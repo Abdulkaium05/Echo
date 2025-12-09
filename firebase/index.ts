@@ -28,9 +28,14 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
-  const messaging = typeof window !== 'undefined'
-    ? getMessaging(firebaseApp)
-    : undefined;
+  let messaging;
+  if (typeof window !== 'undefined') {
+    try {
+      messaging = getMessaging(firebaseApp);
+    } catch (e) {
+      console.error('Failed to initialize Firebase Messaging', e);
+    }
+  }
 
   return {
     firebaseApp,

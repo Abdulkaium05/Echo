@@ -207,6 +207,7 @@ export default function SettingsPage() {
             const { messaging } = initializeFirebase();
             if (!messaging) {
               console.error("Firebase Messaging not initialized.");
+              toast({ title: "Error", description: "Messaging service not available.", variant: "destructive"});
               return;
             }
             const fcmToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY });
@@ -220,6 +221,7 @@ export default function SettingsPage() {
                 console.log("FCM Token saved:", fcmToken);
             } else {
                 console.log('No registration token available. Request permission to generate one.');
+                toast({ title: "Could not get token", description: "Please try enabling notifications again.", variant: "destructive" });
             }
         } else {
             setNotificationsEnabled(false);
