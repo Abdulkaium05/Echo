@@ -16,7 +16,7 @@ import { useAuth } from '@/context/auth-context';
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { login, sendPasswordReset, loading: authLoadingState, user } = useAuth();
+  const { login, loading: authLoadingState, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -73,34 +73,6 @@ export default function LoginPage() {
     }
   };
 
-   const handlePasswordReset = async () => {
-      if (!email) {
-          toast({
-              title: "Email Required",
-              description: "Please enter your email address in the email field to receive a password reset link.",
-              variant: "destructive",
-              duration: 5000,
-          });
-          return;
-      }
-      setIsLoading(true);
-      const { success, message } = await sendPasswordReset(email);
-      if (success) {
-        toast({
-          title: "Password Reset Email Sent",
-          description: message,
-        });
-      } else {
-        toast({
-          title: "Password Reset Failed",
-          description: message,
-          variant: "destructive",
-        });
-      }
-      setIsLoading(false);
-  };
-
-
   return (
     <div className="flex items-center justify-center min-h-screen bg-auth-gradient p-4">
       <Card className="w-full max-w-md shadow-lg">
@@ -132,10 +104,9 @@ export default function LoginPage() {
                      type="button"
                      variant="link"
                      className="text-xs h-auto p-0 text-primary hover:underline"
-                     onClick={handlePasswordReset}
-                     disabled={isLoading || !email || authLoadingState}
+                     asChild
                     >
-                     Forgot Password?
+                     <Link href="/forgot-password">Forgot Password?</Link>
                   </Button>
                 </div>
               <Input

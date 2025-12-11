@@ -40,7 +40,7 @@ import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { UserProfileDialog } from '@/components/profile/user-profile-dialog';
 import { cn } from "@/lib/utils";
-import { OutlineBirdIcon, SquareBotBadgeIcon, CreatorLetterCBBadgeIcon, CreatorLv2BadgeIcon, MemeCreatorLv2BadgeIcon, BetaTesterLv2BadgeIcon } from './bot-icons'; // Changed import
+import { OutlineBirdIcon, SquareBotBadgeIcon, CreatorLetterCBBadgeIcon, CreatorLv2BadgeIcon, MemeCreatorLv2BadgeIcon, BetaTesterLv2BadgeIcon, PioneerBadgeIcon, PatronBadgeIcon } from './bot-icons'; // Changed import
 import { useMusicPlayer, type SavedSong } from '@/context/music-player-context';
 import { AudioCallDialog } from './audio-call-dialog'; // Import the new component
 import { useSound } from '@/context/sound-context';
@@ -61,6 +61,8 @@ const BadgeComponents: Record<string, React.FC<{className?: string}>> = {
     creator_lv2: ({className}) => <CreatorLv2BadgeIcon className={cn("h-4 w-4", className)} />,
     meme_creator_lv2: ({className}) => <MemeCreatorLv2BadgeIcon className={cn("h-4 w-4", className)} />,
     beta_tester_lv2: ({className}) => <BetaTesterLv2BadgeIcon className={cn("h-4 w-4", className)} />,
+    pioneer: ({className}) => <PioneerBadgeIcon className={cn("h-4 w-4", className)} />,
+    patron: ({className}) => <PatronBadgeIcon className={cn("h-4 w-4", className)} />,
 };
 
 
@@ -525,21 +527,20 @@ const orderedBadges = useMemo(() => {
     if (!partnerProfileDetails) return [];
     
     const earnedBadges: BadgeType[] = [];
+    if(partnerProfileDetails.isCreator) earnedBadges.push('creator');
     if(partnerProfileDetails.isCreatorLv2) earnedBadges.push('creator_lv2');
-    else if(partnerProfileDetails.isCreator) earnedBadges.push('creator');
     if(partnerProfileDetails.isVIP) earnedBadges.push('vip');
     if(partnerProfileDetails.isPatron) earnedBadges.push('patron');
     else if(partnerProfileDetails.isVerified) earnedBadges.push('verified');
     if(partnerProfileDetails.isPioneer) earnedBadges.push('pioneer');
     else if(partnerProfileDetails.isDevTeam) earnedBadges.push('dev');
-    if(partnerProfileDetails.isBot) earnedBadges.push('bot');
     if(partnerProfileDetails.isMemeCreatorLv2) earnedBadges.push('meme_creator_lv2');
     else if(partnerProfileDetails.isMemeCreator) earnedBadges.push('meme_creator');
     if(partnerProfileDetails.isBetaTesterLv2) earnedBadges.push('beta_tester_lv2');
     else if(partnerProfileDetails.isBetaTester) earnedBadges.push('beta_tester');
+    if(partnerProfileDetails.isBot) earnedBadges.push('bot');
 
-
-    const badgeDisplayOrder = partnerProfileDetails.badgeOrder?.length ? partnerProfileDetails.badgeOrder : ['pioneer', 'patron', 'creator_lv2', 'creator', 'dev', 'verified', 'vip', 'bot', 'meme_creator_lv2', 'meme_creator', 'beta_tester_lv2', 'beta_tester'];
+    const badgeDisplayOrder = partnerProfileDetails.badgeOrder || [];
     return badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 }, [partnerProfileDetails]);
 
