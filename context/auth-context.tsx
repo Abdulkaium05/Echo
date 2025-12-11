@@ -26,6 +26,8 @@ import type { UserProfile } from '@/types/user';
 
 const { firebaseApp, auth: firebaseAuth, firestore: firebaseFirestore, storage: firebaseStorage } = initializeFirebase();
 
+const USER_PROFILE_CACHE_KEY = 'echo_user_profile_cache';
+
 export interface GiftInfo {
   gifterProfile: UserProfile | null;
   giftedBadge: BadgeType | null;
@@ -68,6 +70,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [pointsGiftInfo, setPointsGiftInfo] = useState<PointsGiftInfo>({ gifterProfile: null, giftedPointsAmount: null });
 
   const { toast } = useToast();
+  
+  // Effect to load user profile from cache on initial mount
+  useEffect(() => {
+    try {
+        const cachedProfile = localStorage.getItem(USER_PROFILE_CACHE_KEY);
+        if (cachedProfile) {
+            const profile = JSON.parse(cachedProfile);
+            // We set the profile, but keep loading states true until auth is confirmed.
+            setUserProfile(profile);
+        }
+    } catch (e) {
+        console.error("Failed to load user profile from cache", e);
+    }
+  }, []);
 
   const updateUserProfile = useCallback(
     async (data: Partial<UserProfile>) => {
@@ -76,18 +92,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("User not authenticated.");
       }
       await updateUserInFirestore(currentUser.uid, data);
-      setUserProfile(prev => (prev ? { ...prev, ...data } : null));
+      
+      const newProfile = (prev: UserProfile | null) => (prev ? { ...prev, ...data } : null);
+      setUserProfile(newProfile);
+      
+      // Update cache
+      if (newProfile) {
+          try {
+              const profileToCache = newProfile(userProfile);
+              if (profileToCache) {
+                // We need to handle non-serializable fields like Timestamps before caching
+                const serializableProfile = JSON.parse(JSON.stringify({
+                    ...profileToCache,
+                    lastSeen: profileToCache.lastSeen?.seconds,
+                    createdAt: profileToCache.createdAt?.seconds,
+                }));
+                localStorage.setItem(USER_PROFILE_CACHE_KEY, JSON.stringify(serializableProfile));
+              }
+          } catch(e) {
+              console.error("Failed to cache updated user profile", e);
+          }
+      }
     },
-    []
+    [userProfile]
   );
   
     const processLogin = useCallback(async (firebaseUser: User) => {
-    // This now only handles profile fetching and processing. Loading state is managed by the effect.
     try {
         const profile = await getUserProfile(firebaseUser.uid);
         if (!profile) {
             console.error('User profile missing for UID:', firebaseUser.uid);
             setUserProfile(null);
+            localStorage.removeItem(USER_PROFILE_CACHE_KEY);
             return;
         }
 
@@ -158,6 +194,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         localProfile = { ...localProfile, ...updatedProfileData, lastSeen: Timestamp.now() };
         setUserProfile(localProfile);
+        
+        try {
+            // Firestore Timestamps are not directly serializable for localStorage
+            const serializableProfile = JSON.parse(JSON.stringify({
+                ...localProfile,
+                lastSeen: localProfile.lastSeen?.seconds,
+                createdAt: localProfile.createdAt?.seconds,
+            }));
+            localStorage.setItem(USER_PROFILE_CACHE_KEY, JSON.stringify(serializableProfile));
+        } catch(e) {
+            console.error("Failed to cache user profile", e);
+        }
 
         if (needsServerUpdate) {
             await updateUserInFirestore(firebaseUser.uid, updatedProfileData);
@@ -166,6 +214,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
         console.error("Error during login processing:", error);
         setUserProfile(null);
+        localStorage.removeItem(USER_PROFILE_CACHE_KEY);
     }
   }, [setGiftInfo, setPointsGiftInfo]);
 
@@ -179,16 +228,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
       setLoading(true);
-      setIsUserProfileLoading(true);
+      // We set profile loading true here, even if we have a cache, 
+      // because we always want to fetch fresh data.
+      setIsUserProfileLoading(true); 
       setUser(firebaseUser);
 
       if (firebaseUser) {
         await processLogin(firebaseUser);
       } else {
         setUserProfile(null);
+        localStorage.removeItem(USER_PROFILE_CACHE_KEY);
       }
       
-      // Only finish loading after all checks are done.
+      // Finish loading after all checks are done.
       setIsUserProfileLoading(false);
       setLoading(false);
     });
