@@ -117,23 +117,28 @@ export function ChatItem(props: ChatItemProps) {
   };
 
   const fallbackInitials = name.substring(0, 2).toUpperCase();
+  
+  let orderedBadges: BadgeType[] = [];
 
-  const earnedBadges: BadgeType[] = [];
-  if(isCreator) earnedBadges.push('creator');
-  if(isCreatorLv2) earnedBadges.push('creator_lv2');
-  if(isContactVIP) earnedBadges.push('vip');
-  if(isPatron) earnedBadges.push('patron');
-  else if(isVerified) earnedBadges.push('verified');
-  if(isPioneer) earnedBadges.push('pioneer');
-  else if(isDevTeam) earnedBadges.push('dev');
-  if(isBot) earnedBadges.push('bot');
-  if(isMemeCreatorLv2) earnedBadges.push('meme_creator_lv2');
-  else if(isMemeCreator) earnedBadges.push('meme_creator');
-  if(isBetaTesterLv2) earnedBadges.push('beta_tester_lv2');
-  else if(isBetaTester) earnedBadges.push('beta_tester');
+  if (isBot) {
+    orderedBadges = ['bot'];
+  } else {
+    const earnedBadges: BadgeType[] = [];
+    if(isCreator) earnedBadges.push('creator');
+    if(isCreatorLv2) earnedBadges.push('creator_lv2');
+    if(isContactVIP) earnedBadges.push('vip');
+    if(isPatron) earnedBadges.push('patron');
+    else if(isVerified) earnedBadges.push('verified');
+    if(isPioneer) earnedBadges.push('pioneer');
+    else if(isDevTeam) earnedBadges.push('dev');
+    if(isMemeCreatorLv2) earnedBadges.push('meme_creator_lv2');
+    else if(isMemeCreator) earnedBadges.push('meme_creator');
+    if(isBetaTesterLv2) earnedBadges.push('beta_tester_lv2');
+    else if(isBetaTester) earnedBadges.push('beta_tester');
 
-  const badgeDisplayOrder = badgeOrder?.length ? badgeOrder : [];
-  const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
+    const badgeDisplayOrder = badgeOrder?.length ? badgeOrder : [];
+    orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
+  }
 
 
   const renderAvatarOrIcon = () => {

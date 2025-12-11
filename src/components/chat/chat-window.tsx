@@ -526,6 +526,10 @@ const ColorOption = ({ colorValue, colorClass, name, onSelect }: { colorValue: s
 const orderedBadges = useMemo(() => {
     if (!partnerProfileDetails) return [];
     
+    if (partnerProfileDetails.isBot) {
+        return ['bot'];
+    }
+
     const earnedBadges: BadgeType[] = [];
     if(partnerProfileDetails.isCreator) earnedBadges.push('creator');
     if(partnerProfileDetails.isCreatorLv2) earnedBadges.push('creator_lv2');
@@ -538,7 +542,6 @@ const orderedBadges = useMemo(() => {
     else if(partnerProfileDetails.isMemeCreator) earnedBadges.push('meme_creator');
     if(partnerProfileDetails.isBetaTesterLv2) earnedBadges.push('beta_tester_lv2');
     else if(partnerProfileDetails.isBetaTester) earnedBadges.push('beta_tester');
-    if(partnerProfileDetails.isBot) earnedBadges.push('bot');
 
     const badgeDisplayOrder = partnerProfileDetails.badgeOrder || [];
     return badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
@@ -560,7 +563,7 @@ const orderedBadges = useMemo(() => {
              <p className="text-sm font-medium text-foreground truncate whitespace-nowrap">{chatName}</p>
             {isChattingWithBot ? (
               <>
-                {aiPersona === 'green-leaf' && <Leaf className="h-4 w-4 text-green-500" />}
+                {aiPersona === 'green-leaf' && <SquareBotBadgeIcon className="text-green-500"/>}
                 {aiPersona === 'blue-bird' && <SquareBotBadgeIcon />}
                 {aiPersona === 'echo-bot' && <Bot className="h-4 w-4 text-foreground/70" />}
               </>

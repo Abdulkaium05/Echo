@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Gem, Code, Gift, Lightbulb, Badge, Star, Mail } from 'lucide-react';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Gem, Code, Gift, Lightbulb, Badge, Star, Mail, RefreshCw } from 'lucide-react';
 import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon, PioneerBadgeIcon, PatronBadgeIcon, CreatorLv2BadgeIcon, MemeCreatorLv2BadgeIcon, BetaTesterLv2BadgeIcon, BotLv2BadgeIcon, PioneerLv3BadgeIcon, PatronLv3BadgeIcon, CreatorLv3BadgeIcon, VipLv3BadgeIcon, MemeCreatorLv3BadgeIcon, BetaTesterLv3BadgeIcon, BotLv3BadgeIcon, RubyCreatorIcon, RubyVipIcon, RubyVerifiedIcon, RubyDeveloperIcon, RubyMemeCreatorIcon, RubyBetaTesterIcon, RubyBotIcon, EmeraldCreatorIcon, EmeraldVipIcon, EmeraldVerifiedIcon, EmeraldDeveloperIcon, EmeraldMemeCreatorIcon, EmeraldBetaTesterIcon, EmeraldBotIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
@@ -159,6 +159,10 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
              <Info className="mr-2 h-4 w-4" />
              <span>About</span>
            </DropdownMenuItem>
+           <DropdownMenuItem onClick={() => window.location.reload()}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                <span>Reload App</span>
+            </DropdownMenuItem>
          <DropdownMenuItem onClick={onLogout}>
            <LogOut className="mr-2 h-4 w-4" />
            <span>Log out</span>
@@ -279,10 +283,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     const hasNewGift = currentUserProfile?.hasNewGift || currentUserProfile?.hasNewPointsGift;
-    const isCurrentlyOnChatPage = /^\/chat(\/.*)?$/.test(pathname);
-
-    const LogoWrapper = isCurrentlyOnChatPage ? 'div' : Link;
-    const logoProps = isCurrentlyOnChatPage ? {} : { href: '/chat' };
+    const LogoWrapper = Link;
+    const logoProps = { href: '/chat' };
 
   return (
     <>
