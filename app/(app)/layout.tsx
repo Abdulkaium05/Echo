@@ -7,8 +7,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Gem, Code, Gift, Lightbulb, Badge, Star } from 'lucide-react';
-import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon, PioneerBadgeIcon, PatronBadgeIcon, CreatorLv2BadgeIcon, MemeCreatorLv2BadgeIcon, BetaTesterLv2BadgeIcon, BotLv2BadgeIcon, PioneerLv3BadgeIcon, PatronLv3BadgeIcon, CreatorLv3BadgeIcon, VipLv3BadgeIcon, MemeCreatorLv3BadgeIcon, BetaTesterLv3BadgeIcon, BotLv3BadgeIcon } from '@/components/chat/bot-icons';
+import { Crown, Settings, User, LogOut, Palette, Edit, MessageSquare, Loader2, Bell, Bot, Wrench, Info, QrCode, Camera, Coins, History, SmilePlus, FlaskConical, Gem, Code, Gift, Lightbulb, Badge, Star, Mail } from 'lucide-react';
+import { CreatorLetterCBBadgeIcon, SquareBotBadgeIcon, PioneerBadgeIcon, PatronBadgeIcon, CreatorLv2BadgeIcon, MemeCreatorLv2BadgeIcon, BetaTesterLv2BadgeIcon, BotLv2BadgeIcon, PioneerLv3BadgeIcon, PatronLv3BadgeIcon, CreatorLv3BadgeIcon, VipLv3BadgeIcon, MemeCreatorLv3BadgeIcon, BetaTesterLv3BadgeIcon, BotLv3BadgeIcon, RubyCreatorIcon, RubyVipIcon, RubyVerifiedIcon, RubyDeveloperIcon, RubyMemeCreatorIcon, RubyBetaTesterIcon, RubyBotIcon, EmeraldCreatorIcon, EmeraldVipIcon, EmeraldVerifiedIcon, EmeraldDeveloperIcon, EmeraldMemeCreatorIcon, EmeraldBetaTesterIcon, EmeraldBotIcon } from '@/components/chat/bot-icons';
 import { ChatList } from '@/components/chat/chat-list';
 import { cn } from '@/lib/utils';
 import { ProfileSettingsDialog } from '@/components/settings/profile-settings-dialog';
@@ -19,7 +19,6 @@ import { useAuth, type UserProfile } from '@/context/auth-context';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { NotificationPopover } from '@/components/chat/notification-popover';
 import { ShareProfileDialog } from '@/components/profile/share-profile-dialog';
-import { GiftBadgeDialog } from '@/components/dev/gift-badge-dialog';
 import { GiftReceivedDialog } from '@/components/dev/gift-received-dialog';
 import { ScanQrDialog } from '@/components/chat/scan-qr-dialog';
 import { PointsReceivedDialog } from '@/components/dev/points-received-dialog';
@@ -31,31 +30,30 @@ import { SuggestionApprovedDialog } from '@/components/profile/suggestion-approv
 export type BadgeType = 'creator' | 'vip' | 'verified' | 'dev' | 'bot' | 'meme_creator' | 'beta_tester' | 'feature_suggestion_approved' | 'pioneer' | 'patron' | 'creator_lv2' | 'meme_creator_lv2' | 'beta_tester_lv2';
 export type BadgeColor = 'sky-blue' | 'light-green' | 'red' | 'orange' | 'yellow' | 'purple' | 'pink' | 'indigo' | 'teal' | 'white' | 'black';
 
-const BadgeComponents: Record<BadgeType, React.FC<{className?: string}>> = {
-    creator: ({className}) => <CreatorLetterCBBadgeIcon className={cn("h-4 w-4", className)} />,
+const BadgeComponents: Record<string, React.FC<{className?: string}>> = {
+    creator: CreatorLetterCBBadgeIcon,
+    creator_lv2: CreatorLv2BadgeIcon,
     vip: ({className}) => <Crown className={cn("h-4 w-4 text-yellow-500", className)} />,
-    verified: ({className}) => <VerifiedBadge className={cn("h-4 w-4", className)} />,
+    verified: VerifiedBadge,
     dev: ({className}) => <Wrench className={cn("h-4 w-4 text-blue-600", className)} />,
-    bot: ({className}) => <SquareBotBadgeIcon className={cn("h-4 w-4", className)} />,
+    bot: SquareBotBadgeIcon,
     meme_creator: ({className}) => <SmilePlus className={cn("h-4 w-4 text-green-500", className)} />,
+    meme_creator_lv2: MemeCreatorLv2BadgeIcon,
     beta_tester: ({className}) => <FlaskConical className={cn("h-4 w-4 text-orange-500", className)} />,
+    beta_tester_lv2: BetaTesterLv2BadgeIcon,
+    pioneer: PioneerBadgeIcon,
+    patron: PatronBadgeIcon,
     feature_suggestion_approved: ({className}) => <Lightbulb className={cn("h-4 w-4 text-primary", className)} />,
-    pioneer: ({className}) => <PioneerBadgeIcon className={cn("h-4 w-4", className)} />,
-    patron: ({className}) => <PatronBadgeIcon className={cn("h-4 w-4", className)} />,
-    creator_lv2: ({className}) => <CreatorLv2BadgeIcon className={cn("h-4 w-4", className)} />,
-    meme_creator_lv2: ({className}) => <MemeCreatorLv2BadgeIcon className={cn("h-4 w-4", className)} />,
-    beta_tester_lv2: ({className}) => <BetaTesterLv2BadgeIcon className={cn("h-4 w-4", className)} />,
 };
 
 
-function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenGiftBadgeDialog, onOpenScanQrDialog, onOpenGiftHistoryDialog }: { 
+function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSettings, onOpenAboutDialog, onOpenShareProfileDialog, onOpenScanQrDialog, onOpenGiftHistoryDialog }: { 
     user: UserProfile, 
     onLogout: () => void, 
     onOpenProfileSettings: () => void,
     onOpenAppearanceSettings: () => void,
     onOpenAboutDialog: () => void,
     onOpenShareProfileDialog: () => void;
-    onOpenGiftBadgeDialog: () => void;
     onOpenScanQrDialog: () => void;
     onOpenGiftHistoryDialog: () => void;
 }) {
@@ -63,26 +61,20 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
    const fallbackInitials = user.name ? user.name.substring(0, 2).toUpperCase() : '??';
 
    const earnedBadges: BadgeType[] = [];
-   if(user.isCreatorLv2) earnedBadges.push('creator_lv2');
-   else if(user.isCreator) earnedBadges.push('creator');
-   
-   if(user.isVIP) earnedBadges.push('vip');
+    if(user.isCreator) earnedBadges.push('creator');
+    if(user.isCreatorLv2) earnedBadges.push('creator_lv2');
+    if(user.isVIP) earnedBadges.push('vip');
+    if(user.isPatron) earnedBadges.push('patron');
+    else if(user.isVerified) earnedBadges.push('verified');
+    if(user.isPioneer) earnedBadges.push('pioneer');
+    else if(user.isDevTeam) earnedBadges.push('dev');
+    if(user.isMemeCreatorLv2) earnedBadges.push('meme_creator_lv2');
+    else if(user.isMemeCreator) earnedBadges.push('meme_creator');
+    if(user.isBetaTesterLv2) earnedBadges.push('beta_tester_lv2');
+    else if(user.isBetaTester) earnedBadges.push('beta_tester');
+    if(user.isBot) earnedBadges.push('bot');
 
-   if(user.isPatron) earnedBadges.push('patron');
-   else if(user.isVerified) earnedBadges.push('verified');
-   
-   if(user.isPioneer) earnedBadges.push('pioneer');
-   else if(user.isDevTeam) earnedBadges.push('dev');
-
-   if(user.isMemeCreatorLv2) earnedBadges.push('meme_creator_lv2');
-   else if(user.isMemeCreator) earnedBadges.push('meme_creator');
-
-   if(user.isBetaTesterLv2) earnedBadges.push('beta_tester_lv2');
-   else if(user.isBetaTester) earnedBadges.push('beta_tester');
-
-   if(user.isBot) earnedBadges.push('bot');
-
-   const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : allPossibleBadges;
+   const badgeDisplayOrder = user.badgeOrder?.length ? user.badgeOrder : [];
    const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
    const isDev = user.isDevTeam;
@@ -149,20 +141,12 @@ function UserMenu({ user, onLogout, onOpenProfileSettings, onOpenAppearanceSetti
                 <Coins className="mr-2 h-4 w-4" />
                 <span>Points</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onOpenGiftHistoryDialog}>
-                <History className="mr-2 h-4 w-4" />
-                <span>Gift History</span>
-            </DropdownMenuItem>
             {isDev && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => router.push('/dev-tools')}>
                   <Code className="mr-2 h-4 w-4" />
                   <span>Developer Tools</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onOpenGiftBadgeDialog}>
-                  <Badge className="mr-2 h-4 w-4" />
-                  <span>Gift a Badge</span>
                 </DropdownMenuItem>
               </>
             )}
@@ -195,7 +179,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isAppearanceDialogOpen, setAppearanceDialogOpen] = useState(false);
   const [isAboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [isShareProfileDialogOpen, setShareProfileDialogOpen] = useState(false);
-  const [isGiftBadgeDialogOpen, setIsGiftBadgeDialogOpen] = useState(false);
   const [isGiftReceivedDialogOpen, setIsGiftReceivedDialogOpen] = useState(false);
   const [isPointsReceivedDialogOpen, setIsPointsReceivedDialogOpen] = useState(false);
   const [isScanQrDialogOpen, setIsScanQrDialogOpen] = useState(false);
@@ -295,6 +278,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
          );
     }
 
+    const hasNewGift = currentUserProfile?.hasNewGift || currentUserProfile?.hasNewPointsGift;
+    const isCurrentlyOnChatPage = /^\/chat(\/.*)?$/.test(pathname);
+
+    const LogoWrapper = isCurrentlyOnChatPage ? 'div' : Link;
+    const logoProps = isCurrentlyOnChatPage ? {} : { href: '/chat' };
+
   return (
     <>
       <div className={cn(
@@ -302,10 +291,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           )}>
         <aside className="hidden md:flex md:flex-col w-80 border-r bg-secondary shrink-0">
            <div className="flex items-center justify-between p-4 border-b">
-               <Link href="/chat">
+               <LogoWrapper {...logoProps}>
                   <Logo className="h-8" />
-               </Link>
+               </LogoWrapper>
                 <div className="flex items-center gap-2">
+                   <Button variant="ghost" size="icon" className="relative h-8 w-8" onClick={() => setIsGiftHistoryDialogOpen(true)}>
+                     <Mail className="h-5 w-5" />
+                     {hasNewGift && (
+                        <span className="absolute top-0 right-0 flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                        </span>
+                     )}
+                   </Button>
                   <NotificationPopover />
                   {currentUserProfile && (
                     <UserMenu
@@ -315,7 +313,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         onOpenAppearanceSettings={() => setAppearanceDialogOpen(true)}
                         onOpenAboutDialog={() => setAboutDialogOpen(true)}
                         onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
-                        onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
                         onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
                         onOpenGiftHistoryDialog={() => setIsGiftHistoryDialogOpen(true)}
                     />
@@ -326,10 +323,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </aside>
 
         <header className="md:hidden flex items-center justify-between p-3 border-b bg-secondary sticky top-0 z-10 shrink-0">
-           <Link href="/chat">
+           <LogoWrapper {...logoProps}>
                <Logo className="h-8" />
-           </Link>
+           </LogoWrapper>
             <div className="flex items-center gap-2">
+               <Button variant="ghost" size="icon" className="relative h-8 w-8" onClick={() => setIsGiftHistoryDialogOpen(true)}>
+                 <Mail className="h-5 w-5" />
+                 {hasNewGift && (
+                    <span className="absolute top-0 right-0 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                    </span>
+                 )}
+               </Button>
               <NotificationPopover />
               {currentUserProfile && (
                 <UserMenu
@@ -339,7 +345,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     onOpenAppearanceSettings={() => setAppearanceDialogOpen(true)}
                     onOpenAboutDialog={() => setAboutDialogOpen(true)}
                     onOpenShareProfileDialog={() => setShareProfileDialogOpen(true)}
-                    onOpenGiftBadgeDialog={() => setIsGiftBadgeDialogOpen(true)}
                     onOpenScanQrDialog={() => setIsScanQrDialogOpen(true)}
                     onOpenGiftHistoryDialog={() => setIsGiftHistoryDialogOpen(true)}
                 />
@@ -396,10 +401,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             isOpen={isShareProfileDialogOpen}
             onOpenChange={setShareProfileDialogOpen}
             user={currentUserProfile}
-          />
-          <GiftBadgeDialog
-            isOpen={isGiftBadgeDialogOpen}
-            onOpenChange={setIsGiftBadgeDialogOpen}
           />
            <GiftReceivedDialog 
                 isOpen={isGiftReceivedDialogOpen}

@@ -152,7 +152,7 @@ export async function blueBirdAssistant(input: BlueBirdAssistantInput): Promise<
 
 const blueBirdPrompt = ai.definePrompt({
   name: 'blueBirdPrompt',
-  model: 'googleai/gemini-2.5-flash',
+  model: 'googleai/gemini-1.5-flash-latest',
   input: {schema: BlueBirdAssistantInputSchema},
   output: {schema: BlueBirdAssistantOutputSchema},
   tools: [playSongFromPlaylist, generateImageTool],

@@ -138,6 +138,11 @@ export const mapChatToChatItem = async (chat: Chat, currentUserId: string): Prom
       isCreator: partnerProfile.isCreator,
       isMemeCreator: partnerProfile.isMemeCreator,
       isBetaTester: partnerProfile.isBetaTester,
+      isPioneer: partnerProfile.isPioneer,
+      isPatron: partnerProfile.isPatron,
+      isCreatorLv2: partnerProfile.isCreatorLv2,
+      isMemeCreatorLv2: partnerProfile.isMemeCreatorLv2,
+      isBetaTesterLv2: partnerProfile.isBetaTesterLv2,
       badgeOrder: partnerProfile.badgeOrder,
       href: `/chat/${partnerId}`,
       iconIdentifier: partnerProfile.avatarUrl,
@@ -517,6 +522,13 @@ export const giftBadge = async (senderUid: string, recipientUid: string, badge: 
 
     try {
         await updateDoc(recipientRef, updateData);
+        // Log the gift after successfully updating the user's profile
+        await logGift({
+            senderId: senderUid,
+            receiverId: recipientUid,
+            giftType: 'badge',
+            badgeType: badge,
+        });
     } catch (error) {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: recipientRef.path,

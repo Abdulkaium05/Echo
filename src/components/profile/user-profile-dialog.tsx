@@ -107,26 +107,20 @@ export function UserProfileDialog({ isOpen, onOpenChange, profile }: UserProfile
   const joinDate = isClient && profile.createdAt ? new Date(profile.createdAt.seconds * 1000).toLocaleDateString() : '...';
 
   const earnedBadges: BadgeType[] = [];
+  if(profile.isCreator) earnedBadges.push('creator');
   if(profile.isCreatorLv2) earnedBadges.push('creator_lv2');
-  else if(profile.isCreator) earnedBadges.push('creator');
-  
   if(profile.isVIP) earnedBadges.push('vip');
-  
   if(profile.isPatron) earnedBadges.push('patron');
   else if(profile.isVerified) earnedBadges.push('verified');
-  
   if(profile.isPioneer) earnedBadges.push('pioneer');
   else if(profile.isDevTeam) earnedBadges.push('dev');
-  
   if(profile.isMemeCreatorLv2) earnedBadges.push('meme_creator_lv2');
   else if(profile.isMemeCreator) earnedBadges.push('meme_creator');
-  
   if(profile.isBetaTesterLv2) earnedBadges.push('beta_tester_lv2');
   else if(profile.isBetaTester) earnedBadges.push('beta_tester');
-
   if(profile.isBot) earnedBadges.push('bot');
 
-  const badgeDisplayOrder = profile.badgeOrder?.length ? profile.badgeOrder : ['pioneer', 'patron', 'creator_lv2', 'creator', 'dev', 'verified', 'vip', 'bot', 'meme_creator_lv2', 'meme_creator', 'beta_tester_lv2', 'beta_tester'];
+  const badgeDisplayOrder = profile.badgeOrder?.length ? profile.badgeOrder : [];
   const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
   return (

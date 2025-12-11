@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
-import { MailCheck, Loader2, AlertTriangle } from 'lucide-react';
+import { MailCheck, Loader2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 
 export default function SignupPage() {
@@ -20,6 +20,8 @@ export default function SignupPage() {
   const { signup, loading: authLoadingState, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [signupError, setSignupError] = useState<string | null>(null);
 
@@ -36,23 +38,16 @@ export default function SignupPage() {
     setSignupError(null);
     setIsLoading(true);
 
-    if (!email || !password) {
+    if (!email || !password || !confirmPassword) {
         setSignupError("Please fill in all fields.");
         toast({ title: "Missing Fields", description: "Please fill in all fields.", variant: "destructive" });
         setIsLoading(false);
         return;
     }
-
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
-    if (!passwordRegex.test(password)) {
-        const errMsg = "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, and one number.";
-        setSignupError(errMsg);
-        toast({
-            title: "Signup Failed",
-            description: errMsg,
-            variant: "destructive",
-            duration: 7000
-        });
+    
+    if (password !== confirmPassword) {
+        setSignupError("Passwords do not match.");
+        toast({ title: "Signup Failed", description: "Passwords do not match.", variant: "destructive" });
         setIsLoading(false);
         return;
     }
@@ -129,15 +124,49 @@ export default function SignupPage() {
             </div>
             <div className="space-y-1">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Create a password (min. 8 chars, A-Z, a-z, 0-9)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading || authLoadingState}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading || authLoadingState}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <div className="relative">
+                <Input
+                  id="confirm-password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={isLoading || authLoadingState}
+                />
+                 <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
             
             <Button type="submit" className="w-full !mt-6" disabled={isLoading || authLoadingState}>

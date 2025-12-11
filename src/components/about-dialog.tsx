@@ -13,7 +13,7 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Logo } from "./logo";
-import { Info, Code, Heart, Instagram, Facebook, Shield, FileText, History, Star, Crown, Wrench, SmilePlus, FlaskConical, Bot as BotIcon, Leaf } from "lucide-react";
+import { Info, Code, Heart, Instagram, Facebook, Shield, FileText, History, Star, Crown, Wrench, SmilePlus, FlaskConical, Bot as BotIcon, Leaf, Megaphone } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
@@ -32,13 +32,12 @@ import {
     MemeCreatorLv3BadgeIcon,
     BetaTesterLv3BadgeIcon,
     BotLv3BadgeIcon,
-    RubyIcon,
     RubyCreatorIcon, RubyVipIcon, RubyVerifiedIcon, RubyDeveloperIcon, RubyMemeCreatorIcon, RubyBetaTesterIcon, RubyBotIcon,
-    EmeraldIcon,
     EmeraldCreatorIcon, EmeraldVipIcon, EmeraldVerifiedIcon, EmeraldDeveloperIcon, EmeraldMemeCreatorIcon, EmeraldBetaTesterIcon, EmeraldBotIcon,
 } from './chat/bot-icons';
 import { ScrollArea } from "./ui/scroll-area";
 import { VerifiedBadge } from "./verified-badge";
+import { Badge } from "./ui/badge";
 
 interface AboutDialogProps {
   isOpen: boolean;
@@ -72,10 +71,10 @@ const iconGroups = {
         { name: 'Beta Tester Lvl 2', Icon: BetaTesterLv2BadgeIcon },
     ],
     "Level 3 (Diamond)": [
-        { name: 'Creator Lvl 3', Icon: CreatorLv3BadgeIcon },
-        { name: 'VIP 3.0', Icon: VipLv3BadgeIcon },
-        { name: 'Verified 3.0', Icon: PatronLv3BadgeIcon },
         { name: 'Developer 3.0', Icon: PioneerLv3BadgeIcon },
+        { name: 'Verified 3.0', Icon: PatronLv3BadgeIcon },
+        { name: 'Creator Lvl 3', Icon: CreatorLv3BadgeIcon },
+        { name: 'VIP Lvl 3', Icon: VipLv3BadgeIcon },
         { name: 'Meme Creator Lvl 3', Icon: MemeCreatorLv3BadgeIcon },
         { name: 'Beta Tester Lvl 3', Icon: BetaTesterLv3BadgeIcon },
         { name: 'Bot Lvl 3', Icon: BotLv3BadgeIcon },

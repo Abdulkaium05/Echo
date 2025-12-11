@@ -1,4 +1,3 @@
-
 // src/components/chat/notification-popover.tsx
 'use client';
 
@@ -8,9 +7,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
-import { Bell, CheckCheck, Inbox, Megaphone, Leaf } from 'lucide-react';
+import { Bell, CheckCheck, Inbox, Megaphone } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
   subscribeToNotifications,
@@ -19,7 +20,6 @@ import {
   type Notification,
 } from '@/services/notificationService';
 import { AnnouncementDialog } from './announcement-dialog';
-import { OutlineBirdIcon } from './bot-icons';
 
 export function NotificationPopover() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -40,6 +40,8 @@ export function NotificationPopover() {
         setSelectedAnnouncement(notification);
     }
   };
+  
+  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   return (
     <>
@@ -57,51 +59,104 @@ export function NotificationPopover() {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between p-3 border-b">
-          <h3 className="text-sm font-medium">Notifications</h3>
-          {notifications.length > 0 && unreadCount > 0 && (
-            <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={markAllNotificationsAsRead}>
-              <CheckCheck className="mr-1 h-3.5 w-3.5" />
-              Mark all as read
-            </Button>
-          )}
-        </div>
-        <ScrollArea className="h-[300px]">
-          {notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
-              <Inbox className="h-10 w-10 mb-2" />
-              <p className="text-sm font-medium">No Notifications</p>
-              <p className="text-xs">You're all caught up!</p>
+         <Tabs defaultValue="notifications" className="w-full">
+            <div className="flex items-center justify-between p-3 border-b">
+                <h3 className="text-sm font-medium">Updates</h3>
+                <TabsList className="grid grid-cols-2 h-8">
+                    <TabsTrigger value="notifications" className="h-6 text-xs px-2 relative">
+                        Notifications
+                        {unreadCount > 0 && (
+                             <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary text-white text-[8px] items-center justify-center">{unreadCount}</span>
+                            </span>
+                        )}
+                    </TabsTrigger>
+                    <TabsTrigger value="whats-new" className="h-6 text-xs px-2">What's New</TabsTrigger>
+                </TabsList>
             </div>
-          ) : (
-            <div className="divide-y">
-              {notifications.map(notif => (
-                <div
-                  key={notif.id}
-                  className={cn(
-                    'p-3 flex items-start gap-3 transition-colors hover:bg-accent/50 cursor-pointer',
-                    !notif.isRead && 'bg-primary/5'
+            <TabsContent value="notifications">
+                {notifications.length > 0 && unreadCount > 0 && (
+                    <div className="px-3 pb-2 border-b">
+                        <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={markAllNotificationsAsRead}>
+                            <CheckCheck className="mr-1 h-3.5 w-3.5" />
+                            Mark all as read
+                        </Button>
+                    </div>
+                )}
+                <ScrollArea className="h-[300px]">
+                  {notifications.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
+                      <Inbox className="h-10 w-10 mb-2" />
+                      <p className="text-sm font-medium">No Notifications</p>
+                      <p className="text-xs">You're all caught up!</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {notifications.map(notif => (
+                        <div
+                          key={notif.id}
+                          className={cn(
+                            'p-3 flex items-start gap-3 transition-colors hover:bg-accent/50 cursor-pointer',
+                            !notif.isRead && 'bg-primary/5'
+                          )}
+                          onClick={() => handleNotificationClick(notif)}
+                        >
+                          <div className="pt-1">
+                              {!notif.isRead && (
+                                <div className="h-2 w-2 rounded-full bg-primary shrink-0"></div>
+                              )}
+                          </div>
+                          <div className={cn('flex-1 -mt-1')}>
+                             <p className="text-sm font-semibold flex items-center gap-1.5">
+                                {notif.type === 'announcement' && <Megaphone className="h-4 w-4 text-primary" />}
+                                {notif.title}
+                             </p>
+                            <p className="text-xs text-muted-foreground">{notif.message}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{new Date(notif.timestamp).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                  onClick={() => handleNotificationClick(notif)}
-                >
-                  <div className="pt-1">
-                      {!notif.isRead && (
-                        <div className="h-2 w-2 rounded-full bg-primary shrink-0"></div>
-                      )}
-                  </div>
-                  <div className={cn('flex-1 -mt-1')}>
-                     <p className="text-sm font-semibold flex items-center gap-1.5">
-                        {notif.type === 'announcement' && <Megaphone className="h-4 w-4 text-primary" />}
-                        {notif.title}
-                     </p>
-                    <p className="text-xs text-muted-foreground">{notif.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{new Date(notif.timestamp).toLocaleDateString()}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
+                </ScrollArea>
+            </TabsContent>
+            <TabsContent value="whats-new">
+                 <ScrollArea className="h-[320px] px-3">
+                    <div className="space-y-6 py-3">
+                        <div>
+                            <h3 className="font-semibold text-base mb-2">{today}</h3>
+                            <div className="space-y-4 text-sm text-muted-foreground">
+                                 <div className="flex gap-3">
+                                    <Badge variant="secondary" className="text-blue-600 border-blue-600/50">NEW</Badge>
+                                    <p><span className="font-semibold text-foreground">"What's New" Tab.</span> The release notes have been moved from the About dialog to their own tab in this notification panel for easier access.</p>
+                                </div>
+                                <div className="flex gap-3">
+                                    <Badge variant="secondary" className="text-blue-600 border-blue-600/50">NEW</Badge>
+                                    <p><span className="font-semibold text-foreground">Password Protection for Dev Tools.</span> Added a password prompt to secure access to the developer tools for authorized users.</p>
+                                </div>
+                                <div className="flex gap-3">
+                                    <Badge variant="secondary" className="text-green-600 border-green-600/50">FIX</Badge>
+                                    <p><span className="font-semibold text-foreground">Dev Tools Session.</span> Fixed a bug that caused the dev tools password to be requested on every visit instead of once per session.</p>
+                                </div>
+                                 <div className="flex gap-3">
+                                    <Badge variant="secondary" className="text-green-600 border-green-600/50">FIX</Badge>
+                                    <p><span className="font-semibold text-foreground">Gift & Badge Logic.</span> Corrected an issue where gifting badges wasn't recorded in history and fixed the logic to ensure only user-selected badges are displayed (up to a max of 2).</p>
+                                </div>
+                                 <div className="flex gap-3">
+                                    <Badge variant="secondary" className="text-purple-600 border-purple-600/50">UI</Badge>
+                                    <p><span className="font-semibold text-foreground">Updated Header & Menus.</span> The "Gift History" is now in the main header with a notification dot, and the "Gift Badge" option is now located in the Developer Tools menu.</p>
+                                </div>
+                                 <div className="flex gap-3">
+                                    <Badge variant="secondary" className="text-green-600 border-green-600/50">FIX</Badge>
+                                    <p><span className="font-semibold text-foreground">Logo Navigation.</span> Clicking the app logo while on a chat page will no longer cause the page to reload.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </ScrollArea>
+            </TabsContent>
+         </Tabs>
       </PopoverContent>
     </Popover>
 

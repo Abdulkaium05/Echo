@@ -20,14 +20,15 @@ export interface Notification {
   };
 }
 
-const defaultAnnouncements: Notification[] = [
+const NOTIFICATION_READ_STATUS_KEY = 'echo_notification_read_status';
+
+const defaultAnnouncements: Omit<Notification, 'isRead'>[] = [
     {
         id: 'announcement-suggest-feature-1',
         type: 'announcement',
         title: "Your Idea, Your Impact!",
         message: "Suggest a feature and earn the exclusive Creator badge if we build it!",
         timestamp: new Date('2025-10-16T09:00:00Z').getTime(),
-        isRead: false,
         personaMessages: {
             'blue-bird': "Got a brilliant idea for Echo Message? Now's your chance to share it! We've just launched a 'Suggest a Feature' page, accessible from your user menu. Submit your concept, and if developer Abdul-Kaium builds it, you'll be awarded the exclusive Creator badge and 10,000 points as a thank you!",
             'green-leaf': "The forest of ideas is now open. A new path, 'Suggest a Feature,' has appeared in your menu. Share a seed of inspiration for how this space might grow. If your idea is chosen to take root and blossom, our creator, Abdul-Kaium, will honor you with the Creator's emblem and a gift of 10,000 points.",
@@ -40,7 +41,6 @@ const defaultAnnouncements: Notification[] = [
         title: "A Gift for Our First Pioneers!",
         message: "The first 10 users will receive a Beta badge, 10,000 points, and a 30-day Verified badge!",
         timestamp: new Date('2025-10-14T09:00:00Z').getTime(),
-        isRead: false,
         personaMessages: {
             'blue-bird': "Huge news from the developer's nest! To celebrate our launch, Abdul-Kaium is giving an exclusive welcome package to our first 10 users. If you're one of them, you'll receive the rare Beta Tester badge—this is the only time it will ever be available! You'll also get a bonus of 10,000 points AND a Verified checkmark for 30 days. Welcome to the flock!",
             'green-leaf': "A message of gratitude blossoms from our creator, Abdul-Kaium. For the first 10 seeds of this new ecosystem, a special gift awaits. You will receive a Beta Tester badge to mark your early presence, a unique treasure that will not be offered again. You will also be gifted 10,000 points to help you flourish, and the mark of Verification for 30 suns. Thank you for being the first to grow with us.",
@@ -53,7 +53,6 @@ const defaultAnnouncements: Notification[] = [
         title: "A Note on Our AI Assistant",
         message: "This is a beta version and our AI is still learning. We appreciate your understanding!",
         timestamp: new Date('2025-10-15T10:00:00Z').getTime(),
-        isRead: false,
         personaMessages: {
             'blue-bird': "Hello! Just a quick feather-gram to let you know that I'm currently in a 'beta' phase. This means my circuits are still warming up, and I might occasionally get my wires crossed. I'm learning so much every day, though! Thank you for your patience as I grow my wings. I'm excited to become an even better assistant for you!",
             'green-leaf': "Greetings. A whisper from the woods: please be mindful that my connection to the digital forest is in its early bloom—a beta phase. Sometimes the leaves may obscure the path, and my wisdom might seem a bit hazy. I am grateful for your gentle patience as my roots grow deeper. The forest and I thank you.",
@@ -62,8 +61,29 @@ const defaultAnnouncements: Notification[] = [
     }
 ];
 
-let mockNotifications: Notification[] = [...defaultAnnouncements];
+let mockNotifications: Notification[] = [];
 let listeners: Array<(notifications: Notification[]) => void> = [];
+
+const initializeNotifications = () => {
+    let readStatus: Record<string, boolean> = {};
+    try {
+        const storedStatus = localStorage.getItem(NOTIFICATION_READ_STATUS_KEY);
+        if (storedStatus) {
+            readStatus = JSON.parse(storedStatus);
+        }
+    } catch (e) {
+        console.error("Could not parse notification read status from localStorage", e);
+    }
+    
+    mockNotifications = defaultAnnouncements.map(notif => ({
+        ...notif,
+        isRead: readStatus[notif.id] || false,
+    }));
+};
+
+// Initialize on script load
+initializeNotifications();
+
 
 const notifyListeners = () => {
   for (const listener of listeners) {
@@ -71,7 +91,26 @@ const notifyListeners = () => {
   }
 };
 
+const persistReadStatus = () => {
+    try {
+        const readStatus = mockNotifications.reduce((acc, notif) => {
+            if (notif.isRead) {
+                acc[notif.id] = true;
+            }
+            return acc;
+        }, {} as Record<string, boolean>);
+        localStorage.setItem(NOTIFICATION_READ_STATUS_KEY, JSON.stringify(readStatus));
+    } catch (e) {
+        console.error("Could not persist notification read status to localStorage", e);
+    }
+};
+
 export const subscribeToNotifications = (callback: (notifications: Notification[]) => void): (() => void) => {
+  if (!listeners.length) {
+      // Re-initialize from storage when the first listener subscribes,
+      // in case storage was updated in another tab.
+      initializeNotifications();
+  }
   listeners.push(callback);
   // Immediately call with current notifications, sorted
   callback([...mockNotifications].sort((a, b) => b.timestamp - a.timestamp));
@@ -103,6 +142,7 @@ export const markNotificationAsRead = (notificationId: string): void => {
             notification.isRead = true;
         }
     });
+    persistReadStatus();
     notifyListeners();
 };
 
@@ -112,10 +152,12 @@ export const markAllNotificationsAsRead = (): void => {
             n.isRead = true;
         });
     });
+    persistReadStatus();
     notifyListeners();
 };
 
 export const clearNotifications = (): void => {
   mockNotifications = [];
+  persistReadStatus();
   notifyListeners();
 };

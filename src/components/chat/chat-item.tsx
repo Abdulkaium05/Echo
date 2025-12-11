@@ -119,8 +119,8 @@ export function ChatItem(props: ChatItemProps) {
   const fallbackInitials = name.substring(0, 2).toUpperCase();
 
   const earnedBadges: BadgeType[] = [];
+  if(isCreator) earnedBadges.push('creator');
   if(isCreatorLv2) earnedBadges.push('creator_lv2');
-  else if(isCreator) earnedBadges.push('creator');
   if(isContactVIP) earnedBadges.push('vip');
   if(isPatron) earnedBadges.push('patron');
   else if(isVerified) earnedBadges.push('verified');
@@ -132,7 +132,7 @@ export function ChatItem(props: ChatItemProps) {
   if(isBetaTesterLv2) earnedBadges.push('beta_tester_lv2');
   else if(isBetaTester) earnedBadges.push('beta_tester');
 
-  const badgeDisplayOrder = badgeOrder?.length ? badgeOrder : ['pioneer', 'patron', 'creator_lv2', 'creator', 'dev', 'verified', 'vip', 'bot', 'meme_creator_lv2', 'meme_creator', 'beta_tester_lv2', 'beta_tester'];
+  const badgeDisplayOrder = badgeOrder?.length ? badgeOrder : [];
   const orderedBadges = badgeDisplayOrder.filter(badge => earnedBadges.includes(badge)).slice(0, 2);
 
 
